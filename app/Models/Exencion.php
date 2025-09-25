@@ -22,8 +22,10 @@ class Exencion extends Model
     ];
 
     protected $casts = [
-        'valor'       => 'decimal:2',
-        'monto_maximo'=> 'decimal:2',
+        'valor' => 'decimal:2',
+        'monto_maximo' => 'decimal:2',
+        'vigente_desde' => 'date',
+        'vigente_hasta' => 'date',
     ];
 
     /* ================== HELPERS ================== */

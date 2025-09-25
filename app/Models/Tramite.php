@@ -15,44 +15,63 @@ class Tramite extends Model
         'nro_tramite',
         'fecha_presentacion',
         'tipo_transmision_id',
-        'inmueble_id',
         'valor_declarado',
         'base_imponible',
         'total_idtgb',
         'recargo_mora',
         'monto_final',
+        'ufv_aplicada',
         'estado',
         'fecha_transmision',
         'fecha_vencimiento',
         'observaciones',
         'user_id',
+        'created_by',
+        'updated_by',
     ];
 
     protected $casts = [
-        'valor_declarado' => 'decimal:2',
-        'base_imponible'  => 'decimal:2',
-        'total_idtgb'     => 'decimal:2',
-        'recargo_mora'    => 'decimal:2',
-        'monto_final'     => 'decimal:2',
         'fecha_presentacion' => 'date',
-        'fecha_transmision'  => 'date',
-        'fecha_vencimiento'  => 'date',
+        'fecha_transmision' => 'date',
+        'fecha_vencimiento' => 'date',
+        'valor_declarado' => 'decimal:2',
+        'base_imponible' => 'decimal:2',
+        'total_idtgb' => 'decimal:2',
+        'recargo_mora' => 'decimal:2',
+        'monto_final' => 'decimal:2',
+        'ufv_aplicada' => 'decimal:5',
     ];
 
     /* ================== RELACIONES ================== */
-    public function tipoTransmision()
+ public function tipoTransmision()
     {
         return $this->belongsTo(TipoTransmision::class);
-    }
-
-    public function inmueble()
-    {
-        return $this->belongsTo(Inmueble::class);
     }
 
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function creador()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function editor()
+    {
+        return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function inmuebles()
+    {
+        return $this->belongsToMany(Inmueble::class, 'tramite_inmuebles');
+    }
+
+    public function exenciones()
+    {
+        return $this->belongsToMany(Exencion::class, 'tramite_exenciones')
+                    ->withPivot('monto_aplicado');
     }
 
     public function adquirentes()
@@ -65,16 +84,16 @@ class Tramite extends Model
         return $this->hasMany(DisponenteTramite::class);
     }
 
-    public function tramiteExenciones()
-    {
-        return $this->hasMany(TramiteExencion::class);
-    }
-
     public function pagos()
     {
         return $this->hasMany(Pago::class);
     }
 
+    public function documentos()
+    {
+        return $this->hasMany(Documento::class);
+    }
+    
     /* ================== HELPERS ================== */
     public function calcularMora(): float
     {

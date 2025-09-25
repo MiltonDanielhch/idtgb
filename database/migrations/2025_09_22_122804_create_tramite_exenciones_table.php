@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('tramite_exenciones', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tramite_id')->constrained();
-            $table->foreignId('exencion_id')->constrained();
+            $table->foreignId('exencion_id')->constrained('exenciones');
             $table->decimal('monto_aplicado', 14, 2);
             $table->timestamps();
         });

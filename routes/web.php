@@ -6,6 +6,7 @@ use App\Http\Controllers\ErrorController;
 use App\Http\Controllers\PersonController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\AjaxController;
+use App\Http\Controllers\CalculadoraBeniController;
 use App\Http\Controllers\RoleController;
 use TCG\Voyager\Facades\Voyager;
 
@@ -18,6 +19,10 @@ use TCG\Voyager\Facades\Voyager;
 // Redirección raíz y login
 Route::redirect('login', 'admin/login')->name('login');
 Route::redirect('/', 'admin');
+
+// Ruta pública (sin login)
+Route::get('/calculadora-idtgb-beni', [CalculadoraBeniController::class, 'formulario'])->name('calculadora.beni.form');
+Route::post('/calculadora-idtgb-beni', [CalculadoraBeniController::class, 'calcular'])->name('calculadora.beni.calcular');
 
 // Grupo principal con middleware personalizado
 Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {

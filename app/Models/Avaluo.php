@@ -19,6 +19,8 @@ class Avaluo extends Model
         'perito_id',
         'documento_path',
         'estado',
+        'created_by',
+        'updated_by',
     ];
 
     protected $casts = [
@@ -36,6 +38,16 @@ class Avaluo extends Model
     public function perito()
     {
         return $this->belongsTo(Person::class, 'perito_id');
+    }
+
+    public function creador()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function editor()
+    {
+        return $this->belongsTo(User::class, 'updated_by');
     }
 
     /* ================== HELPERS ================== */

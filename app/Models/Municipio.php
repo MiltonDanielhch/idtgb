@@ -11,13 +11,10 @@ class Municipio extends Model
 
     protected $table = 'municipios';
 
-    protected $fillable = [
-        'nombre',
-        'departamento_id',
-    ];
+    protected $fillable = ['nombre', 'provincia_id'];
 
-    public function departamento()
+    public function provincia()
     {
-        return $this->belongsTo(Departamento::class);
+        return $this->belongsTo(Provincia::class);
     }
 }

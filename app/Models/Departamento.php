@@ -11,13 +11,10 @@ class Departamento extends Model
 
     protected $table = 'departamentos';
 
-    protected $fillable = [
-        'nombre',
-        'codigo',
-    ];
+    protected $fillable = ['nombre', 'codigo'];
 
-    public function municipios()
+    public function provincias()
     {
-        return $this->hasMany(Municipio::class);
+        return $this->hasMany(Provincia::class);
     }
 }

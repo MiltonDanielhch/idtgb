@@ -12,8 +12,8 @@ class Inmueble extends Model
     protected $table = 'inmuebles';
 
     protected $fillable = [
-        'catastro',
         'complemento',
+        'catastro',
         'tipo_inmueble_id',
         'municipio_id',
         'barrio_comunidad',
@@ -22,6 +22,7 @@ class Inmueble extends Model
         'valor_catastral',
         'matricula_rr',
         'es_vivienda_unica_familiar',
+        'estado_inmueble',
     ];
 
     protected $casts = [

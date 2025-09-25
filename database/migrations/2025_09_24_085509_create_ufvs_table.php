@@ -11,10 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('municipios', function (Blueprint $table) {
+        Schema::create('ufvs', function (Blueprint $table) {
             $table->id();
-            $table->string('nombre', 80);
-            $table->foreignId('provincia_id')->constrained();
+            $table->date('fecha');
+            $table->decimal('valor', 8, 5);
             $table->timestamps();
         });
     }
@@ -24,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('municipios');
+        Schema::dropIfExists('ufvs');
     }
 };

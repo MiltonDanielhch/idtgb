@@ -11,12 +11,19 @@ class Tasa extends Model
 
     protected $table = 'tasas';
 
-    protected $fillable = [
+     protected $fillable = [
         'departamento_id',
         'parentesco_id',
+        'tipo_transmision_id',
         'tasa',
         'vigente_desde',
         'vigente_hasta',
+    ];
+
+    protected $casts = [
+        'tasa' => 'decimal:2',
+        'vigente_desde' => 'date',
+        'vigente_hasta' => 'date',
     ];
 
     public function departamento()
@@ -27,6 +34,11 @@ class Tasa extends Model
     public function parentesco()
     {
         return $this->belongsTo(Parentesco::class);
+    }
+
+    public function tipoTransmision()
+    {
+        return $this->belongsTo(TipoTransmision::class, 'tipo_transmision_id');
     }
 
     /* ==================  HELPERS  ================== */

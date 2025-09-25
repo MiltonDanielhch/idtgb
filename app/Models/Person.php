@@ -6,20 +6,32 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Traits\RegistersUserEvents;
-use Attribute;
 
 class Person extends Model
 {
     use HasFactory, RegistersUserEvents, SoftDeletes;
 
-    protected $dates = ['deleted_at'];
+    /* -------------------------------------------------
+     *  CONFIGURACIÓN
+     * ------------------------------------------------- */
+    protected $table = 'people';               // <-- faltaba
+    protected $dates = ['deleted_at', 'birth_date'];
+    protected $casts = [
+        'status' => 'integer',
+        'birth_date' => 'date',
+    ];
 
     protected $fillable = [
+        'person_type',
+        'tipo_doc',
         'ci',
+        'ci_complemento',
+        'nit',
         'first_name',
         'middle_name',
         'paternal_surname',
         'maternal_surname',
+        'legal_name',
         'birth_date',
         'email',
         'phone',
@@ -27,45 +39,64 @@ class Person extends Model
         'gender',
         'image',
         'status',
-
+        'estado_persona',
         'registerUser_id',
         'registerRole',
-        'deleted_at',
         'deleteUser_id',
         'deleteRole',
         'deleteObservation',
     ];
 
-    const STATUS_ACTIVE = 1;
+    /* -------------------------------------------------
+     *  CONSTANTES
+     * ------------------------------------------------- */
+    const STATUS_ACTIVE   = 1;
     const STATUS_INACTIVE = 0;
-    const STATUS_PENDING = 2;
+    const STATUS_PENDING  = 2;
 
-    public static function getStatusLabel($status)
+    public static function getStatusLabel($status): string
     {
         return match ($status) {
-            self::STATUS_ACTIVE => 'Activo',
+            self::STATUS_ACTIVE   => 'Activo',
             self::STATUS_INACTIVE => 'Inactivo',
-            self::STATUS_PENDING => 'Pendiente',
-            default => 'Desconocido',
+            self::STATUS_PENDING  => 'Pendiente',
+            default               => 'Desconocido',
         };
     }
-    /* -----------------------------------------------------------------
-     |  Accessors & Mutators
-     | -----------------------------------------------------------------*/
-   public function getFullNameAttribute()
+
+    /* -------------------------------------------------
+     *  ACCESORES
+     * ------------------------------------------------- */
+    public function getFullNameAttribute(): string
     {
-        return trim(collect([
-            $this->first_name,
-            $this->middle_name,
-            $this->paternal_surname,
-            $this->maternal_surname,
-        ])->filter()->join(' '));
+        return trim(
+            collect([
+                $this->first_name,
+                $this->middle_name,
+                $this->paternal_surname,
+                $this->maternal_surname,
+            ])->filter()->join(' ')
+        );
     }
-    /* -----------------------------------------------------------------
-     |  Scopes
-     | -----------------------------------------------------------------*/
+
+    /* -------------------------------------------------
+     *  SCOPES
+     * ------------------------------------------------- */
     public function scopeActive($query)
     {
-        return $query->where('status', 1);
+        return $query->where('status', self::STATUS_ACTIVE);
+    }
+
+    /* -------------------------------------------------
+     *  RELACIONES
+     * ------------------------------------------------- */
+    public function registerUser()
+    {
+        return $this->belongsTo(User::class, 'registerUser_id');
+    }
+
+    public function deleteUser()
+    {
+        return $this->belongsTo(User::class, 'deleteUser_id');
     }
 }

@@ -10,6 +10,7 @@ class IdtgbMaestrosSeeder extends Seeder
     {
         $this->call([
             DepartamentoSeeder::class,
+            ProvinciaSeeder::class,
             MunicipioSeeder::class,
             ParentescoSeeder::class,
             TipoTransmisionSeeder::class,

@@ -22,12 +22,17 @@ return new class extends Migration
             $table->decimal('total_idtgb', 12, 2)->default(0);
             $table->decimal('recargo_mora', 12, 2)->default(0);
             $table->decimal('monto_final', 14, 2)->default(0);
+            $table->decimal('ufv_aplicada', 8, 5)->default(1);
             $table->enum('estado', ['Borrador', 'Pagado', 'Observado', 'Anulado', 'Finalizado'])->default('Borrador');
-            $table->date('fecha_transmision'); // ← AÑADIR ESTA FECHA CLAVE
+            $table->date('fecha_transmision');
             $table->date('fecha_vencimiento');
             $table->text('observaciones')->nullable();
             $table->foreignId('user_id')->constrained();
             $table->timestamps();
+
+            // 🔹 Auditoría
+            $table->foreignId('created_by')->nullable()->constrained('users');
+            $table->foreignId('updated_by')->nullable()->constrained('users');
         });
     }
 

@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('tramite_id')->constrained()->cascadeOnDelete();
             $table->foreignId('persona_id')->constrained('people');
             $table->foreignId('parentesco_id')->constrained('parentescos');
-            $table->decimal('tasa_aplicada', 5, 2); // ← CAMBIAR: en lugar de tasa_id
+            $table->decimal('tasa_aplicada', 5, 2);
             $table->decimal('porcentaje', 5, 2);
             $table->decimal('idtgb_proporcional', 12, 2);
             $table->boolean('es_beneficiario_exencion')->default(false);

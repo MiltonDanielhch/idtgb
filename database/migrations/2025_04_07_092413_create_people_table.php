@@ -15,52 +15,39 @@ return new class extends Migration
     {
         Schema::create('people', function (Blueprint $table) {
             $table->id();
-            // 🆕 Tipo de persona (clave para CI/NIT)
             $table->enum('person_type', ['Natural', 'Jurídica'])->default('Natural');
 
             $table->string('tipo_doc', 10)->default('CI');
             $table->string('ci')->nullable();
             $table->string('ci_complemento', 5)->nullable();
-
-            // 🆕 NIT para personas jurídicas
-            $table->string('nit')->nullable(); // NIT sin guiones
-
+            $table->string('nit')->nullable();
 
             $table->string('first_name')->nullable();
             $table->string('middle_name')->nullable();
             $table->string('paternal_surname')->nullable();
             $table->string('maternal_surname')->nullable();
-
-            // 🆕 Razón social (para personas jurídicas)
-            $table->string('legal_name')->nullable(); // "Fundación XYZ", "Empresa ABC S.R.L."
+            $table->string('legal_name')->nullable();
 
             $table->date('birth_date')->nullable();
-            $table->string('email')->unique()->nullable();
+            $table->string('email')->nullable();
             $table->string('phone')->nullable();
-
             $table->text('address')->nullable();
 
             $table->enum('gender', ['Masculino', 'Femenino'])->nullable();
             $table->string('image')->nullable();
 
-
             $table->tinyInteger('status')->default(1)->comment('1=activo,0=inactivo,2=pending');
-
-            // Estado persona (IDTGB: Activo/Inactivo/Fallecido)
-            $table->enum('estado_persona', ['Activo', 'Inactivo', 'Fallecido'])
-                ->default('Activo');
+            $table->enum('estado_persona', ['Activo', 'Inactivo', 'Fallecido'])->default('Activo');
 
             $table->timestamps();
             $table->foreignId('registerUser_id')->nullable()->constrained('users');
             $table->string('registerRole')->nullable();
-
             $table->softDeletes();
             $table->foreignId('deleteUser_id')->nullable()->constrained('users');
             $table->string('deleteRole')->nullable();
             $table->text('deleteObservation')->nullable();
 
-            // Índice único para evitar duplicados (CI/NIT + complemento + tipo)
-            $table->unique(['tipo_doc', 'ci', 'ci_complemento']);
+            $table->unique(['tipo_doc', 'ci', 'ci_complemento']); // 🔹 Solo para CI
         });
     }
 
