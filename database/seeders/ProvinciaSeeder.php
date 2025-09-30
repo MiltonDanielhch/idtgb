@@ -9,10 +9,21 @@ class ProvinciaSeeder extends Seeder
 {
     public function run(): void
     {
-        $dep = Departamento::where('codigo', 'BE')->first();
+        $beni = Departamento::where('codigo', 'BE')->firstOrFail();
 
-        foreach (['Moxos', 'Yacuma', 'Cercado'] as $nombre) {
-            $dep->provincias()->firstOrCreate(['nombre' => $nombre]);
+        $provincias = [
+            'Cercado',
+            'Moxos',
+            'Yacuma',
+            'Marbán',
+            'Mamoré',
+            'Iténez',
+            'Ballivián',
+            'Vaca Díez',
+        ];
+
+        foreach ($provincias as $nombre) {
+            $beni->provincias()->firstOrCreate(['nombre' => $nombre]);
         }
     }
 }

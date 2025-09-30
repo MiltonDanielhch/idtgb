@@ -7,34 +7,32 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- FontAwesome -->
+    <!-- FontAwesome 6 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-        <style>
-            :root { --beni-green: #007A33; --beni-green-light: #00A652; --beni-yellow: #FCD116; }
-            body { background-color: #f4f7fa; font-family: "Segoe UI", Arial, sans-serif; }
-            .navbar-custom { background: linear-gradient(135deg, var(--beni-green), var(--beni-green-light)); }
-            .navbar-custom .navbar-brand, .navbar-custom .nav-link { color: #fff !important; }
-            .card-header-primary { background: linear-gradient(135deg, var(--beni-green), var(--beni-green-light)); color: #fff; }
-            .btn-primary { background-color: var(--beni-green); border-color: var(--beni-green); }
-            .btn-primary:hover { background-color: var(--beni-green-light); border-color: var(--beni-green-light); }
-            .btn-outline-danger { border-color: var(--beni-yellow); color: var(--beni-green); }
-            .btn-outline-danger:hover { background-color: var(--beni-yellow); border-color: var(--beni-yellow); color: #fff; }
-            .step-header { font-weight: 600; font-size: 1.1rem; margin-bottom: 1rem; }
-            .result-box { background: #e9f5ff; border-left: 5px solid var(--beni-green); }
-            .final-amount { font-size: 1.75rem; font-weight: 700; color: var(--beni-green); }
-            .icon-size { font-size: 1.2rem; margin-right: 0.4rem; }
-        </style>
+    <style>
+        :root { --beni-green: #007A33; --beni-green-light: #00A652; --beni-yellow: #FCD116; }
+        body { background-color: #f4f7fa; font-family: "Segoe UI", Arial, sans-serif; }
+        .navbar-custom { background: linear-gradient(135deg, var(--beni-green), var(--beni-green-light)); }
+        .navbar-custom .navbar-brand, .navbar-custom .nav-link { color: #fff !important; }
+        .card-header-primary { background: linear-gradient(135deg, var(--beni-green), var(--beni-green-light)); color: #fff; }
+        .btn-primary { background-color: var(--beni-green); border-color: var(--beni-green); }
+        .btn-primary:hover { background-color: var(--beni-green-light); border-color: var(--beni-green-light); }
+        .btn-outline-danger { border-color: var(--beni-yellow); color: var(--beni-green); }
+        .btn-outline-danger:hover { background-color: var(--beni-yellow); border-color: var(--beni-yellow); color: #fff; }
+        .step-header { font-weight: 600; font-size: 1.1rem; margin-bottom: 1rem; }
+        .result-box { background: #e9f5ff; border-left: 5px solid var(--beni-green); }
+        .final-amount { font-size: 1.75rem; font-weight: 700; color: var(--beni-green); }
+        .icon-size { font-size: 1.2rem; margin-right: 0.4rem; }
+    </style>
 </head>
 <body>
 
-<!-- HEADER PORTAL CIUDADANO -->
+<!-- HEADER -->
 <nav class="navbar navbar-expand-lg navbar-custom shadow-sm">
     <div class="container-fluid">
         <a class="navbar-brand" href="#"><i class="fas fa-building"></i> Portal Ciudadano - GAD Beni</a>
         <div class="navbar-nav ms-auto">
             <a class="nav-link" href="#"><i class="fas fa-home"></i> Inicio</a>
-            {{-- <a class="nav-link" href="#"><i class="fas fa-info-circle"></i> Acerca de</a> --}}
-            {{-- <a class="nav-link" href="#"><i class="fas fa-envelope"></i> Contáctanos</a> --}}
         </div>
     </div>
 </nav>
@@ -64,24 +62,25 @@
                 @csrf
                 <div class="col-md-6">
                     <label class="form-label">Tipo de contribuyente</label>
-                    <select name="persona_id" class="form-select" required>
-                        @foreach($personas as $p)
-                            <option value="{{ $p->id }}">{{ $p->first_name }} {{ $p->paternal_surname }}</option>
+                    <select name="tipo_contribuyente" class="form-select" required>
+                        <option value="">--Seleccione--</option>
+                        <option value="Natural">Natural</option>
+                        <option value="Jurídica">Jurídica</option>
+                    </select>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Inmueble (catastro Beni)</label>
+                    <select name="inmueble_id" class="form-select" required>
+                        <option value="">--Seleccione--</option>
+                        @foreach($inmuebles as $inm)
+                            <option value="{{ $inm->id }}">
+                                {{ $inm->catastro }} - {{ $inm->direccion }}, {{ $inm->municipio->nombre }}
+                            </option>
                         @endforeach
                     </select>
                 </div>
-                <select name="inmueble_id" class="form-select" required>
-                    <option value="">--Seleccione--</option>
-                    <option value="1">BE-DEMO-01-0101 - Calle Demo #100, Trinidad</option>
-                </select>
-                {{-- <div class="col-md-6">
-                    <label class="form-label">Tipo de contribuyente</label>
-                    <select name="persona_id" class="form-select" required>
-                        <option value="">--Seleccione--</option>
-                        <option value="1">Natural</option>
-                        <option value="2">Jurídica</option>
-                    </select>
-                </div> --}}
+
                 <div class="col-md-6">
                     <label class="form-label">Tipo de transmisión</label>
                     <select name="tipo_transmision" class="form-select" required>
@@ -89,19 +88,25 @@
                         <option value="Testamento">Sucesión</option>
                     </select>
                 </div>
+
                 <div class="col-md-6">
                     <label class="form-label">Fecha de transmisión</label>
                     <input type="date" name="fecha_transmision" class="form-control" required>
                 </div>
+
                 <div class="col-md-6">
                     <label class="form-label">Base imponible (Bs.)</label>
-                    <input type="number" name="base_imponible" class="form-control" value="1000" min="1" step="0.01" required>
+                    <input type="number" name="base_imponible" class="form-control" value="1000" min="0.01" step="0.01" required>
                 </div>
-                <div class="col-md-12">
-                    <label class="form-label">Alicuota (parentesco)</label>
+
+                <div class="col-md-6">
+                    <label class="form-label">Parentesco / Alicuota</label>
                     <select name="parentesco_id" class="form-select" required>
+                        <option value="">--Seleccione--</option>
                         @foreach($parentescos as $p)
-                            <option value="{{ $p->id }}">{{ $p->nombre }} ({{ $p->tasa ?? '—' }}%)</option>
+                            <option value="{{ $p->id }}" data-tasa="{{ $p->tasa }}">
+                                {{ $p->nombre }} ({{ $p->tasa ?? '—' }}%)
+                            </option>
                         @endforeach
                     </select>
                     <div class="form-text">Seleccione el parentesco para aplicar la alícuota correspondiente.</div>
@@ -116,9 +121,7 @@
 
             <!-- TOTAL DETERMINADO -->
             <div class="step-header mt-4"><i class="fas fa-chart-line text-success"></i> Total determinado</div>
-            <div id="resultado" class="result-box p-3 rounded d-none">
-                {{-- aquí se inyectan los resultados --}}
-            </div>
+            <div id="resultado" class="result-box p-3 rounded d-none"></div>
 
             <!-- MARCO LEGAL -->
             <div class="mt-3">
@@ -175,7 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div class="col-md-6">
                         <p><strong>Tributo omitido:</strong> Bs. ${json.tributo_omitido}</p>
-                        <p><strong>Mantenimiento de valor:</strong> 0</p>
+                        <p><strong>Descuento 15 %:</strong> Bs. ${json.descuento}</p>
                         <p><strong>Intereses moratorios:</strong> 0</p>
                         <p><strong>Multa IDF:</strong> 0</p>
                         <p class="final-amount">Total (Bs.): ${json.monto_final}</p>
@@ -223,5 +226,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 </script>
+
 </body>
 </html>

@@ -15,6 +15,7 @@ class Tramite extends Model
         'nro_tramite',
         'fecha_presentacion',
         'tipo_transmision_id',
+        'inmueble_id',
         'valor_declarado',
         'base_imponible',
         'total_idtgb',
@@ -63,9 +64,13 @@ class Tramite extends Model
         return $this->belongsTo(User::class, 'updated_by');
     }
 
-    public function inmuebles()
+    // public function inmuebles()
+    // {
+    //     return $this->belongsToMany(Inmueble::class, 'tramite_inmuebles');
+    // }
+    public function inmueble()
     {
-        return $this->belongsToMany(Inmueble::class, 'tramite_inmuebles');
+        return $this->belongsTo(Inmueble::class);
     }
 
     public function exenciones()
@@ -93,7 +98,7 @@ class Tramite extends Model
     {
         return $this->hasMany(Documento::class);
     }
-    
+
     /* ================== HELPERS ================== */
     public function calcularMora(): float
     {

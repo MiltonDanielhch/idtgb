@@ -12,9 +12,18 @@ class AdquirenteTramiteSeeder extends Seeder
 {
     public function run(): void
     {
-        $tramite    = Tramite::first()->id;
-        $hijo       = Parentesco::where('nombre', 'Hijo/a')->first()->id;
-        $persona    = Person::where('person_type', 'Natural')->first()->id;
+        $tramite = Tramite::first()->id;
+        $hijo    = Parentesco::where('nombre', 'Hijo/a')->first()->id;
+
+        // Crea o recupera la persona con los campos CORRECTOS
+        $persona = Person::firstOrCreate(
+            ['person_type' => 'Natural', 'ci' => '123456789'],
+            [
+                'person_type'      => 'Natural',
+                'first_name'       => 'Test',
+                'paternal_surname' => 'User',
+            ]
+        )->id;
 
         AdquirenteTramite::create([
             'tramite_id'                  => $tramite,
@@ -22,7 +31,7 @@ class AdquirenteTramiteSeeder extends Seeder
             'parentesco_id'               => $hijo,
             'tasa_aplicada'               => 1.00,
             'porcentaje'                  => 100.00,
-            'idtgb_proporcional'          => 5000.00, // ejemplo 1 % de 500 000
+            'idtgb_proporcional'          => 5000.00,
             'es_beneficiario_exencion'    => false,
             'documento_sustento_exencion' => null,
         ]);

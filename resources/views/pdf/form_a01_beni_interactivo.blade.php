@@ -4,17 +4,52 @@
     <meta charset="utf-8">
     <title>IDTGB Beni - Form A-01 Cálculo</title>
     <style>
-        body { font-family: Arial, sans-serif; font-size: 14px; margin: 30px; color: #333; }
-        .header { text-align: center; margin-bottom: 25px; }
-        .header h2 { margin: 0; font-size: 18px; font-weight: 700; }
-        .header h3 { margin: 2px 0 15px; font-size: 16px; font-weight: 600; }
-        .section { margin-bottom: 20px; }
-        .section p { margin: 4px 0; }
-        .table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        .table th, .table td { border: 1px solid #000; padding: 8px 6px; }
-        .table th { background: #f2f2f2; font-weight: 700; }
-        .text-right { text-align: right; }
-        .total { font-size: 1.25rem; font-weight: 700; }
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            margin: 30px;
+            color: #333;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        .header h2 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 700;
+        }
+        .header h3 {
+            margin: 2px 0 15px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .section {
+            margin-bottom: 20px;
+        }
+        .section p {
+            margin: 4px 0;
+        }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .table th, .table td {
+            border: 1px solid #000;
+            padding: 8px 6px;
+        }
+        .table th {
+            background: #f2f2f2;
+            font-weight: 700;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .total {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
     </style>
 </head>
 <body>
@@ -26,9 +61,7 @@
 
 <!-- DATOS DEL CONTRIBUYENTE -->
 <div class="section">
-    <p><strong>Sujeto Pasivo:</strong> {{ $persona->first_name }} {{ $persona->paternal_surname }} {{ $persona->maternal_surname ?? '' }}</p>
-    <p><strong>C.I./NIT:</strong> {{ $persona->ci ?? $persona->nit }}</p>
-    <p><strong>Inmueble:</strong> {{ $inmueble->catastro }} - {{ $inmueble->direccion }}</p>
+    <p><strong>Tipo de Contribuyente:</strong> {{ $tipo_contribuyente }}</p>
     <p><strong>Tipo de Transmisión:</strong> {{ $tipo_transmision }}</p>
     <p><strong>Fecha de Transmisión:</strong> {{ $fecha_transmision }}</p>
     <p><strong>Fecha de Vencimiento:</strong> {{ $fecha_vencimiento }}</p>
@@ -49,6 +82,10 @@
         <tr>
             <td>Tributo Omitido</td>
             <td class="text-right">{{ number_format($tributo_omitido, 2, ',', '.') }}</td>
+        </tr>
+        <tr>
+            <td>Descuento 15 % (pronto pago)</td>
+            <td class="text-right">{{ number_format($descuento, 2, ',', '.') }}</td>
         </tr>
         <tr>
             <td>Mantenimiento de Valor</td>
@@ -72,6 +109,16 @@
 <!-- DATOS BANCARIOS -->
 <p style="margin-top: 25px;"><strong>Nº de Cuenta Banco Unión:</strong> {{ $cuenta_banco }}</p>
 <p><em>Este cálculo es referencial y no reemplaza el trámite oficial ante la GAD-Beni.</em></p>
+
+<!-- CÓDIGO QR -->
+<div style="margin-top: 30px; text-align: center;">
+    <p><strong>Código QR de validación</strong></p>
+    <img src="{{ $qrDataUrl }}" alt="Código QR de Pago" style="width: 180px; height: 180px;">
+    <div style="font-size: 11px; color: #555; margin-top: 6px;">
+        Monto: <strong>Bs. {{ number_format($monto_final, 2, ',', '.') }}</strong><br>
+        Fecha de cálculo: {{ now()->format('d/m/Y H:i') }}
+    </div>
+</div>
 
 </body>
 </html>

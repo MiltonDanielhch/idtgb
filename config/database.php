@@ -63,19 +63,19 @@ return [
             ]) : [],
         ],
 
-        'solucionDigital' => [
-            'driver' => 'mysql',
-            'host' => env('DB_HOST_SOLUCION_DIGITAL', 'localhost'),
-            'port' => env('DB_PORT_SOLUCION_DIGITAL', '3306'),
-            'database' => env('DB_DATABASE_SOLUCION_DIGITAL', 'forge'),
-            'username' => env('DB_USERNAME_SOLUCION_DIGITAL', 'forge'),
-            'password' => env('DB_PASSWORD_SOLUCION_DIGITAL', ''),
-            'charset' => 'utf8',
-            'collation' => 'utf8_unicode_ci',
-            'prefix' => '',
-            'strict' => false,
-            'engine' => null,
-        ],
+        // 'solucionDigital' => [
+        //     'driver' => 'mysql',
+        //     'host' => env('DB_HOST_SOLUCION_DIGITAL', 'localhost'),
+        //     'port' => env('DB_PORT_SOLUCION_DIGITAL', '3306'),
+        //     'database' => env('DB_DATABASE_SOLUCION_DIGITAL', 'forge'),
+        //     'username' => env('DB_USERNAME_SOLUCION_DIGITAL', 'forge'),
+        //     'password' => env('DB_PASSWORD_SOLUCION_DIGITAL', ''),
+        //     'charset' => 'utf8',
+        //     'collation' => 'utf8_unicode_ci',
+        //     'prefix' => '',
+        //     'strict' => false,
+        //     'engine' => null,
+        // ],
 
         'pgsql' => [
             'driver' => 'pgsql',
