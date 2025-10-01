@@ -56,9 +56,18 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
         Route::put('/{id}', [PersonController::class, 'update'])->name('voyager.people.update');
     });
 
-    Route::resource('parentescos', ParentescoController::class)
-        ->names('admin.parentescos');
-
+    // ──────────────── PARENTESCO ────────────────
+    Route::prefix('parentescos')->group(function () {
+        Route::get('/', [ParentescoController::class, 'index'])->name('admin.parentescos.index');
+        Route::get('/create', [ParentescoController::class, 'create'])->name('admin.parentescos.create');
+        Route::get('/list', [ParentescoController::class, 'listView'])->name('admin.parentescos.list');
+        Route::get('/ajax/list', [ParentescoController::class, 'list'])->name('admin.parentescos.ajax.list');
+        Route::get('/{parentesco}', [ParentescoController::class, 'show'])->name('admin.parentescos.show');
+        Route::post('/', [ParentescoController::class, 'store'])->name('admin.parentescos.store');
+        Route::get('/{parentesco}/edit', [ParentescoController::class, 'edit'])->name('admin.parentescos.edit');
+        Route::put('/{parentesco}', [ParentescoController::class, 'update'])->name('admin.parentescos.update');
+        Route::delete('/{parentesco}', [ParentescoController::class, 'destroy'])->name('admin.parentescos.destroy');
+    });
 
     Route::resource('tasas', TasaController::class)->names('admin.tasas');
 
