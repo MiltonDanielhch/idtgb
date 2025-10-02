@@ -81,6 +81,15 @@
                                 // $role = TCG\Voyager\Models\Role::whereRaw($rol_id!=1? 'id != 1':1)
                                 //         ->get();
                                 $role = TCG\Voyager\Models\Role::whereRaw($rol_id != 1 ? 'id != 1' : 1)->get();
+                                // $role = TCG\Voyager\Models\Role::where(function ($q) use ($rol_id) {
+                                //     // si NO soy admin, solo mostrar roles != 1
+                                //     if ($rol_id != 1) {
+                                //         $q->where('id', '!=', 1);
+                                //     }
+                                // })
+                                // // pero SIEMPRE permitir ver el rol que YA tengo (para no ocultarlo)
+                                // ->orWhere('id', $dataTypeContent->role_id ?? 0)
+                                // ->get();
                             @endphp
                             @can('editRoles', $dataTypeContent)
 

@@ -59,7 +59,7 @@
                             <ul class="permissions checkbox">
                                 <?php
                                     $role_permissions = (isset($dataTypeContent)) ? $dataTypeContent->permissions->pluck('key')->toArray() : [];
-                                    $rol_id = Auth::user()->role->id; 
+                                    $rol_id = Auth::user()->role->id;
                                 ?>
                                 @foreach(Voyager::model('Permission')->whereRaw($rol_id!=1? 'table_name != "menus"':1)->whereRaw($rol_id!=1? 'table_name != "permissions"':1)->get()->groupBy('table_name') as $table => $permission)
                                     <li>

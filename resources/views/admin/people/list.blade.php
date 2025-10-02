@@ -1,4 +1,4 @@
-{{-- <div class="table-responsive">
+<div class="table-responsive">
     <table id="dataTable" class="table table-bordered table-hover">
         <thead>
             <tr>
@@ -19,9 +19,12 @@
                     $fullName = $item->person_type === 'Jurídica'
                         ? $item->legal_name
                         : trim($item->first_name.' '.$item->middle_name.' '.$item->paternal_surname.' '.$item->maternal_surname);
-                    $doc = $item->person_type === 'Jurídica'
-                        ? $item->nit
-                        : $item->ci.($item->ci_complemento ? ' '.$item->ci_complemento : '');
+                        if ($item->person_type === 'Jurídica') {
+                            $doc = $item->nit ?: 'Sin NIT';
+                        } else {
+                            $doc = $item->ci ?: 'Sin CI';
+                            if ($item->ci_complemento) $doc .= ' '.$item->ci_complemento;
+                        }
                     $age = $item->birth_date ? \Carbon\Carbon::parse($item->birth_date)->age : '-';
                 @endphp
                 <tr>
@@ -45,20 +48,20 @@
                         </span>
                     </td>
                     <td class="text-right" style="width: 18%">
-                        @can('read_people')
+                        @can('view', $item)
                             <a href="{{ route('admin.people.show', $item) }}" title="Ver" class="btn btn-sm btn-warning">
                                 <i class="voyager-eye"></i> Ver
                             </a>
                         @endcan
-                        @can('edit_people')
+                        @can('update', $item)
                             <a href="{{ route('admin.people.edit', $item) }}" title="Editar" class="btn btn-sm btn-primary">
                                 <i class="voyager-edit"></i> Editar
                             </a>
                         @endcan
-                        @can('delete_people')
+                        @can('delete', $item)
                             <form action="{{ route('admin.people.destroy', $item) }}" method="POST"
-                                  style="display: inline-block;"
-                                  onsubmit="return confirm('¿Borrar este registro?')">
+                                style="display: inline-block;"
+                                onsubmit="return confirm('¿Borrar este registro?')">
                                 @csrf @method('DELETE')
                                 <button type="submit" class="btn btn-sm btn-danger" title="Borrar">
                                     <i class="voyager-trash"></i> Borrar
@@ -93,4 +96,4 @@
             {{ $data->appends(request()->only(['search','paginate']))->links() }}
         </nav>
     </div>
-</div> --}}
+</div>

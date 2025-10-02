@@ -2,29 +2,27 @@
 
 namespace App\Providers;
 
-// use Illuminate\Support\Facades\Gate;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
+use App\Models\Person;
+use App\Models\Parentesco;
+use App\Policies\PersonPolicy;
+use App\Policies\ParentescoPolicy;
+use Illuminate\Support\Facades\Log;
 
 class AuthServiceProvider extends ServiceProvider
 {
-    /**
-     * The model to policy mappings for the application.
-     *
-     * @var array<class-string, class-string>
-     */
     protected $policies = [
-        // 'App\Models\Model' => 'App\Policies\ModelPolicy',
+        Person::class => PersonPolicy::class,
+        Parentesco::class => ParentescoPolicy::class,
     ];
 
-    /**
-     * Register any authentication / authorization services.
-     *
-     * @return void
-     */
     public function boot()
     {
+        Log::info('=== AUTH SERVICE PROVIDER BOOT ===');
+        Log::info('Registered policies: ', array_keys($this->policies));
+
         $this->registerPolicies();
 
-        //
+        Log::info('Policies registered successfully');
     }
 }

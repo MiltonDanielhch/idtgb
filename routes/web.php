@@ -48,19 +48,21 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
     // Rutas de Voyager (no tocar)
     Voyager::routes();
 
-    // ──────────────── PERSONAS ────────────────
-    Route::prefix('people')->group(function () {
-        Route::get('/', [PersonController::class, 'index'])->name('voyager.people.index');
-        Route::get('/ajax/list', [PersonController::class, 'list'])->name('voyager.people.ajax.list');
-        Route::post('/', [PersonController::class, 'store'])->name('voyager.people.store');
-        Route::put('/{id}', [PersonController::class, 'update'])->name('voyager.people.update');
+ Route::prefix('people')->group(function () {
+        Route::get('/', [PersonController::class, 'index'])->name('admin.people.index');
+        Route::get('/ajax/list', [PersonController::class, 'list'])->name('admin.people.ajax.list');
+        Route::get('/create', [PersonController::class, 'create'])->name('admin.people.create');
+        Route::post('/', [PersonController::class, 'store'])->name('admin.people.store');
+        Route::get('/{person}/edit', [PersonController::class, 'edit'])->name('admin.people.edit');
+        Route::put('/{person}', [PersonController::class, 'update'])->name('admin.people.update');
+        Route::delete('/{person}', [PersonController::class, 'destroy'])->name('admin.people.destroy');
+        Route::get('/{person}', [PersonController::class, 'show'])->name('admin.people.show');
     });
 
     // ──────────────── PARENTESCO ────────────────
     Route::prefix('parentescos')->group(function () {
         Route::get('/', [ParentescoController::class, 'index'])->name('admin.parentescos.index');
         Route::get('/create', [ParentescoController::class, 'create'])->name('admin.parentescos.create');
-        Route::get('/list', [ParentescoController::class, 'listView'])->name('admin.parentescos.list');
         Route::get('/ajax/list', [ParentescoController::class, 'list'])->name('admin.parentescos.ajax.list');
         Route::get('/{parentesco}', [ParentescoController::class, 'show'])->name('admin.parentescos.show');
         Route::post('/', [ParentescoController::class, 'store'])->name('admin.parentescos.store');
@@ -151,4 +153,5 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
             'alert-type' => 'success'
         ]);
     })->name('clear.cache');
+
 });

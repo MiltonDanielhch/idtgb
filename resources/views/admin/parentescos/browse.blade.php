@@ -4,6 +4,15 @@
 
 @section('page_header')
     <div class="container-fluid">
+        @include('voyager::alerts')
+
+        {{-- Mostrar mensajes de éxito/error --}}
+        @if(session('message'))
+            <div class="alert alert-{{ session('alert-type', 'info') }} alert-dismissible auto-dismiss">
+                <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+                {{ session('message') }}
+            </div>
+        @endif
         <div class="row">
             <div class="col-md-12">
                 <div class="panel panel-bordered" style="margin-bottom: 0;">
@@ -14,9 +23,12 @@
                             </h1>
                         </div>
                         <div class="col-md-4 text-right" style="margin-top: 30px;">
-                            <a href="{{ route('admin.parentescos.create') }}" class="btn btn-success">
-                                <i class="voyager-plus"></i> <span>Crear</span>
-                            </a>
+                               <!-- Botón crear -->
+                                @can('create', App\Models\Parentesco::class)
+                                    <a href="{{ route('admin.parentescos.create') }}" class="btn btn-success">
+                                        <i class="voyager-plus"></i> Nuevo Parentesco
+                                    </a>
+                                @endcan
                         </div>
                     </div>
                 </div>
@@ -88,42 +100,101 @@
     .badge-primary{background-color:#007bff}
     .badge-warning{background-color:#ffc107;color:#212529}
     .badge-danger{background-color:#dc3545}
+
+    /* Animación suave para el loading */
+    .loading-icon {
+        animation: spin 1.5s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
 </style>
 @stop
 
 @push('javascript')
 <script>
     let countPage = 10;
+
     $(document).ready(function () {
+        // ========== AUTO-DISMISS ALERTS ==========
+        // Auto-dismiss alerts after 5 seconds
+        setTimeout(function() {
+            $('.auto-dismiss').fadeOut('slow', function() {
+                $(this).remove();
+            });
+        }, 5000);
+
+        // También permitir cerrar manualmente
+        $('.auto-dismiss .close').click(function(e) {
+            e.preventDefault();
+            $(this).closest('.alert').fadeOut('slow', function() {
+                $(this).remove();
+            });
+        });
+
+        // ========== INITIAL LOAD ==========
         list();
 
+        // ========== SEARCH EVENTS ==========
         $('#input-search').on('keyup', function (e) {
-            if (e.keyCode === 13) list();
+            if (e.keyCode === 13) {
+                list(1); // Reset to page 1 when searching
+            }
         });
+
+        // Search on input change with debounce (opcional)
+        let searchTimeout;
+        $('#input-search').on('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(function() {
+                list(1);
+            }, 500);
+        });
+
+        // ========== PAGINATION SELECT ==========
         $('#select-paginate').change(function () {
             countPage = $(this).val();
-            list();
+            list(1); // Reset to page 1 when changing items per page
         });
     });
 
+    function deleteItem(url, nombre) {
+        $('#delete_form').attr('action', url);
+        $('.modal-title').html('<i class="voyager-trash"></i> ¿Eliminar el parentesco "<strong>' + nombre + '</strong>"?');
+    }
+
+    // Función mejorada para manejar errores de AJAX
     function list(page = 1) {
         let url = '{{ url("admin/parentescos/ajax/list") }}';
-        let search = $('#input-search').val() ? $('#input-search').val() : '';
+        let search = $('#input-search').val() ? $('#input-search').val().trim() : '';
+
+        // Mostrar loading
+        $('#div-results').html(`
+            <div class="text-center" style="padding: 40px">
+                <i class="voyager-refresh voyager-2x loading-icon"></i>
+                <br>Cargando...
+            </div>
+        `);
+
         $.ajax({
-            url: `${url}?search=${search}&paginate=${countPage}&page=${page}`,
+            url: `${url}?search=${encodeURIComponent(search)}&paginate=${countPage}&page=${page}`,
             type: 'get',
             success: function (response) {
                 $('#div-results').html(response);
             },
             error: function (xhr) {
-                console.error(xhr.responseText);
-                $('#div-results').html('<div class="alert alert-danger">Error al cargar los datos</div>');
+                console.error('Error:', xhr.responseText);
+                $('#div-results').html(`
+                    <div class="alert alert-danger text-center">
+                        <i class="voyager-warning"></i><br>
+                        Error al cargar los datos.<br>
+                        <button onclick="list(${page})" class="btn btn-xs btn-default mt-2">Reintentar</button>
+                    </div>
+                `);
             }
         });
-    }
-
-    function deleteItem(url) {
-        $('#delete_form').attr('action', url);
     }
 </script>
 @endpush

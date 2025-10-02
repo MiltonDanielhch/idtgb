@@ -15,10 +15,10 @@ class PermissionsTableSeeder extends Seeder
      */
     public function run()
     {
-        
+
 
         \DB::table('permissions')->delete();
-        
+
         Permission::firstOrCreate([
             'key'        => 'browse_admin',
             'keyDescription'=>'vista de acceso al sistema',
@@ -54,7 +54,7 @@ class PermissionsTableSeeder extends Seeder
         Permission::generateFor('categories');
         Permission::generateFor('pages');
 
-        
+
 
         // Administracion
         $permissions = [
@@ -74,11 +74,23 @@ class PermissionsTableSeeder extends Seeder
             ]);
         }
 
-     
 
+        // Parentescos
+        $permissionsParentesco = [
+            'browse_parentescos' => 'Ver lista de parentescos',
+            'read_parentescos' => 'Ver detalles de un parentesco',
+            'edit_parentescos' => 'Editar información de parentescos',
+            'add_parentescos' => 'Agregar nuevos parentescos',
+            'delete_parentescos' => 'Eliminar parentescos',
+        ];
 
-
-        
-        
+        foreach ($permissionsParentesco as $key => $description) {
+            Permission::firstOrCreate([
+                'key'        => $key,
+                'keyDescription'=> $description,
+                'table_name' => 'parentescos',
+                'tableDescription'=>'Parentescos'
+            ]);
+        }
     }
 }

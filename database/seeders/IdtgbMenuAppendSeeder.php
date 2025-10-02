@@ -11,6 +11,13 @@ class IdtgbMenuAppendSeeder extends Seeder
     /** Ítems IDTGB que se añaden (sin borrar lo existente) */
     protected $tree = [
     [
+        'title'      => 'Personas',
+        'order'      => 2,          // cambialo si querés otro orden
+        'icon_class' => 'voyager-person', // ícono de Voyager
+        'route'      => 'admin.people.index',
+        'url'        => '',          // dejá vacío si usás route
+    ],
+    [
         'title'      => 'Catálogos IDTGB',
         'order'      => 20,
         'icon_class' => 'fa-solid fa-folder-tree',
@@ -21,8 +28,8 @@ class IdtgbMenuAppendSeeder extends Seeder
             // ['title' => 'Provincias',            'route' => 'admin.provincias.index',          'icon_class' => 'fa-solid fa-map-pin',              'order' => 2],
             // ['title' => 'Municipios',            'route' => 'admin.municipios.index',          'icon_class' => 'fa-solid fa-city',                 'order' => 3],
             ['title' => 'Parentescos',           'route' => 'admin.parentescos.index',         'icon_class' => 'fa-solid fa-people-group',         'order' => 4],
-            ['title' => 'Tipos de Transmisión',  'route' => 'admin.tipos-transmision.index',   'icon_class' => 'fa-solid fa-arrow-right-arrow-left','order'=>5],
-            ['title' => 'Tipos de Inmueble',     'route' => 'admin.tipos-inmueble.index',      'icon_class' => 'fa-solid fa-house-chimney',        'order' => 6],
+            // ['title' => 'Tipos de Transmisión',  'route' => 'admin.tipos-transmision.index',   'icon_class' => 'fa-solid fa-arrow-right-arrow-left','order'=>5],
+            // ['title' => 'Tipos de Inmueble',     'route' => 'admin.tipos-inmueble.index',      'icon_class' => 'fa-solid fa-house-chimney',        'order' => 6],
             ['title' => 'Tasas',                 'route' => 'admin.tasas.index',               'icon_class' => 'fa-solid fa-percent',              'order' => 7],
             ['title' => 'Exenciones',            'route' => 'admin.exenciones.index',          'icon_class' => 'fa-solid fa-gift',                 'order' => 8],
         ],

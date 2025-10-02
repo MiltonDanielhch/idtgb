@@ -7,7 +7,7 @@
     <div class="panel panel-bordered panel-primary">
         <div class="panel-heading">
             <h3 class="panel-title">
-                <i class="voyager-eye"></i> Ver Parentesco
+                <i class="voyager-eye"></i> Ver Parentesco: {{ $parentesco->nombre }}
             </h3>
         </div>
 
@@ -39,10 +39,13 @@
         </div>
 
         <div class="panel-footer text-right">
+            {{-- Botón para volver al listado --}}
             <a href="{{ route('admin.parentescos.index') }}" class="btn btn-default">
                 <i class="voyager-angle-left"></i> Volver
             </a>
-            @can('edit_parentescos')
+
+            {{-- Botón de edición con control de permisos usando la Policy --}}
+            @can('update', $parentesco)
                 <a href="{{ route('admin.parentescos.edit', $parentesco) }}" class="btn btn-primary">
                     <i class="voyager-edit"></i> Editar
                 </a>

@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Person;
-use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class PersonController extends Controller
 {
@@ -14,20 +14,28 @@ class PersonController extends Controller
         $this->middleware('auth');
     }
 
+    /* ----------  LISTADO (AJAX)  ---------- */
     public function index()
     {
-        $this->custom_authorize('browse_people');
-
-        return view('administrations.people.browse');
+        $this->authorize('viewAny', Person::class); // ✅ POLICY
+        return view('admin.people.browse');
     }
 
-   public function list()
+    /* ----------  LECTURA  ---------- */
+    public function show(Person $person)
     {
-        // Parámetros de entrada
+        $this->authorize('view', $person); // ✅ POLICY
+        return view('admin.people.read', compact('person'));
+    }
+
+    public function list()
+    {
+        $this->authorize('viewAny', Person::class); // ✅ POLICY
+
         $search   = request('search');
         $paginate = request('paginate', 10);
 
-        // Sub-consulta para el nombre completo
+        // nombre completo para búsqueda
         $fullNameRaw = "TRIM(CONCAT(
             COALESCE(first_name, ''), ' ',
             COALESCE(middle_name, ''), ' ',
@@ -35,26 +43,24 @@ class PersonController extends Controller
             COALESCE(maternal_surname, '')
         ))";
 
-        // Consulta principal
         $data = Person::query()
             ->select('*')
             ->selectRaw("$fullNameRaw as full_name")
             ->when($search, function ($q) use ($search, $fullNameRaw) {
-                // Búsqueda numérica exacta (id o ci)
                 if (is_numeric($search)) {
                     $q->where(function ($sub) use ($search) {
                         $sub->where('id', $search)
-                            ->orWhere('ci', 'like', "%{$search}%");
+                            ->orWhere('ci', 'like', "%{$search}%")
+                            ->orWhere('nit', 'like', "%{$search}%");
                     });
                 }
-
-                // Búsqueda textual parcial
                 $q->orWhere(function ($sub) use ($search, $fullNameRaw) {
                     $sub->where('phone', 'like', "%{$search}%")
                         ->orWhere('first_name', 'like', "%{$search}%")
                         ->orWhere('middle_name', 'like', "%{$search}%")
                         ->orWhere('paternal_surname', 'like', "%{$search}%")
                         ->orWhere('maternal_surname', 'like', "%{$search}%")
+                        ->orWhere('legal_name', 'like', "%{$search}%")
                         ->orWhereRaw("{$fullNameRaw} like ?", ["%{$search}%"]);
                 });
             })
@@ -62,77 +68,119 @@ class PersonController extends Controller
             ->orderByDesc('id')
             ->paginate($paginate);
 
-        return view('administrations.people.list', compact('data'));
+        return view('admin.people.list', compact('data'));
+    }
+
+    /* ----------  ALTA  ---------- */
+    public function create()
+    {
+        $this->authorize('create', Person::class); // ✅ POLICY
+        return view('admin.people.edit-add', ['person' => new Person()]);
     }
 
     public function store(Request $request)
     {
-        $this->custom_authorize('add_people');
-        $request->validate([
-            'image' => 'image|mimes:jpeg,jpg,png,bmp,webp'
-        ]);
-        DB::beginTransaction();
-        try {
-            // Si envian las imágenes
-            $storageController = new StorageController();
-            Person::create([
-                'ci' => $request->ci,
-                'birth_date' => $request->birth_date,
-                'gender' => $request->gender,
-                'first_name' => $request->first_name,
-                'middle_name' => $request->middle_name,
-                'paternal_surname' => $request->paternal_surname,
-                'maternal_surname' => $request->maternal_surname,
-                'email' => $request->email,
-                'phone' => $request->phone,
-                'address' => $request->address,
-                'image' => $storageController->store_image($request->image, 'people'),
-            ]);
+        $this->authorize('create', Person::class); // ✅ POLICY
 
-            DB::commit();
-            return redirect()->route('voyager.people.index')->with(['message' => 'Registrado exitosamente', 'alert-type' => 'success']);
-        } catch (\Throwable $th) {
-            DB::rollback();
-            return redirect()->route('voyager.people.index')->with(['message' => $th->getMessage(), 'alert-type' => 'error']);
+        \Log::info('INPUT RECIBIDO', $request->all());
+
+        try {
+            // Validación
+            $request->validate($this->rules());
+
+            // Datos
+            $data = $request->except('image');
+            $data['image'] = $request->hasFile('image') ? $this->storeImage($request->file('image')) : null;
+
+            \Log::info('DATOS A INSERTAR', $data);
+
+            // Crear
+            $person = Person::create($data);
+
+            \Log::info('PERSONA CREADA', ['id' => $person->id]);
+
+            return redirect()->route('admin.people.index')
+                ->with(['message' => 'Persona creada.', 'alert-type' => 'success']);
+
+        } catch (\Throwable $e) {
+            \Log::error('ERROR EN STORE', ['msg' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return back()->withInput()->with(['message' => $e->getMessage(), 'alert-type' => 'error']);
         }
     }
 
+    /* ----------  EDICIÓN  ---------- */
+    public function edit(Person $person)
+    {
+        $this->authorize('update', $person); // ✅ POLICY
+        return view('admin.people.edit-add', compact('person'));
+    }
 
-    public function update(Request $request, $id){
-        $this->custom_authorize('edit_people');
-        $request->validate([
-            'image' => 'image|mimes:jpeg,jpg,png,bmp,webp'
-        ]);
+    public function update(Request $request, Person $person)
+    {
+        $this->authorize('update', $person); // ✅ POLICY
+
+        $request->validate($this->rules($person->id));
 
         DB::beginTransaction();
         try {
-            $storageController = new StorageController();
-
-            $person = Person::find($id);
-            $person->ci = $request->ci;
-            $person->birth_date = $request->birth_date;
-            $person->gender = $request->gender;
-            $person->first_name = $request->first_name;
-            $person->middle_name = $request->middle_name;
-            $person->paternal_surname = $request->paternal_surname;
-            $person->maternal_surname = $request->maternal_surname;
-            $person->email = $request->email;
-            $person->phone = $request->phone;
-            $person->address = $request->address;
-            $person->status = $request->status=='on' ? 1 : 0;
-
-            if ($request->image) {
-                $person->image = $storageController->store_image($request->image, 'people');
+            $data = $request->except('image');
+            if ($request->hasFile('image')) {
+                $data['image'] = $this->storeImage($request->file('image'), $person->image);
             }
-
-
-            $person->save();
-
+            $person->update($data);
             DB::commit();
-            return redirect()->route('voyager.people.index')->with(['message' => 'Actualizada exitosamente', 'alert-type' => 'success']);
-        } catch (\Throwable $th) {
-            DB::rollback();
-            return redirect()->route('voyager.people.index')->with(['message' => $th->getMessage(), 'alert-type' => 'error']);
+
+            return redirect()->route('admin.people.index')
+                ->with(['message' => 'Persona actualizada.', 'alert-type' => 'success']);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return back()->withInput()->with(['message' => $e->getMessage(), 'alert-type' => 'error']);
         }
+    }
+
+    /* ----------  ELIMINAR  ---------- */
+    public function destroy(Person $person)
+    {
+        $this->authorize('delete', $person); // ✅ POLICY
+        $person->delete();
+        return redirect()->route('admin.people.index')
+            ->with(['message' => 'Persona eliminada.', 'alert-type' => 'success']);
+    }
+
+    /* ----------  REGLAS DE VALIDACIÓN  ---------- */
+    private function rules($id = null)
+    {
+        $uniqueCi   = $id ? "unique:people,ci,$id"          : 'unique:people';
+        $uniqueNit  = $id ? "unique:people,nit,$id"         : 'unique:people';
+
+        return [
+            'person_type'         => 'required|in:Natural,Jurídica',
+            'tipo_doc'            => 'required|in:CI,NIT,PASS',
+            'ci'                  => 'nullable|max:20|'.$uniqueCi,
+            'ci_complemento'      => 'nullable|max:5',
+            'nit'                 => 'nullable|max:20|'.$uniqueNit,
+            'legal_name'          => 'nullable|max:100',
+            'first_name'          => 'nullable|max:50',
+            'middle_name'         => 'nullable|max:50',
+            'paternal_surname'    => 'nullable|max:50',
+            'maternal_surname'    => 'nullable|max:50',
+            'birth_date'          => 'nullable|date',
+            'email'               => 'nullable|email|max:100',
+            'phone'               => 'nullable|max:50',
+            'address'             => 'nullable|max:255',
+            'gender'              => 'nullable|in:Masculino,Femenino',
+            'image'               => 'nullable|image|max:2048',
+            'status'              => 'nullable|in:0,1,2',
+            'estado_persona'      => 'nullable|in:Activo,Inactivo,Fallecido',
+        ];
+    }
+
+    /* ----------  GUARDAR IMAGEN  ---------- */
+    private function storeImage($file, $old = null)
+    {
+        if ($old) {
+            Storage::disk('public')->delete($old);
+        }
+        return $file ? $file->store('people', 'public') : null;
     }
 }

@@ -14,17 +14,17 @@ class UsersTableSeeder extends Seeder
      */
     public function run()
     {
-        
+
 
         \DB::table('users')->delete();
-        
+
         \DB::table('users')->insert(array (
-            0 => 
+            0 =>
             array (
                 'id' => 1,
                 'role_id' => 1,
                 'name' => 'Admin',
-                'email' => 'admin@soluciondigital.dev',
+                'email' => 'milton@admin.com',
                 'avatar' => 'users/default.png',
                 'email_verified_at' => NULL,
                 'password' => '$2y$10$ILLZfhsbwinK3235ceVa7O0mj3M5fr33wb3z28aDqiBWLwBfSUzYy',
@@ -33,7 +33,7 @@ class UsersTableSeeder extends Seeder
                 'created_at' => '2024-10-18 14:28:45',
                 'updated_at' => '2024-10-18 14:33:30',
             ),
-            1 => 
+            1 =>
             array (
                 'id' => 2,
                 'role_id' => 2,
@@ -48,7 +48,7 @@ class UsersTableSeeder extends Seeder
                 'updated_at' => '2024-10-18 14:33:30',
             ),
         ));
-        
-        
+
+
     }
 }

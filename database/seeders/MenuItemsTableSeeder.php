@@ -14,12 +14,12 @@ class MenuItemsTableSeeder extends Seeder
      */
     public function run()
     {
-        
+
 
         \DB::table('menu_items')->delete();
-        
+
         \DB::table('menu_items')->insert(array (
-            0 => 
+            0 =>
             array (
                 'id' => 1,
                 'menu_id' => 1,
@@ -35,7 +35,7 @@ class MenuItemsTableSeeder extends Seeder
                 'route' => 'voyager.dashboard',
                 'parameters' => 'null',
             ),
-            1 => 
+            1 =>
             array (
                 'id' => 2,
                 'menu_id' => 1,
@@ -51,7 +51,7 @@ class MenuItemsTableSeeder extends Seeder
                 'route' => 'voyager.media.index',
                 'parameters' => NULL,
             ),
-            2 => 
+            2 =>
             array (
                 'id' => 3,
                 'menu_id' => 1,
@@ -67,7 +67,7 @@ class MenuItemsTableSeeder extends Seeder
                 'route' => 'voyager.users.index',
                 'parameters' => 'null',
             ),
-            3 => 
+            3 =>
             array (
                 'id' => 4,
                 'menu_id' => 1,
@@ -83,7 +83,7 @@ class MenuItemsTableSeeder extends Seeder
                 'route' => 'voyager.roles.index',
                 'parameters' => NULL,
             ),
-            4 => 
+            4 =>
             array (
                 'id' => 5,
                 'menu_id' => 1,
@@ -99,7 +99,7 @@ class MenuItemsTableSeeder extends Seeder
                 'route' => NULL,
                 'parameters' => '',
             ),
-            5 => 
+            5 =>
             array (
                 'id' => 6,
                 'menu_id' => 1,
@@ -115,7 +115,7 @@ class MenuItemsTableSeeder extends Seeder
                 'route' => 'voyager.menus.index',
                 'parameters' => NULL,
             ),
-            6 => 
+            6 =>
             array (
                 'id' => 7,
                 'menu_id' => 1,
@@ -131,7 +131,7 @@ class MenuItemsTableSeeder extends Seeder
                 'route' => 'voyager.database.index',
                 'parameters' => NULL,
             ),
-            7 => 
+            7 =>
             array (
                 'id' => 8,
                 'menu_id' => 1,
@@ -147,7 +147,7 @@ class MenuItemsTableSeeder extends Seeder
                 'route' => 'voyager.compass.index',
                 'parameters' => NULL,
             ),
-            8 => 
+            8 =>
             array (
                 'id' => 9,
                 'menu_id' => 1,
@@ -163,7 +163,7 @@ class MenuItemsTableSeeder extends Seeder
                 'route' => 'voyager.bread.index',
                 'parameters' => NULL,
             ),
-            9 => 
+            9 =>
             array (
                 'id' => 10,
                 'menu_id' => 1,
@@ -179,7 +179,7 @@ class MenuItemsTableSeeder extends Seeder
                 'route' => 'voyager.settings.index',
                 'parameters' => 'null',
             ),
-            10 => 
+            10 =>
             array (
                 'id' => 11,
                 'menu_id' => 1,
@@ -195,7 +195,7 @@ class MenuItemsTableSeeder extends Seeder
                 'route' => 'voyager.categories.index',
                 'parameters' => NULL,
             ),
-            11 => 
+            11 =>
             array (
                 'id' => 12,
                 'menu_id' => 1,
@@ -211,7 +211,7 @@ class MenuItemsTableSeeder extends Seeder
                 'route' => 'voyager.posts.index',
                 'parameters' => NULL,
             ),
-            12 => 
+            12 =>
             array (
                 'id' => 13,
                 'menu_id' => 1,
@@ -227,7 +227,7 @@ class MenuItemsTableSeeder extends Seeder
                 'route' => 'voyager.pages.index',
                 'parameters' => NULL,
             ),
-            13 => 
+            13 =>
             array (
                 'id' => 14,
                 'menu_id' => 1,
@@ -243,7 +243,7 @@ class MenuItemsTableSeeder extends Seeder
                 'route' => NULL,
                 'parameters' => '',
             ),
-            14 => 
+            14 =>
             array (
                 'id' => 15,
                 'menu_id' => 1,
@@ -259,40 +259,40 @@ class MenuItemsTableSeeder extends Seeder
                 'route' => 'clear.cache',
                 'parameters' => NULL,
             ),
-            15 => 
-            array (
-                'id' => 16,
-                'menu_id' => 1,
-                'title' => 'Administración',
-                'url' => '',
-                'target' => '_self',
-                'icon_class' => 'fa-regular fa-folder-open',
-                'color' => '#000000',
-                'parent_id' => NULL,
-                'order' => 5,
-                'created_at' => '2025-02-10 15:42:49',
-                'updated_at' => '2025-02-10 15:42:59',
-                'route' => NULL,
-                'parameters' => '',
-            ),
-            16 => 
-            array (
-                'id' => 18,
-                'menu_id' => 1,
-                'title' => 'Personas',
-                'url' => '',
-                'target' => '_self',
-                'icon_class' => 'fa-solid fa-person',
-                'color' => NULL,
-                'parent_id' => 16,
-                'order' => 1,
-                'created_at' => '2025-04-07 09:43:00',
-                'updated_at' => '2025-04-07 09:44:30',
-                'route' => 'voyager.people.index',
-                'parameters' => NULL,
-            ),
+            // 15 =>
+            // array (
+            //     'id' => 16,
+            //     'menu_id' => 1,
+            //     'title' => 'Administración',
+            //     'url' => '',
+            //     'target' => '_self',
+            //     'icon_class' => 'fa-regular fa-folder-open',
+            //     'color' => '#000000',
+            //     'parent_id' => NULL,
+            //     'order' => 5,
+            //     'created_at' => '2025-02-10 15:42:49',
+            //     'updated_at' => '2025-02-10 15:42:59',
+            //     'route' => NULL,
+            //     'parameters' => '',
+            // ),
+            // 16 =>
+            // array (
+            //     'id' => 18,
+            //     'menu_id' => 1,
+            //     'title' => 'Personas',
+            //     'url' => '',
+            //     'target' => '_self',
+            //     'icon_class' => 'fa-solid fa-person',
+            //     'color' => NULL,
+            //     'parent_id' => 16,
+            //     'order' => 1,
+            //     'created_at' => '2025-04-07 09:43:00',
+            //     'updated_at' => '2025-04-07 09:44:30',
+            //     'route' => 'voyager.people.index',
+            //     'parameters' => NULL,
+            // ),
         ));
-        
-        
+
+
     }
 }

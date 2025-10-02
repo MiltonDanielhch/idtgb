@@ -4,14 +4,6 @@
 
 @section('content')
 <div class="page-content container-fluid">
-    {{-- Mostrar mensajes de éxito/error --}}
-    @if(session('message'))
-        <div class="alert alert-{{ session('alert-type', 'info') }} alert-dismissible auto-dismiss">
-            <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-            {{ session('message') }}
-        </div>
-    @endif
-
     <form action="{{ ($parentesco->exists ?? false)
             ? route('admin.parentescos.update', $parentesco)
             : route('admin.parentescos.store') }}"
@@ -29,9 +21,7 @@
 
             <div class="panel-body">
                 @if($errors->any())
-                    <div class="alert alert-danger alert-dismissible auto-dismiss">
-                        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                        <strong>Por favor corrige los siguientes errores:</strong>
+                    <div class="alert alert-danger">
                         <ul class="mb-0">
                             @foreach($errors->all() as $error)
                                 <li>{{ $error }}</li>
@@ -48,7 +38,6 @@
                                    name="nombre"
                                    id="nombre"
                                    class="form-control @error('nombre') is-invalid @enderror"
-                                   placeholder="Ej: Padre, Madre, Hermano, etc."
                                    maxlength="50"
                                    value="{{ old('nombre', optional($parentesco)->nombre) }}"
                                    required
@@ -57,7 +46,7 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                             <small class="form-text text-muted">
-                                Máximo 50 caracteres. El nombre debe ser único en el sistema.
+                                Máximo 50 caracteres. El nombre debe ser único.
                             </small>
                         </div>
                     </div>
@@ -80,47 +69,28 @@
 @section('javascript')
 <script>
     $(document).ready(function () {
-        // ========== AUTO-DISMISS ALERTS ==========
-        // Auto-dismiss alerts after 5 seconds
-        setTimeout(function() {
-            $('.auto-dismiss').fadeOut('slow', function() {
-                $(this).remove();
-            });
-        }, 5000);
-
-        // También permitir cerrar manualmente
-        $('.auto-dismiss .close').click(function(e) {
-            e.preventDefault();
-            $(this).closest('.alert').fadeOut('slow', function() {
-                $(this).remove();
-            });
-        });
-
-        // ========== FORM VALIDATION ==========
-        // Auto-trim al perder foco
-        $('#nombre').on('blur', function() {
-            $(this).val($(this).val().trim());
-        });
-
-        // Validación básica frontend
-        $('#parentesco-form').on('submit', function() {
+        // Validación frontend básica
+        $('#parentesco-form').on('submit', function(e) {
             const nombre = $('#nombre').val().trim();
-            $('#nombre').val(nombre); // Asegurar que se envía trimmed
 
-            // Validación adicional opcional
             if (!nombre) {
+                e.preventDefault();
                 alert('El nombre del parentesco es obligatorio');
+                $('#nombre').focus();
+                return false;
+            }
+
+            if (nombre.length > 50) {
+                e.preventDefault();
+                alert('El nombre no puede tener más de 50 caracteres');
                 $('#nombre').focus();
                 return false;
             }
         });
 
-        // Prevenir envío con Enter en el input de búsqueda (si lo hubiera)
-        $('#nombre').on('keypress', function(e) {
-            if (e.which === 13) {
-                e.preventDefault();
-                return false;
-            }
+        // Auto-trim al perder foco
+        $('#nombre').on('blur', function() {
+            $(this).val($(this).val().trim());
         });
     });
 </script>

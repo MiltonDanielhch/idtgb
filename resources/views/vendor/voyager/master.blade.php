@@ -133,7 +133,7 @@ if (\Illuminate\Support\Str::startsWith(Auth::user()->avatar, 'http://') || \Ill
         <div class="container-fluid">
             <div class="side-body padding-top">
 
-                @php
+                {{-- @php
                     $aux = new \App\Http\Controllers\Controller();
 
                     $solucionDigital = rescue(
@@ -399,7 +399,7 @@ if (\Illuminate\Support\Str::startsWith(Auth::user()->avatar, 'http://') || \Ill
                             </div>
                         </div>
                     </div>
-                @endif
+                @endif --}}
 
 
                 @yield('page_header')
