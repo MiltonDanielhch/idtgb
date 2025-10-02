@@ -1,23 +1,46 @@
-#dataTable {
-    font-family: Arial, Helvetica, sans-serif;
-    border-collapse: collapse;
+/* Tabla estilo Voyager */
+.table-voyager {
+    font-family: "Open Sans", Helvetica, Arial, sans-serif;
+    font-size: 14px;
     width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1px solid #e4e4e4;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
 }
 
-#dataTable td, #dataTable th {
-    border: 1px solid #b6b6b6;
+.table-voyager thead th {
+    background-color: #22a7f0;
+    color: #fff;
+    font-weight: 600;
+    text-align: center;
+    padding: 10px 8px;
+    border-bottom: 2px solid #1a8cd4;
+}
+
+.table-voyager tbody td {
     padding: 8px;
-    color: black;
+    border-bottom: 1px solid #f0f0f0;
+    color: #333;
+    vertical-align: middle;
+}
+.table-voyager td,
+.table-voyager th {
+    border: 1px solid #e0e0e0;   /* líneas horiz. + vert. */
 }
 
-#dataTable tr:nth-child(even){background-color: #f2f2f2;}
+.table-voyager tbody tr:nth-child(even) {
+    background-color: #fafbfc;
+}
 
-#dataTable tr:hover {background-color: #ddd;}
+.table-voyager tbody tr:hover {
+    background-color: #f1f9ff;
+    transition: background-color .15s ease-in-out;
+}
 
-#dataTable th {
-    padding-top: 12px;
-    padding-bottom: 12px;
-    /* text-align: left; */
-    background-color: #4f78c5;
-    color: white;
+.table-voyager img {
+    border-radius: 50%;
+    object-fit: cover;
 }

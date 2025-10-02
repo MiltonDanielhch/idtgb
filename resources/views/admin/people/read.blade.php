@@ -90,7 +90,7 @@
                             <tr>
                                 <th>Estado</th>
                                 <td>
-                                    <span class="label label-{{ $person->status == 1 ? 'success' : 'warning' }}">
+                                   <span class="badge badge-{{ $person->status == 1 ? 'success' : ($person->status == 2 ? 'warning' : 'danger') }}">
                                         {{ $person->estado_persona }}
                                     </span>
                                 </td>

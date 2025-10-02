@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Person;
 use Illuminate\Http\Request;
+use App\Http\Requests\StorePersonRequest;
+use App\Http\Requests\UpdatePersonRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
@@ -78,36 +80,23 @@ class PersonController extends Controller
         return view('admin.people.edit-add', ['person' => new Person()]);
     }
 
-    public function store(Request $request)
+    public function store(StorePersonRequest $request)
     {
-        $this->authorize('create', Person::class); // ✅ POLICY
-
-        \Log::info('INPUT RECIBIDO', $request->all());
+        $this->authorize('create', Person::class);
 
         try {
-            // Validación
-            $request->validate($this->rules());
-
-            // Datos
             $data = $request->except('image');
             $data['image'] = $request->hasFile('image') ? $this->storeImage($request->file('image')) : null;
 
-            \Log::info('DATOS A INSERTAR', $data);
-
-            // Crear
-            $person = Person::create($data);
-
-            \Log::info('PERSONA CREADA', ['id' => $person->id]);
+            Person::create($data);
 
             return redirect()->route('admin.people.index')
                 ->with(['message' => 'Persona creada.', 'alert-type' => 'success']);
 
         } catch (\Throwable $e) {
-            \Log::error('ERROR EN STORE', ['msg' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return back()->withInput()->with(['message' => $e->getMessage(), 'alert-type' => 'error']);
         }
     }
-
     /* ----------  EDICIÓN  ---------- */
     public function edit(Person $person)
     {
@@ -115,11 +104,9 @@ class PersonController extends Controller
         return view('admin.people.edit-add', compact('person'));
     }
 
-    public function update(Request $request, Person $person)
+    public function update(UpdatePersonRequest $request, Person $person)
     {
-        $this->authorize('update', $person); // ✅ POLICY
-
-        $request->validate($this->rules($person->id));
+        $this->authorize('update', $person);
 
         DB::beginTransaction();
         try {
@@ -145,34 +132,6 @@ class PersonController extends Controller
         $person->delete();
         return redirect()->route('admin.people.index')
             ->with(['message' => 'Persona eliminada.', 'alert-type' => 'success']);
-    }
-
-    /* ----------  REGLAS DE VALIDACIÓN  ---------- */
-    private function rules($id = null)
-    {
-        $uniqueCi   = $id ? "unique:people,ci,$id"          : 'unique:people';
-        $uniqueNit  = $id ? "unique:people,nit,$id"         : 'unique:people';
-
-        return [
-            'person_type'         => 'required|in:Natural,Jurídica',
-            'tipo_doc'            => 'required|in:CI,NIT,PASS',
-            'ci'                  => 'nullable|max:20|'.$uniqueCi,
-            'ci_complemento'      => 'nullable|max:5',
-            'nit'                 => 'nullable|max:20|'.$uniqueNit,
-            'legal_name'          => 'nullable|max:100',
-            'first_name'          => 'nullable|max:50',
-            'middle_name'         => 'nullable|max:50',
-            'paternal_surname'    => 'nullable|max:50',
-            'maternal_surname'    => 'nullable|max:50',
-            'birth_date'          => 'nullable|date',
-            'email'               => 'nullable|email|max:100',
-            'phone'               => 'nullable|max:50',
-            'address'             => 'nullable|max:255',
-            'gender'              => 'nullable|in:Masculino,Femenino',
-            'image'               => 'nullable|image|max:2048',
-            'status'              => 'nullable|in:0,1,2',
-            'estado_persona'      => 'nullable|in:Activo,Inactivo,Fallecido',
-        ];
     }
 
     /* ----------  GUARDAR IMAGEN  ---------- */

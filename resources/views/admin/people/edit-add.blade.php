@@ -62,7 +62,7 @@
                     {{-- Razón social (solo Jurídica) --}}
                     <div class="col-md-8 juridica-field" style="{{ optional($person)->person_type != 'Jurídica' ? 'display:none' : '' }}">
                         <label>Razón social</label>
-                        <input type="text" name="legal_name" class="form-control" value="{{ old('legal_name', optional($person)->legal_name) }}">
+                        <input type="text" name="legal_name" class="form-control" value="{{ old('legal_name', optional($person)->legal_name) }}" required>
                     </div>
 
                     {{-- Nombres y apellidos (solo Natural) --}}
@@ -181,5 +181,8 @@
     }
     $('#person_type').change(toggleFields);
     toggleFields(); // inicial
+    // Limpiar valores de campos ocultos
+    $('.juridica-field:hidden input').val('');
+    $('.natural-field:hidden input').val('');
 </script>
 @endpush

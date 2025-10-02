@@ -1,5 +1,5 @@
 <div class="table-responsive">
-    <table id="dataTable" class="table table-bordered table-hover">
+    <table class="table table-hover table-voyager">
         <thead>
             <tr>
                 <th style="text-align: center">#</th>
@@ -47,7 +47,7 @@
                             {{ $item->estado_persona }}
                         </span>
                     </td>
-                    <td class="text-right" style="width: 18%">
+                    <td class="text-right" style="width: 20%">
                         @can('view', $item)
                             <a href="{{ route('admin.people.show', $item) }}" title="Ver" class="btn btn-sm btn-warning">
                                 <i class="voyager-eye"></i> Ver
