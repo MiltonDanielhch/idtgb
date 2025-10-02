@@ -71,19 +71,50 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
         Route::delete('/{parentesco}', [ParentescoController::class, 'destroy'])->name('admin.parentescos.destroy');
     });
 
-    Route::resource('tasas', TasaController::class)->names('admin.tasas');
+    // Route::resource('tasas', TasaController::class)->names('admin.tasas');
+    Route::prefix('tasas')->group(function () {
+        Route::get('/', [TasaController::class, 'index'])->name('admin.tasas.index');
+        Route::get('/create', [TasaController::class, 'create'])->name('admin.tasas.create');
+        Route::get('/ajax/list', [TasaController::class, 'list'])->name('admin.tasas.ajax.list');
+        Route::get('/{tasa}', [TasaController::class, 'show'])->name('admin.tasas.show');
+        Route::post('/', [TasaController::class, 'store'])->name('admin.tasas.store');
+        Route::get('/{tasa}/edit', [TasaController::class, 'edit'])->name('admin.tasas.edit');
+        Route::put('/{tasa}', [TasaController::class, 'update'])->name('admin.tasas.update');
+        Route::delete('/{tasa}', [TasaController::class, 'destroy'])->name('admin.tasas.destroy');
+    });
 
     Route::resource('exenciones', ExencionController::class)->names('admin.exenciones');
 
 
-    Route::resource('inmuebles', InmuebleController::class)->names('admin.inmuebles');
+    // Route::resource('inmuebles', InmuebleController::class)->names('admin.inmuebles');
+
+    Route::prefix('inmuebles')->group(function () {
+        Route::get('/', [InmuebleController::class, 'index'])->name('admin.inmuebles.index');
+        Route::get('/create', [InmuebleController::class, 'create'])->name('admin.inmuebles.create');
+        Route::get('/ajax/list', [InmuebleController::class, 'list'])->name('admin.inmuebles.ajax.list');
+        Route::get('/{inmueble}', [InmuebleController::class, 'show'])->name('admin.inmuebles.show');
+        Route::post('/', [InmuebleController::class, 'store'])->name('admin.inmuebles.store');
+        Route::get('/{inmueble}/edit', [InmuebleController::class, 'edit'])->name('admin.inmuebles.edit');
+        Route::put('/{inmueble}', [InmuebleController::class, 'update'])->name('admin.inmuebles.update');
+        Route::delete('/{inmueble}', [InmuebleController::class, 'destroy'])->name('admin.inmuebles.destroy');
+    });
 
 
+    // Route::resource('avaluos', AvaluoController::class)->names('admin.avaluos');
 
-    Route::resource('avaluos', AvaluoController::class)->names('admin.avaluos');
+    // Route::get('avaluos/{avaluo}/download', [AvaluoController::class, 'download'])->name('admin.avaluos.download');
 
-    Route::get('avaluos/{avaluo}/download', [AvaluoController::class, 'download'])->name('admin.avaluos.download');
-
+    Route::prefix('avaluos')->group(function () {
+        Route::get('/', [AvaluoController::class, 'index'])->name('admin.avaluos.index');
+        Route::get('/create', [AvaluoController::class, 'create'])->name('admin.avaluos.create');
+        Route::get('/ajax/list', [AvaluoController::class, 'list'])->name('admin.avaluos.ajax.list');
+        Route::get('/{avaluo}', [AvaluoController::class, 'show'])->name('admin.avaluos.show');
+        Route::post('/', [AvaluoController::class, 'store'])->name('admin.avaluos.store');
+        Route::get('/{avaluo}/edit', [AvaluoController::class, 'edit'])->name('admin.avaluos.edit');
+        Route::put('/{avaluo}', [AvaluoController::class, 'update'])->name('admin.avaluos.update');
+        Route::delete('/{avaluo}', [AvaluoController::class, 'destroy'])->name('admin.avaluos.destroy');
+        Route::get('/{avaluo}/download', [AvaluoController::class, 'download'])->name('admin.avaluos.download');
+    });
 
     Route::resource('tramites', TramiteController::class)->names('admin.tramites');
 

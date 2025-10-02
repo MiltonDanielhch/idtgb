@@ -17,7 +17,7 @@
                                 <input type="text" name="complemento" class="form-control" value="{{ old('complemento', $inmueble->complemento) }}" maxlength="3">
                             </div>
                             <div class="col-md-3">
-                                <label>Catástro *</label>
+                                <label>Catástro *</label>   
                                 <input type="text" name="catastro" class="form-control" value="{{ old('catastro', $inmueble->catastro) }}" required maxlength="15">
                             </div>
                             <div class="col-md-3">

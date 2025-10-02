@@ -97,3 +97,7 @@
         </nav>
     </div>
 </div>
+
+<script>
+    bindPageLinks();   // ← se ejecuta después de cargar el HTML via AJAX
+</script>

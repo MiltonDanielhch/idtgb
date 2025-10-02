@@ -62,6 +62,15 @@ class IdtgbMenuAppendSeeder extends Seeder
     //     'route'      => 'admin.pagos.index',
     //     'url'        => '',
     // ],
+
+    // 5. Reportes (cuando lo crees)
+    // [
+    //     'title'      => 'Reportes',
+    //     'order'      => 23,
+    //     'icon_class' => 'fa-solid fa-chart-bar',
+    //     'route'      => 'admin.reportes.index',
+    //     'url'        => '',
+    // ],
 ];
     public function run()
     {

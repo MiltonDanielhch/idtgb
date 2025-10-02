@@ -6,70 +6,92 @@ use App\Models\Tasa;
 use App\Models\Departamento;
 use App\Models\Parentesco;
 use App\Models\TipoTransmision;
-use Illuminate\Http\Request;
+use App\Http\Requests\StoreTasaRequest;
+use App\Http\Requests\UpdateTasaRequest;
+use Illuminate\Support\Facades\DB;
 
 class TasaController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth');
+    }
+
+    /* ----------  LISTADO (AJAX)  ---------- */
     public function index()
     {
-        $tasas = Tasa::with(['departamento', 'parentesco', 'tipoTransmision'])
-                     ->orderBy('vigente_desde', 'desc')
-                     ->paginate(20);
-        return view('admin.tasas.index', compact('tasas'));
+        $this->authorize('viewAny', Tasa::class);
+        return view('admin.tasas.browse');
     }
 
+    public function list()
+    {
+        $this->authorize('viewAny', Tasa::class);
+
+        $search   = request('search');
+        $paginate = request('paginate', 10);
+
+        $data = Tasa::with(['departamento', 'parentesco', 'tipoTransmision'])
+            ->when($search, fn($q) => $q->whereHas('departamento', fn($b) => $b->where('nombre', 'like', "%{$search}%"))
+                ->orWhereHas('parentesco', fn($b) => $b->where('nombre', 'like', "%{$search}%"))
+                ->orWhere('tasa', 'like', "%{$search}%"))
+            ->orderByDesc('vigente_desde')
+            ->paginate($paginate);
+
+        return view('admin.tasas.list', compact('data'));
+    }
+
+    /* ----------  LECTURA  ---------- */
+    public function show(Tasa $tasa)
+    {
+        $this->authorize('view', $tasa);
+        return view('admin.tasas.read', compact('tasa'));
+    }
+
+    /* ----------  ALTA  ---------- */
     public function create()
     {
-        $departamentos = Departamento::orderBy('nombre')->get();
-        $parentescos = Parentesco::orderBy('nombre')->get();
-        $tipos = TipoTransmision::orderBy('nombre')->get();
-        return view('admin.tasas.create', compact('departamentos', 'parentescos', 'tipos'));
+        $this->authorize('create', Tasa::class);
+        return view('admin.tasas.edit-add', [
+            'tasa' => new Tasa(),
+            'departamentos' => Departamento::orderBy('nombre')->get(),
+            'parentescos'   => Parentesco::orderBy('nombre')->get(),
+            'tipos'         => TipoTransmision::orderBy('nombre')->get(),
+        ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreTasaRequest $request)
     {
-        $request->validate([
-            'departamento_id'      => 'required|exists:departamentos,id',
-            'parentesco_id'        => 'required|exists:parentescos,id',
-            'tipo_transmision_id'  => 'nullable|exists:tipos_transmision,id',
-            'tasa'                 => 'required|numeric|min:0|max:99.99',
-            'vigente_desde'        => 'required|date',
-            'vigente_hasta'        => 'nullable|date|after_or_equal:vigente_desde',
-        ]);
-
-        Tasa::create($request->all());
-
+        $this->authorize('create', Tasa::class);
+        Tasa::create($request->validated());
         return redirect()->route('admin.tasas.index')
             ->with(['message' => 'Tasa creada.', 'alert-type' => 'success']);
     }
 
+    /* ----------  EDICIÓN  ---------- */
     public function edit(Tasa $tasa)
     {
-        $departamentos = Departamento::orderBy('nombre')->get();
-        $parentescos = Parentesco::orderBy('nombre')->get();
-        $tipos = TipoTransmision::orderBy('nombre')->get();
-        return view('admin.tasas.edit', compact('tasa', 'departamentos', 'parentescos', 'tipos'));
+        $this->authorize('update', $tasa);
+        return view('admin.tasas.edit-add', [
+            'tasa' => $tasa,
+            'departamentos' => Departamento::orderBy('nombre')->get(),
+            'parentescos'   => Parentesco::orderBy('nombre')->get(),
+            'tipos'         => TipoTransmision::orderBy('nombre')->get(),
+        ]);
     }
 
-    public function update(Request $request, Tasa $tasa)
+    public function update(UpdateTasaRequest $request, Tasa $tasa)
     {
-        $request->validate([
-            'departamento_id'      => 'required|exists:departamentos,id',
-            'parentesco_id'        => 'required|exists:parentescos,id',
-            'tipo_transmision_id'  => 'nullable|exists:tipos_transmision,id',
-            'tasa'                 => 'required|numeric|min:0|max:99.99',
-            'vigente_desde'        => 'required|date',
-            'vigente_hasta'        => 'nullable|date|after_or_equal:vigente_desde',
-        ]);
-
-        $tasa->update($request->all());
-
+        $this->authorize('update', $tasa);
+        $tasa->update($request->validated());
         return redirect()->route('admin.tasas.index')
             ->with(['message' => 'Tasa actualizada.', 'alert-type' => 'success']);
     }
 
+    /* ----------  BORRADO  ---------- */
     public function destroy(Tasa $tasa)
     {
+        $this->authorize('delete', $tasa);
         $tasa->delete();
         return redirect()->route('admin.tasas.index')
             ->with(['message' => 'Tasa eliminada.', 'alert-type' => 'success']);

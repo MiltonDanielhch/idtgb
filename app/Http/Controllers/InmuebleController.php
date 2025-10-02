@@ -5,78 +5,93 @@ namespace App\Http\Controllers;
 use App\Models\Inmueble;
 use App\Models\TipoInmueble;
 use App\Models\Municipio;
-use Illuminate\Http\Request;
+use App\Http\Requests\StoreInmuebleRequest;
+use App\Http\Requests\UpdateInmuebleRequest;
+use Illuminate\Support\Facades\DB;
 
 class InmuebleController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth');
+    }
+
+    /* ----------  LISTADO (AJAX)  ---------- */
     public function index()
     {
-        $inmuebles = Inmueble::with(['tipoInmueble', 'municipio'])
-                             ->orderBy('catastro')
-                             ->paginate(20);
-        return view('admin.inmuebles.index', compact('inmuebles'));
+        $this->authorize('viewAny', Inmueble::class);
+        return view('admin.inmuebles.browse');
     }
 
+    public function list()
+    {
+        $this->authorize('viewAny', Inmueble::class);
+
+        $search   = request('search');
+        $paginate = request('paginate', 10);
+
+        $data = Inmueble::with(['tipoInmueble', 'municipio.provincia.departamento'])
+            ->when($search, fn($q) => $q->where('catastro', 'like', "%{$search}%")
+                ->orWhere('direccion', 'like', "%{$search}%"))
+            ->orderBy('catastro')
+            ->paginate($paginate);
+
+        return view('admin.inmuebles.list', compact('data'));
+    }
+
+    /* ----------  LECTURA  ---------- */
+    public function show(Inmueble $inmueble)
+    {
+        $this->authorize('view', $inmueble);
+        return view('admin.inmuebles.read', compact('inmueble'));
+    }
+
+    /* ----------  ALTA  ---------- */
     public function create()
     {
-        $tipos = TipoInmueble::orderBy('nombre')->get();
-        $municipios = Municipio::with('provincia.departamento')->orderBy('nombre')->get();
-        return view('admin.inmuebles.create', compact('tipos', 'municipios'));
+        $this->authorize('create', Inmueble::class);
+        return view('admin.inmuebles.edit-add', [
+            'inmueble'    => new Inmueble(),
+            'tipos'       => TipoInmueble::orderBy('nombre')->get(),
+            'municipios'  => Municipio::with('provincia.departamento')->orderBy('nombre')->get(),
+        ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreInmuebleRequest $request)
     {
-        $request->validate([
-            'complemento'                => 'nullable|string|max:3',
-            'catastro'                   => 'required|string|max:15|unique:inmuebles',
-            'tipo_inmueble_id'           => 'required|exists:tipos_inmueble,id',
-            'municipio_id'               => 'nullable|exists:municipios,id',
-            'barrio_comunidad'           => 'nullable|string|max:100',
-            'direccion'                  => 'nullable|string|max:200',
-            'superficie_m2'              => 'nullable|numeric|min:0',
-            'valor_catastral'            => 'required|numeric|min:0',
-            'matricula_rr'               => 'nullable|string|max:20',
-            'es_vivienda_unica_familiar' => 'boolean',
-            'estado_inmueble'            => 'in:Activo,Transferido,Baja',
-        ]);
-
-        Inmueble::create($request->all());
-
+        $this->authorize('create', Inmueble::class);
+        Inmueble::create($request->validated());
         return redirect()->route('admin.inmuebles.index')
             ->with(['message' => 'Inmueble creado.', 'alert-type' => 'success']);
     }
 
+    /* ----------  EDICIÓN  ---------- */
     public function edit(Inmueble $inmueble)
     {
-        $tipos = TipoInmueble::orderBy('nombre')->get();
-        $municipios = Municipio::with('provincia.departamento')->orderBy('nombre')->get();
-        return view('admin.inmuebles.edit', compact('inmueble', 'tipos', 'municipios'));
+        $this->authorize('update', $inmueble);
+        return view('admin.inmuebles.edit-add', [
+            'inmueble'    => $inmueble,
+            'tipos'       => TipoInmueble::orderBy('nombre')->get(),
+            'municipios'  => Municipio::with('provincia.departamento')->orderBy('nombre')->get(),
+        ]);
     }
 
-    public function update(Request $request, Inmueble $inmueble)
+    public function update(UpdateInmuebleRequest $request, Inmueble $inmueble)
     {
-        $request->validate([
-            'complemento'                => 'nullable|string|max:3',
-            'catastro'                   => 'required|string|max:15|unique:inmuebles,catastro,'.$inmueble->id,
-            'tipo_inmueble_id'           => 'required|exists:tipos_inmueble,id',
-            'municipio_id'               => 'nullable|exists:municipios,id',
-            'barrio_comunidad'           => 'nullable|string|max:100',
-            'direccion'                  => 'nullable|string|max:200',
-            'superficie_m2'              => 'nullable|numeric|min:0',
-            'valor_catastral'            => 'required|numeric|min:0',
-            'matricula_rr'               => 'nullable|string|max:20',
-            'es_vivienda_unica_familiar' => 'boolean',
-            'estado_inmueble'            => 'in:Activo,Transferido,Baja',
-        ]);
-
-        $inmueble->update($request->all());
-
+        $this->authorize('update', $inmueble);
+        $inmueble->update($request->validated());
         return redirect()->route('admin.inmuebles.index')
             ->with(['message' => 'Inmueble actualizado.', 'alert-type' => 'success']);
     }
 
+    /* ----------  BORRADO  ---------- */
     public function destroy(Inmueble $inmueble)
     {
+        $this->authorize('delete', $inmueble);
+        // Si tiene avalúos, podrías validar antes de eliminar
+        if ($inmueble->avaluos()->exists()) {
+            return back()->with(['message' => 'No se puede eliminar: tiene avalúos asociados.', 'alert-type' => 'error']);
+        }
         $inmueble->delete();
         return redirect()->route('admin.inmuebles.index')
             ->with(['message' => 'Inmueble eliminado.', 'alert-type' => 'success']);
