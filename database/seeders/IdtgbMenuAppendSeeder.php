@@ -8,18 +8,17 @@ use TCG\Voyager\Models\MenuItem;
 
 class IdtgbMenuAppendSeeder extends Seeder
 {
-    /** Ítems IDTGB que se añaden (sin borrar lo existente) */
     protected $tree = [
     [
         'title'      => 'Personas',
-        'order'      => 2,          // cambialo si querés otro orden
-        'icon_class' => 'voyager-person', // ícono de Voyager
+        'order'      => 2,
+        'icon_class' => 'voyager-person',
         'route'      => 'admin.people.index',
-        'url'        => '',          // dejá vacío si usás route
+        'url'        => '',
     ],
     [
         'title'      => 'Catálogos IDTGB',
-        'order'      => 20,
+        'order'      => 3,
         'icon_class' => 'fa-solid fa-folder-tree',
         'route'      => null,
         'url'        => '',
@@ -36,7 +35,7 @@ class IdtgbMenuAppendSeeder extends Seeder
     ],
     [
         'title'      => 'Inmuebles',
-        'order'      => 21,
+        'order'      => 4,
         'icon_class' => 'fa-solid fa-building',
         'route'      => null,
         'url'        => '',
@@ -47,7 +46,7 @@ class IdtgbMenuAppendSeeder extends Seeder
     ],
     [
         'title'      => 'Trámites IDTGB',
-        'order'      => 22,
+        'order'      => 5,
         'icon_class' => 'fa-solid fa-file-lines',
         'route'      => null,
         'url'        => '',

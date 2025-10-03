@@ -46,7 +46,7 @@ Route::post('/calculadora-idtgb-beni', [CalculadoraBeniController::class, 'calcu
 // Grupo principal con middleware personalizado
 Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
 
-    // Rutas de Voyager (no tocar)
+    // Rutas de Voyager
     Voyager::routes();
 
  Route::prefix('people')->group(function () {
@@ -60,7 +60,6 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
         Route::get('/{person}', [PersonController::class, 'show'])->name('admin.people.show');
     });
 
-    // ──────────────── PARENTESCO ────────────────
     Route::prefix('parentescos')->group(function () {
         Route::get('/', [ParentescoController::class, 'index'])->name('admin.parentescos.index');
         Route::get('/create', [ParentescoController::class, 'create'])->name('admin.parentescos.create');
@@ -72,7 +71,6 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
         Route::delete('/{parentesco}', [ParentescoController::class, 'destroy'])->name('admin.parentescos.destroy');
     });
 
-    // Route::resource('tasas', TasaController::class)->names('admin.tasas');
     Route::prefix('tasas')->group(function () {
         Route::get('/', [TasaController::class, 'index'])->name('admin.tasas.index');
         Route::get('/create', [TasaController::class, 'create'])->name('admin.tasas.create');
@@ -86,9 +84,6 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
 
     Route::resource('exenciones', ExencionController::class)->names('admin.exenciones');
 
-
-    // Route::resource('inmuebles', InmuebleController::class)->names('admin.inmuebles');
-
     Route::prefix('inmuebles')->group(function () {
         Route::get('/', [InmuebleController::class, 'index'])->name('admin.inmuebles.index');
         Route::get('/create', [InmuebleController::class, 'create'])->name('admin.inmuebles.create');
@@ -99,11 +94,6 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
         Route::put('/{inmueble}', [InmuebleController::class, 'update'])->name('admin.inmuebles.update');
         Route::delete('/{inmueble}', [InmuebleController::class, 'destroy'])->name('admin.inmuebles.destroy');
     });
-
-
-    // Route::resource('avaluos', AvaluoController::class)->names('admin.avaluos');
-
-    // Route::get('avaluos/{avaluo}/download', [AvaluoController::class, 'download'])->name('admin.avaluos.download');
 
     Route::prefix('avaluos')->group(function () {
         Route::get('/', [AvaluoController::class, 'index'])->name('admin.avaluos.index');
@@ -116,8 +106,6 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
         Route::delete('/{avaluo}', [AvaluoController::class, 'destroy'])->name('admin.avaluos.destroy');
         Route::get('/{avaluo}/download', [AvaluoController::class, 'download'])->name('admin.avaluos.download');
     });
-
-    // Route::resource('tramites', TramiteController::class)->names('admin.tramites');
 
     Route::prefix('tramites')->group(function () {
         Route::get('/', [TramiteController::class, 'index'])->name('admin.tramites.index');
@@ -139,12 +127,6 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
         Route::post('/', [TramiteInmuebleController::class, 'store'])->name('store');
         Route::delete('/{item}', [TramiteInmuebleController::class, 'destroy'])->name('destroy');
     });
-
-    // Route::prefix('tramites/{tramite}')->group(function () {
-    //     Route::get('pagar', [PagoController::class, 'create'])->name('admin.tramites.pagar');
-    //     Route::post('pagar', [PagoController::class, 'store'])->name('admin.tramites.pago.store');
-    //     Route::get('pago/{pago}/comprobante', [PagoController::class, 'comprobante'])->name('admin.pago.comprobante');
-    // });
 
     Route::prefix('tramites/{tramite}/exenciones')->name('admin.tramites.exenciones.')->group(function () {
         Route::get('/', [TramiteExencionController::class, 'index'])->name('index');
@@ -192,6 +174,7 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
     });
 
     Route::resource('ufvs', UfvController::class)->names('admin.ufvs');
+
     // ──────────────── USUARIOS ────────────────
     Route::prefix('users')->group(function () {
         Route::get('/ajax/list', [UserController::class, 'list'])->name('voyager.users.ajax.list');

@@ -259,38 +259,6 @@ class MenuItemsTableSeeder extends Seeder
                 'route' => 'clear.cache',
                 'parameters' => NULL,
             ),
-            // 15 =>
-            // array (
-            //     'id' => 16,
-            //     'menu_id' => 1,
-            //     'title' => 'Administración',
-            //     'url' => '',
-            //     'target' => '_self',
-            //     'icon_class' => 'fa-regular fa-folder-open',
-            //     'color' => '#000000',
-            //     'parent_id' => NULL,
-            //     'order' => 5,
-            //     'created_at' => '2025-02-10 15:42:49',
-            //     'updated_at' => '2025-02-10 15:42:59',
-            //     'route' => NULL,
-            //     'parameters' => '',
-            // ),
-            // 16 =>
-            // array (
-            //     'id' => 18,
-            //     'menu_id' => 1,
-            //     'title' => 'Personas',
-            //     'url' => '',
-            //     'target' => '_self',
-            //     'icon_class' => 'fa-solid fa-person',
-            //     'color' => NULL,
-            //     'parent_id' => 16,
-            //     'order' => 1,
-            //     'created_at' => '2025-04-07 09:43:00',
-            //     'updated_at' => '2025-04-07 09:44:30',
-            //     'route' => 'voyager.people.index',
-            //     'parameters' => NULL,
-            // ),
         ));
 
 
