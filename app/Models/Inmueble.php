@@ -32,6 +32,12 @@ class Inmueble extends Model
     ];
 
     /* ================== RELACIONES ================== */
+    // app/Models/Inmueble.php
+    public function tramiteInmuebles()
+    {
+        return $this->hasMany(TramiteInmueble::class);
+    }
+
     public function tipoInmueble()
     {
         return $this->belongsTo(TipoInmueble::class);

@@ -1,0 +1,135 @@
+<div class="table-responsive">
+    <table class="table table-voyager">
+        <thead>
+            <tr>
+                <th>Nro Trámite</th>
+                <th>Tipo Transmisión</th>
+                <th>Inmueble</th>
+                <th class="text-center">Valor Declarado</th>
+                <th class="text-center">Base Imponible</th>
+                <th class="text-center">Total IDTGB</th>
+                <th class="text-center">Estado</th>
+                <th class="text-center">Vencimiento</th>
+                <th class="text-right">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse ($data as $t)
+                <tr>
+                    <td><strong>{{ $t->nro_tramite }}</strong></td>
+                    <td>{{ $t->tipoTransmision->nombre }}</td>
+                    <td>{{ $t->inmueble->catastro }}</td>
+                    <td class="text-center">
+                        <span class="badge badge-secondary">Bs. {{ number_format($t->valor_declarado, 2) }}</span>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge badge-primary">Bs. {{ number_format($t->base_imponible, 2) }}</span>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge badge-success">Bs. {{ number_format($t->total_idtgb, 2) }}</span>
+                    </td>
+                    <td class="text-center">
+                        @php
+                            $badge = match($t->estado) {
+                                'Pagado'     => 'success',
+                                'Borrador'   => 'default',
+                                'Observado'  => 'warning',
+                                'Anulado'    => 'danger',
+                                'Finalizado' => 'info',
+                                default      => 'secondary'
+                            };
+                        @endphp
+                        <span class="badge badge-{{ $badge }}">{{ $t->estado }}</span>
+                    </td>
+                    <td class="text-center">
+                        <span class="text-{{ now()->gt($t->fecha_vencimiento) ? 'danger' : 'muted' }}">
+                            {{ $t->fecha_vencimiento->format('d/m/Y') }}
+                        </span>
+                    </td>
+                    <td class="text-right" style="width: 22%">
+                        {{-- Botones siempre visibles --}}
+                        @can('view', $t)
+                            <a href="{{ route('admin.tramites.show', $t) }}" class="btn btn-xs btn-warning" title="Ver">
+                                <i class="voyager-eye"></i>
+                            </a>
+                        @endcan
+                        @can('update', $t)
+                            <a href="{{ route('admin.tramites.edit', $t) }}" class="btn btn-xs btn-primary" title="Editar">
+                                <i class="voyager-edit"></i>
+                            </a>
+                        @endcan
+                        @can('delete', $t)
+                            <form action="{{ route('admin.tramites.destroy', $t) }}" method="POST"
+                                  style="display: inline-block;" onsubmit="return confirm('¿Borrar este trámite?')">
+                                @csrf @method('DELETE')
+                                <button type="submit" class="btn btn-xs btn-danger" title="Borrar">
+                                    <i class="voyager-trash"></i>
+                                </button>
+                            </form>
+                        @endcan
+
+                        {{-- Dropdown de acciones --}}
+                        <div class="btn-group dropup-xs" role="group">
+                            <button type="button" class="btn btn-default dropdown-toggle btn-xs" data-toggle="dropdown"
+                                    aria-haspopup="true" aria-expanded="false">
+                                <i class="voyager-wrench"></i> Más <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-right">
+                                <li><a href="{{ route('admin.tramites.a01', $t) }}" target="_blank">
+                                        <i class="voyager-documentation"></i> Form. A-01</a></li>
+
+                                @if($t->estado !== 'Pagado')
+                                    <li><a href="{{ route('admin.tramites.pagos.create', $t) }}">
+                                        <i class="voyager-dollar"></i> Registrar pago</a></li>
+                                @else
+                                    <li><a href="{{ route('admin.pago.comprobante', $t->pago) }}" target="_blank">
+                                            <i class="voyager-check"></i> Comprobante</a></li>
+                                @endif
+
+                                <li role="separator" class="divider"></li>
+
+                                <li><a href="{{ route('admin.tramites.inmuebles.index', $t) }}">
+                                    <i class="voyager-home"></i> Inmuebles (pivote)</a></li>
+
+                                    <li><a href="{{ route('admin.tramites.exenciones.index', $t) }}">
+                                        <i class="voyager-gift"></i> Exenciones</a></li>
+
+                                <li><a href="{{ route('admin.tramites.adquirentes.index', $t) }}">
+                                        <i class="voyager-people"></i> Adquirentes</a></li>
+
+                                <li><a href="{{ route('admin.tramites.disponentes.index', $t) }}">
+                                        <i class="voyager-person"></i> Disponentes</a></li>
+
+                                <li><a href="{{ route('admin.tramites.documentos.index', $t) }}">
+                                        <i class="voyager-folder"></i> Documentos</a></li>
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="9">
+                        <h5 class="text-center" style="margin-top: 50px">
+                            <img src="{{ asset('images/empty.png') }}" width="120px" alt="" style="opacity: 0.8">
+                            <br><br>
+                            No hay trámites registrados
+                        </h5>
+                    </td>
+                </tr>
+            @endforelse
+        </tbody>
+    </table>
+</div>
+
+<div class="col-md-12">
+    <div class="col-md-4 text-muted">
+        @if($data->count())
+            Mostrando del {{ $data->firstItem() }} al {{ $data->lastItem() }} de {{ $data->total() }} registros.
+        @endif
+    </div>
+    <div class="col-md-8 text-right">
+        <nav>{{ $data->appends(request()->only(['search', 'paginate']))->links() }}</nav>
+    </div>
+</div>
+
+<script>bindPageLinks();</script>

@@ -21,6 +21,7 @@ use App\Http\Controllers\TramiteExencionController;
 use App\Http\Controllers\AdquirenteTramiteController;
 use App\Http\Controllers\DisponenteTramiteController;
 use App\Http\Controllers\DocumentoController;
+use App\Http\Controllers\TramiteInmuebleController;
 use App\Http\Controllers\UfvController;
 
 
@@ -116,44 +117,78 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
         Route::get('/{avaluo}/download', [AvaluoController::class, 'download'])->name('admin.avaluos.download');
     });
 
-    Route::resource('tramites', TramiteController::class)->names('admin.tramites');
+    // Route::resource('tramites', TramiteController::class)->names('admin.tramites');
 
+    Route::prefix('tramites')->group(function () {
+        Route::get('/', [TramiteController::class, 'index'])->name('admin.tramites.index');
+        Route::get('/create', [TramiteController::class, 'create'])->name('admin.tramites.create');
+        Route::get('/ajax/list', [TramiteController::class, 'list'])->name('admin.tramites.ajax.list');
+        Route::get('/{tramite}', [TramiteController::class, 'show'])->name('admin.tramites.show');
+        Route::post('/', [TramiteController::class, 'store'])->name('admin.tramites.store');
+        Route::get('/{tramite}/edit', [TramiteController::class, 'edit'])->name('admin.tramites.edit');
+        Route::put('/{tramite}', [TramiteController::class, 'update'])->name('admin.tramites.update');
+        Route::delete('/{tramite}', [TramiteController::class, 'destroy'])->name('admin.tramites.destroy');
+    });
     Route::get('tramites/{tramite}/a01', [TramiteController::class, 'a01'])->name('admin.tramites.a01');
 
-    Route::prefix('tramites/{tramite}')->group(function () {
-        Route::get('pagar', [PagoController::class, 'create'])->name('admin.tramites.pagar');
-        Route::post('pagar', [PagoController::class, 'store'])->name('admin.tramites.pago.store');
-        Route::get('pago/{pago}/comprobante', [PagoController::class, 'comprobante'])->name('admin.pago.comprobante');
+    /*  Trámites - Inmuebles (pivote)  */
+    Route::prefix('tramites/{tramite}/inmuebles')->name('admin.tramites.inmuebles.')->group(function () {
+        Route::get('/', [TramiteInmuebleController::class, 'index'])->name('index');
+        Route::get('/list', [TramiteInmuebleController::class, 'list'])->name('ajax.list');
+        Route::get('/create', [TramiteInmuebleController::class, 'create'])->name('create');
+        Route::post('/', [TramiteInmuebleController::class, 'store'])->name('store');
+        Route::delete('/{item}', [TramiteInmuebleController::class, 'destroy'])->name('destroy');
     });
 
-    Route::prefix('tramites/{tramite}')->group(function () {
-        Route::get('exenciones', [TramiteExencionController::class, 'index'])->name('admin.tramites.exenciones.index');
-        Route::get('exenciones/create', [TramiteExencionController::class, 'create'])->name('admin.tramites.exenciones.create');
-        Route::post('exenciones', [TramiteExencionController::class, 'store'])->name('admin.tramites.exenciones.store');
-        Route::delete('exenciones/{exencion}', [TramiteExencionController::class, 'destroy'])->name('admin.tramites.exenciones.destroy');
+    // Route::prefix('tramites/{tramite}')->group(function () {
+    //     Route::get('pagar', [PagoController::class, 'create'])->name('admin.tramites.pagar');
+    //     Route::post('pagar', [PagoController::class, 'store'])->name('admin.tramites.pago.store');
+    //     Route::get('pago/{pago}/comprobante', [PagoController::class, 'comprobante'])->name('admin.pago.comprobante');
+    // });
+
+    Route::prefix('tramites/{tramite}/exenciones')->name('admin.tramites.exenciones.')->group(function () {
+        Route::get('/', [TramiteExencionController::class, 'index'])->name('index');
+        Route::get('/list', [TramiteExencionController::class, 'list'])->name('ajax.list');
+        Route::get('/create', [TramiteExencionController::class, 'create'])->name('create');
+        Route::post('/', [TramiteExencionController::class, 'store'])->name('store');
+        Route::get('/{item}', [TramiteExencionController::class, 'show'])->name('show');
+        Route::delete('/{item}', [TramiteExencionController::class, 'destroy'])->name('destroy');
     });
 
-    Route::prefix('tramites/{tramite}')->group(function () {
-        Route::get('adquirentes', [AdquirenteTramiteController::class, 'index'])->name('admin.tramites.adquirentes.index');
-        Route::get('adquirentes/create', [AdquirenteTramiteController::class, 'create'])->name('admin.tramites.adquirentes.create');
-        Route::post('adquirentes', [AdquirenteTramiteController::class, 'store'])->name('admin.tramites.adquirentes.store');
-        Route::delete('adquirentes/{adquirente}', [AdquirenteTramiteController::class, 'destroy'])->name('admin.tramites.adquirentes.destroy');
+    Route::prefix('tramites/{tramite}/adquirentes')->name('admin.tramites.adquirentes.')->group(function () {
+        Route::get('/', [AdquirenteTramiteController::class, 'index'])->name('index');
+        Route::get('/list', [AdquirenteTramiteController::class, 'list'])->name('ajax.list');
+        Route::get('/create', [AdquirenteTramiteController::class, 'create'])->name('create');
+        Route::post('/', [AdquirenteTramiteController::class, 'store'])->name('store');
+        Route::get('/{item}', [AdquirenteTramiteController::class, 'show'])->name('show');
+        Route::delete('/{item}', [AdquirenteTramiteController::class, 'destroy'])->name('destroy');
     });
 
-
-    Route::prefix('tramites/{tramite}')->group(function () {
-        Route::get('disponentes', [DisponenteTramiteController::class, 'index'])->name('admin.tramites.disponentes.index');
-        Route::get('disponentes/create', [DisponenteTramiteController::class, 'create'])->name('admin.tramites.disponentes.create');
-        Route::post('disponentes', [DisponenteTramiteController::class, 'store'])->name('admin.tramites.disponentes.store');
-        Route::delete('disponentes/{disponente}', [DisponenteTramiteController::class, 'destroy'])->name('admin.tramites.disponentes.destroy');
+    Route::prefix('tramites/{tramite}/disponentes')->name('admin.tramites.disponentes.')->group(function () {
+        Route::get('/', [DisponenteTramiteController::class, 'index'])->name('index');
+        Route::get('/list', [DisponenteTramiteController::class, 'list'])->name('ajax.list');
+        Route::get('/create', [DisponenteTramiteController::class, 'create'])->name('create');
+        Route::post('/', [DisponenteTramiteController::class, 'store'])->name('store');
+        Route::get('/{item}', [DisponenteTramiteController::class, 'show'])->name('show');
+        Route::delete('/{item}', [DisponenteTramiteController::class, 'destroy'])->name('destroy');
     });
 
-    Route::prefix('tramites/{tramite}')->group(function () {
-        Route::get('documentos', [DocumentoController::class, 'index'])->name('admin.tramites.documentos.index');
-        Route::get('documentos/create', [DocumentoController::class, 'create'])->name('admin.tramites.documentos.create');
-        Route::post('documentos', [DocumentoController::class, 'store'])->name('admin.tramites.documentos.store');
-        Route::delete('documentos/{documento}', [DocumentoController::class, 'destroy'])->name('admin.tramites.documentos.destroy');
-        Route::get('documentos/{documento}/download', [DocumentoController::class, 'download'])->name('admin.tramites.documentos.download');
+    Route::prefix('tramites/{tramite}/documentos')->name('admin.tramites.documentos.')->group(function () {
+        Route::get('/', [DocumentoController::class, 'index'])->name('index');
+        Route::get('/list', [DocumentoController::class, 'list'])->name('ajax.list');
+        Route::get('/create', [DocumentoController::class, 'create'])->name('create');
+        Route::post('/', [DocumentoController::class, 'store'])->name('store');
+        Route::get('/{item}', [DocumentoController::class, 'show'])->name('show');
+        Route::delete('/{item}', [DocumentoController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::prefix('tramites/{tramite}/pagos')->name('admin.tramites.pagos.')->group(function () {
+        Route::get('/', [PagoController::class, 'index'])->name('index');
+        Route::get('/list', [PagoController::class, 'list'])->name('ajax.list');
+        Route::get('/create', [PagoController::class, 'create'])->name('create');
+        Route::post('/', [PagoController::class, 'store'])->name('store');
+        Route::get('/{pago}', [PagoController::class, 'show'])->name('show');
+        Route::delete('/{pago}', [PagoController::class, 'destroy'])->name('destroy');
     });
 
     Route::resource('ufvs', UfvController::class)->names('admin.ufvs');

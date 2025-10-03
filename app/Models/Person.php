@@ -90,6 +90,16 @@ class Person extends Model
     /* -------------------------------------------------
      *  RELACIONES
      * ------------------------------------------------- */
+    public function adquirentesTramite()
+    {
+        return $this->hasMany(AdquirenteTramite::class, 'persona_id');
+    }
+
+    public function disponentesTramite()
+    {
+        return $this->hasMany(DisponenteTramite::class, 'persona_id');
+    }
+
     public function registerUser()
     {
         return $this->belongsTo(User::class, 'registerUser_id');

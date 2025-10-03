@@ -60,6 +60,32 @@
             @endforeach
         </tbody>
     </table>
+    <h4>5. Disponentes</h4>
+    <table class="table">
+        <thead><tr><th>Nombre</th><th>Tipo</th><th>Fallecimiento</th></tr></thead>
+        <tbody>
+            @foreach($tramite->disponentes as $d)
+            <tr>
+                <td>{{ $d->persona->first_name.' '.$d->persona->paternal_surname }}</td>
+                <td>{{ $d->tipo }}</td>
+                <td>{{ optional($d->fecha_fallecimiento)->format('d/m/Y') ?? 'Vivo' }}</td>
+            </tr>
+            @endforeach
+        </tbody>
+    </table>
+    <h4>6. Exenciones Aplicadas</h4>
+    <ul>
+        @forelse($tramite->exenciones as $e)
+            <li>{{ optional($e->exencion)->nombre ?? 'Exención no encontrada' }} - Bs {{ number_format($e->monto_aplicado, 2) }}</li>
+        @empty
+            <li>Ninguna</li>
+        @endforelse
+    </ul>
+
+    <div style="margin-top:40px; text-align:right;">
+        <p>_________________________</p>
+        <small>Funcionario IDTGB - Beni</small>
+    </div>
 
     <div class="footer">
         <p>Formulario generado el {{ now()->format('d/m/Y H:i') }}</p>

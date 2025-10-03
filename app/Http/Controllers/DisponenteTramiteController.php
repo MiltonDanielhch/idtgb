@@ -1,62 +1,114 @@
 <?php
-
+// app/Http/Controllers/DisponenteTramiteController.php
 namespace App\Http\Controllers;
 
 use App\Models\Tramite;
 use App\Models\Person;
 use App\Models\DisponenteTramite;
-use Illuminate\Http\Request;
+use App\Http\Requests\StoreDisponenteTramiteRequest;
+use Illuminate\Support\Facades\DB;
 
 class DisponenteTramiteController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth');
+    }
+
+    /* ---------- LISTADO (AJAX) ---------- */
     public function index(Tramite $tramite)
     {
-        $disponentes = $tramite->disponentes()->with('persona')->get();
-        return view('admin.tramites.disponentes.index', compact('tramite', 'disponentes'));
+        $this->authorize('viewAny', DisponenteTramite::class);
+        return view('admin.tramites.disponentes.browse', compact('tramite'));
     }
 
+    public function list(Tramite $tramite)
+    {
+        $this->authorize('viewAny', DisponenteTramite::class);
+
+        $search   = request('search');
+        $paginate = request('paginate', 10);
+
+        $data = DisponenteTramite::with(['persona'])
+            ->where('tramite_id', $tramite->id)
+            ->when($search, fn($q) => $q->whereHas('persona', fn($sq) => $sq->where('ci', 'like', "%{$search}%")->orWhere('first_name', 'like', "%{$search}%")->orWhere('paternal_surname', 'like', "%{$search}%")))
+            ->orderBy('id')
+            ->paginate($paginate);
+
+        return view('admin.tramites.disponentes.list', compact('tramite', 'data'));
+    }
+
+    /* ---------- LECTURA ---------- */
+    public function show(Tramite $tramite, DisponenteTramite $item)
+    {
+        $this->authorize('view', $item);
+        return view('admin.tramites.disponentes.read', compact('tramite', 'item'));
+    }
+
+    /* ---------- ALTA ---------- */
     public function create(Tramite $tramite)
     {
-        $personas = Person::where('person_type', 'Natural')->orderBy('first_name')->orderBy('paternal_surname')->get();
-        return view('admin.tramites.disponentes.create', compact('tramite', 'personas'));
+        $this->authorize('create', DisponenteTramite::class);
+
+        $personas = Person::where('status', 1)
+            ->where('estado_persona', 'Activo')
+            ->whereDoesntHave('disponentesTramite', fn($q) => $q->where('tramite_id', $tramite->id))
+            ->orderBy('first_name')
+            ->orderBy('paternal_surname')
+            ->get();
+
+        $tipos = ['Causante', 'Donante', 'Testador'];
+
+        return view('admin.tramites.disponentes.create', compact('tramite', 'personas', 'tipos'));
     }
 
-    public function store(Request $request, Tramite $tramite)
+    public function store(StoreDisponenteTramiteRequest $request, Tramite $tramite)
     {
-        $request->validate([
-            'persona_id'          => 'required|exists:people,id',
-            'tipo'                => 'required|in:Causante,Donante,Testador',
-            'fecha_fallecimiento' => 'nullable|date|before_or_equal:today',
-            'es_discapacitado'    => 'boolean',
-        ]);
+        $this->authorize('create', DisponenteTramite::class);
 
-        // Verificar que no esté duplicado
-        if ($tramite->disponentes()->where('persona_id', $request->persona_id)->exists()) {
-            return back()->withErrors(['persona_id' => 'Esta persona ya está agregada como disponente.']);
+        DB::beginTransaction();
+        try {
+            DisponenteTramite::create([
+                'tramite_id' => $tramite->id,
+                'persona_id' => $request->persona_id,
+                'tipo' => $request->tipo,
+                'fecha_fallecimiento' => $request->fecha_fallecimiento,
+                'es_discapacitado' => $request->boolean('es_discapacitado'),
+                'created_by' => auth()->id(),
+                'updated_by' => auth()->id(),
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('admin.tramites.disponentes.index', $tramite)
+                ->with(['message' => 'Disponente agregado.', 'alert-type' => 'success']);
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return back()->withInput()->with(['message' => $e->getMessage(), 'alert-type' => 'error']);
         }
-
-        DisponenteTramite::create([
-            'tramite_id'           => $tramite->id,
-            'persona_id'           => $request->persona_id,
-            'tipo'                 => $request->tipo,
-            'fecha_fallecimiento'  => $request->fecha_fallecimiento,
-            'es_discapacitado'     => $request->boolean('es_discapacitado'),
-        ]);
-
-        return redirect()->route('admin.tramites.disponentes.index', $tramite)
-            ->with(['message' => 'Disponente agregado.', 'alert-type' => 'success']);
     }
 
-    public function destroy(Tramite $tramite, DisponenteTramite $disponente)
+    /* ---------- BORRADO ---------- */
+    public function destroy(Tramite $tramite, DisponenteTramite $item)
     {
-        // Asegurar que pertenece al trámite
-        if ($disponente->tramite_id !== $tramite->id) {
+        $this->authorize('delete', $item);
+
+        if ($item->tramite_id !== $tramite->id) {
             abort(404);
         }
 
-        $disponente->delete();
+        DB::beginTransaction();
+        try {
+            $item->delete();
+            DB::commit();
 
-        return redirect()->route('admin.tramites.disponentes.index', $tramite)
-            ->with(['message' => 'Disponente quitado.', 'alert-type' => 'success']);
+            return redirect()->route('admin.tramites.disponentes.index', $tramite)
+                ->with(['message' => 'Disponente quitado.', 'alert-type' => 'success']);
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return back()->with(['message' => $e->getMessage(), 'alert-type' => 'error']);
+        }
     }
 }

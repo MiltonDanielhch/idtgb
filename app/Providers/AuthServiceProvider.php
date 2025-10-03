@@ -18,11 +18,6 @@ class AuthServiceProvider extends ServiceProvider
 
     public function boot()
     {
-        Log::info('=== AUTH SERVICE PROVIDER BOOT ===');
-        Log::info('Registered policies: ', array_keys($this->policies));
-
         $this->registerPolicies();
-
-        Log::info('Policies registered successfully');
     }
 }

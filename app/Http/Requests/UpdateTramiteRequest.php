@@ -3,26 +3,26 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Gate;
 
 class UpdateTramiteRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
-    public function authorize(): bool
-    {
-        return false;
+    public function authorize() {
+        return Gate::allows('update', $this->route('tramite'));
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
-     */
-    public function rules(): array
+    public function rules()
     {
+        $id = $this->route('tramite')->id;
         return [
-            //
+            'nro_tramite'        => "required|string|max:15|unique:tramites,nro_tramite,$id",
+            'fecha_presentacion' => 'required|date',
+            'tipo_transmision_id'=> 'required|exists:tipos_transmision,id',
+            'valor_declarado'    => 'required|numeric|min:0',
+            'base_imponible'     => 'required|numeric|min:0',
+            'fecha_transmision'  => 'required|date',
+            'observaciones'      => 'nullable|string|max:1000',
+            'estado'             => 'in:Borrador,Pagado,Observado,Anulado,Finalizado',
         ];
     }
 }
