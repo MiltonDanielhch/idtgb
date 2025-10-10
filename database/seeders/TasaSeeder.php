@@ -11,35 +11,58 @@ class TasaSeeder extends Seeder
 {
     public function run(): void
     {
-        // ID del departamento Beni
-        $beni = Departamento::where('codigo', 'BE')->first()->id;
+        $beni = Departamento::where('codigo', 'BE')->firstOrFail();
+        $hoy = now()->format('Y-m-d');
 
-        // Mapa parentesco → tasa (según orden del seeder previo)
-        $mapa = [
-            1  => 1.00,  // Cónyuge
-            2  => 1.00,  // Hijo/a
-            3  => 1.00,  // Padre/Madre
-            4  => 5.00,  // Hermano/a
-            5  => 5.00,  // Abuelo/a
-            6  => 5.00,  // Nieto/a
-            7  => 10.00, // Tío/a
-            8  => 10.00, // Sobrino/a
-            9  => 10.00, // Primo/a
-            10 => 20.00, // Sin parentesco
+        // Mapeo: nombre de parentesco → tasa del Beni
+        $tasasBeni = [
+            'Cónyuge o Conviviente' => 0.00,
+            'Hijo/a'                => 1.50,
+            'Padre/Madre'           => 3.00,
+            'Hermano/a'             => 3.00,
+            'Nieto/a'               => 3.00,
+            'Abuelo/a'              => 3.00,
+            'Tío/a o Sobrino/a'     => 5.00,
+            'Sin parentesco'        => 5.00,
         ];
 
-        foreach ($mapa as $parentescoId => $tasa) {
-            Tasa::firstOrCreate(
-                [
-                    'departamento_id' => $beni,
-                    'parentesco_id'   => $parentescoId,
-                    'vigente_desde'   => '2025-01-01',
-                ],
-                [
-                    'tasa'            => $tasa,
-                    'vigente_hasta'   => null,
-                ]
-            );
+        foreach ($tasasBeni as $nombreParentesco => $tasa) {
+            $parentesco = Parentesco::where('nombre', $nombreParentesco)->first();
+
+            if (!$parentesco) {
+                // Si usaste nombres ligeramente distintos, ajusta aquí
+                // Ej: si tienes "Cónyuge" en lugar de "Cónyuge o Conviviente"
+                $alternativas = [
+                    'Cónyuge' => 'Cónyuge o Conviviente',
+                    'Hijo' => 'Hijo/a',
+                    'Padre' => 'Padre/Madre',
+                    'Hermano' => 'Hermano/a',
+                    'Nieto' => 'Nieto/a',
+                    'Abuelo' => 'Abuelo/a',
+                    'Tío' => 'Tío/a o Sobrino/a',
+                    'Sobrino' => 'Tío/a o Sobrino/a',
+                ];
+                foreach ($alternativas as $key => $value) {
+                    if (str_contains($nombreParentesco, $key)) {
+                        $parentesco = Parentesco::where('nombre', 'like', "%{$key}%")->first();
+                        break;
+                    }
+                }
+            }
+
+            if ($parentesco) {
+                Tasa::firstOrCreate(
+                    [
+                        'departamento_id' => $beni->id,
+                        'parentesco_id'   => $parentesco->id,
+                        'vigente_desde'   => $hoy,
+                    ],
+                    [
+                        'tasa'          => $tasa,
+                        'vigente_hasta' => null,
+                    ]
+                );
+            }
         }
     }
 }

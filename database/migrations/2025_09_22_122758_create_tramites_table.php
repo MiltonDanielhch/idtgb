@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('nro_tramite', 15)->unique();
             $table->date('fecha_presentacion');
             $table->foreignId('tipo_transmision_id')->constrained('tipos_transmision');
-            $table->foreignId('inmueble_id')->constrained();
+            // $table->foreignId('inmueble_id')->constrained();
             $table->decimal('valor_declarado', 14, 2);
             $table->decimal('base_imponible', 14, 2);
             $table->decimal('total_idtgb', 12, 2)->default(0);

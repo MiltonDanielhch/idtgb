@@ -32,7 +32,7 @@ class TramiteController extends Controller
         $search   = request('search');
         $paginate = request('paginate', 10);
 
-        $data = Tramite::with(['inmueble', 'tipoTransmision', 'user'])
+        $data = Tramite::with(['inmuebles', 'tipoTransmision', 'user'])
             ->when($search, fn($q) => $q->where('nro_tramite', 'like', "%{$search}%"))
             ->orderByDesc('fecha_presentacion')
             ->paginate($paginate);
@@ -45,7 +45,7 @@ class TramiteController extends Controller
     {
         $this->authorize('view', $tramite);
 
-        $tramite->load(['inmueble', 'adquirentes', 'disponentes', 'exenciones', 'user']);
+        $tramite->load(['inmuebles', 'adquirentes', 'disponentes', 'exenciones', 'user']);
 
         return view('admin.tramites.read', compact('tramite'));
     }

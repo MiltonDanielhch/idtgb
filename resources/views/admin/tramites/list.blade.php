@@ -18,7 +18,7 @@
                 <tr>
                     <td><strong>{{ $t->nro_tramite }}</strong></td>
                     <td>{{ $t->tipoTransmision->nombre }}</td>
-                    <td>{{ $t->inmueble->catastro }}</td>
+                    <td>{{ $t->inmuebles->pluck('catastro')->join(', ') ?: 'Sin inmueble' }}</td>
                     <td class="text-center">
                         <span class="badge badge-secondary">Bs. {{ number_format($t->valor_declarado, 2) }}</span>
                     </td>
@@ -82,10 +82,11 @@
                                     <li><a href="{{ route('admin.tramites.pagos.create', $t) }}">
                                         <i class="voyager-dollar"></i> Registrar pago</a></li>
                                 @else
-                                    <li><a href="{{ route('admin.pago.comprobante', $t->pago) }}" target="_blank">
-                                            <i class="voyager-check"></i> Comprobante</a></li>
+                                    @if($t->pago)
+                                        <li><a href="{{ route('admin.tramites.pagos.show', [$t, $t->pago]) }}" target="_blank">
+                                                <i class="voyager-check"></i> Comprobante</a></li>
+                                    @endif
                                 @endif
-
                                 <li role="separator" class="divider"></li>
 
                                 <li><a href="{{ route('admin.tramites.inmuebles.index', $t) }}">

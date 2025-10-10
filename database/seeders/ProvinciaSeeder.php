@@ -18,7 +18,7 @@ class ProvinciaSeeder extends Seeder
             'Marbán',
             'Mamoré',
             'Iténez',
-            'Ballivián',
+            'José Ballivián',
             'Vaca Díez',
         ];
 

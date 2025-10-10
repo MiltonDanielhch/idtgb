@@ -16,7 +16,7 @@ class PermissionsTableSeeder extends Seeder
     public function run()
     {
 
-
+        
         \DB::table('permissions')->delete();
 
         Permission::firstOrCreate([

@@ -15,7 +15,6 @@ class Tramite extends Model
         'nro_tramite',
         'fecha_presentacion',
         'tipo_transmision_id',
-        'inmueble_id',
         'valor_declarado',
         'base_imponible',
         'total_idtgb',
@@ -68,9 +67,14 @@ class Tramite extends Model
     // {
     //     return $this->belongsToMany(Inmueble::class, 'tramite_inmuebles');
     // }
-    public function inmueble()
+    public function inmuebles()
     {
-        return $this->belongsTo(Inmueble::class);
+        return $this->belongsToMany(
+            Inmueble::class,
+            'tramite_inmuebles', // nombre de la tabla pivote
+            'tramite_id',        // FK de trámite en la pivote
+            'inmueble_id'        // FK de inmueble en la pivote
+        );
     }
 
     public function exenciones()

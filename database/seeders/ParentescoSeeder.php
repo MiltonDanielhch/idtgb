@@ -3,26 +3,20 @@
 namespace Database\Seeders;
 
 use App\Models\Parentesco;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class ParentescoSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         $parentescos = [
-            'Cónyuge',
+            'Cónyuge o Conviviente',
             'Hijo/a',
             'Padre/Madre',
             'Hermano/a',
-            'Abuelo/a',
             'Nieto/a',
-            'Tío/a',
-            'Sobrino/a',
-            'Primo/a',
+            'Abuelo/a',
+            'Tío/a o Sobrino/a',
             'Sin parentesco',
         ];
 

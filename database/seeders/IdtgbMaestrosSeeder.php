@@ -9,26 +9,33 @@ class IdtgbMaestrosSeeder extends Seeder
     public function run(): void
     {
         $this->call([
+            // Geografía
             DepartamentoSeeder::class,
             ProvinciaSeeder::class,
             MunicipioSeeder::class,
 
+            // Maestros del sistema
             ParentescoSeeder::class,
             TipoTransmisionSeeder::class,
             TipoInmuebleSeeder::class,
             TasaSeeder::class,
+            PeopleBeniSeeder::class,    // ⚠️ ¡FALTABA ESTE!
             ExencionSeeder::class,
 
+            // Datos operativos
             InmuebleSeeder::class,
+            AvaluoSeeder::class,
 
+            // Trámites y sus relaciones
             TramiteSeeder::class,
-            TramiteExencionSeeder::class,
             AdquirenteTramiteSeeder::class,
             DisponenteTramiteSeeder::class,
-            AvaluoSeeder::class,
+            TramiteExencionSeeder::class,
             DocumentoSeeder::class,
-
             PagoSeeder::class,
+
+            // 🔑 Crítico para cálculos
+            UfvSeeder::class,           // ⚠️ ¡FALTABA ESTE!
         ]);
     }
 }
