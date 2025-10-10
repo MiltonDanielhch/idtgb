@@ -5,9 +5,7 @@
     <title>Portal Ciudadano | IDTGB - Beni</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- FontAwesome 6 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root { --beni-green: #007A33; --beni-green-light: #00A652; --beni-yellow: #FCD116; }
@@ -17,12 +15,13 @@
         .card-header-primary { background: linear-gradient(135deg, var(--beni-green), var(--beni-green-light)); color: #fff; }
         .btn-primary { background-color: var(--beni-green); border-color: var(--beni-green); }
         .btn-primary:hover { background-color: var(--beni-green-light); border-color: var(--beni-green-light); }
-        .btn-outline-danger { border-color: var(--beni-yellow); color: var(--beni-green); }
-        .btn-outline-danger:hover { background-color: var(--beni-yellow); border-color: var(--beni-yellow); color: #fff; }
+        .btn-outline-warning { border-color: #ffc107; color: #856404; }
+        .btn-outline-warning:hover { background-color: #ffc107; color: #212529; }
         .step-header { font-weight: 600; font-size: 1.1rem; margin-bottom: 1rem; }
         .result-box { background: #e9f5ff; border-left: 5px solid var(--beni-green); }
         .final-amount { font-size: 1.75rem; font-weight: 700; color: var(--beni-green); }
         .icon-size { font-size: 1.2rem; margin-right: 0.4rem; }
+        .disclaimer { background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 12px; border-radius: 6px; margin-top: 15px; }
     </style>
 </head>
 <body>
@@ -56,6 +55,14 @@
         </div>
         <div class="card-body">
 
+        <!-- ADVERTENCIA IMPORTANTE -->
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>Atención:</strong> Este cálculo es <strong>estimado y orientativo</strong>.
+            El monto final puede variar según avalúos, exenciones y normativa vigente.
+            Próximamente podrá iniciar un trámite oficial directamente desde esta plataforma.
+        </div>
+
             <!-- PARÁMETROS -->
             <div class="step-header"><i class="fas fa-list-ol text-primary"></i> Parámetros</div>
             <form id="form-calculadora" class="row g-3">
@@ -84,8 +91,8 @@
                 <div class="col-md-6">
                     <label class="form-label">Tipo de transmisión</label>
                     <select name="tipo_transmision" class="form-select" required>
-                        <option value="Entre vivos">Entre vivos</option>
-                        <option value="Testamento">Sucesión</option>
+                        <option value="Entre vivos">Entre vivos (Donación)</option>
+                        <option value="Testamento">Sucesión (Herencia/Testamento)</option>
                     </select>
                 </div>
 
@@ -104,12 +111,15 @@
                     <select name="parentesco_id" class="form-select" required>
                         <option value="">--Seleccione--</option>
                         @foreach($parentescos as $p)
-                            <option value="{{ $p->id }}" data-tasa="{{ $p->tasa }}">
-                                {{ $p->nombre }} ({{ $p->tasa ?? '—' }}%)
+                            @php
+                                $tasa = $p->tasa_vigente ?? 0.00;
+                            @endphp
+                            <option value="{{ $p->id }}" data-tasa="{{ $tasa }}">
+                                {{ $p->nombre }} ({{ number_format($tasa, 2) }}%)
                             </option>
                         @endforeach
                     </select>
-                    <div class="form-text">Seleccione el parentesco para aplicar la alícuota correspondiente.</div>
+                    <div class="form-text">Seleccione el parentesco para aplicar la alícuota del Beni.</div>
                 </div>
 
                 <div class="col-12 text-end">
@@ -120,14 +130,14 @@
             </form>
 
             <!-- TOTAL DETERMINADO -->
-            <div class="step-header mt-4"><i class="fas fa-chart-line text-success"></i> Total determinado</div>
+            <div class="step-header mt-4"><i class="fas fa-chart-line text-success"></i> Resultado estimado</div>
             <div id="resultado" class="result-box p-3 rounded d-none"></div>
 
             <!-- MARCO LEGAL -->
             <div class="mt-3">
                 <small class="text-muted">
                     <i class="fas fa-gavel"></i> Marco Legal:
-                    <a href="#" class="text-decoration-none">Descargar base legal</a>
+                    <a href="#" class="text-decoration-none">Ley Departamental IDTGB - Beni</a>
                 </small>
             </div>
         </div>
@@ -137,7 +147,6 @@
     </div>
 </div>
 
-<!-- Bootstrap 5 JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -159,34 +168,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            if (!res.ok || !res.headers.get('content-type')?.includes('application/json')) {
-                const text = await res.text();
-                throw new Error(text);
-            }
-
             const json = await res.json();
+
+            if (!res.ok) {
+                throw new Error(json.message || 'Error en el cálculo');
+            }
 
             resultado.innerHTML = `
                 <div class="row">
                     <div class="col-md-6">
+                        <p><strong>Fecha de transmisión:</strong> ${json.fecha_transmision}</p>
                         <p><strong>Fecha de vencimiento:</strong> ${json.fecha_vencimiento}</p>
-                        <p><strong>UFV fecha vencimiento:</strong> ${json.ufv}</p>
-                        <p><strong>Fecha de pago:</strong> ${new Date().toLocaleDateString('es-ES')}</p>
-                        <p><strong>UFV fecha pago:</strong> ${json.ufv}</p>
-                        <p><strong>Días de mora:</strong> ${json.dias_mora}</p>
-                        <p><strong>Tasa de interés (%):</strong> 0</p>
+                        <p><strong>Base imponible:</strong> Bs. ${parseFloat(json.base_imponible).toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        <p><strong>Tasa aplicada:</strong> ${json.tasa}%</p>
+                        <p><strong>UFV:</strong> ${json.ufv}</p>
                     </div>
                     <div class="col-md-6">
-                        <p><strong>Tributo omitido:</strong> Bs. ${json.tributo_omitido}</p>
-                        <p><strong>Descuento 15 %:</strong> Bs. ${json.descuento}</p>
-                        <p><strong>Intereses moratorios:</strong> 0</p>
-                        <p><strong>Multa IDF:</strong> 0</p>
-                        <p class="final-amount">Total (Bs.): ${json.monto_final}</p>
+                        <p><strong>IDTGB estimado:</strong> Bs. ${parseFloat(json.tributo_omitido).toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        <p class="final-amount">Monto estimado: Bs. ${parseFloat(json.monto_final).toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                     </div>
                 </div>
+                <div class="disclaimer mt-3">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Este resultado es únicamente orientativo.</strong>
+                    Para un trámite válido, acérquese a las oficinas de la Gobernación del Beni.
+                </div>
                 <div class="text-end mt-3">
-                    <button class="btn btn-outline-danger btn-sm" id="download-pdf">
-                        <i class="fas fa-file-pdf"></i> Descargar PDF
+                    <button class="btn btn-outline-warning btn-sm" id="download-pdf">
+                        <i class="fas fa-file-pdf"></i> Descargar cálculo estimado
                     </button>
                 </div>
             `;
@@ -196,14 +205,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Descarga PDF
+    // Descarga PDF del cálculo estimado
     resultado.addEventListener('click', (e) => {
         if (e.target.id === 'download-pdf') {
             e.preventDefault();
             const formData = new FormData(form);
             formData.append('download_pdf', '1');
 
-            fetch('/calculadora-idtgb-beni', {
+            fetch('/calculadora-idtgb-beni-pdf', {
                 method: 'POST',
                 body: formData,
                 headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') }
@@ -213,7 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'IDTGB_Beni_Form_A01_Calculo.pdf';
+                a.download = 'IDTGB_Beni_Calculo_Estimado.pdf';
                 document.body.appendChild(a);
                 a.click();
                 a.remove();

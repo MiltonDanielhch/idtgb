@@ -33,11 +33,15 @@ use App\Http\Controllers\UfvController;
 
 // Redirección raíz y login
 Route::redirect('login', 'admin/login')->name('login');
-Route::redirect('/', 'admin');
+// Route::redirect('/', 'admin');
+Route::get('/', function () {
+    return view('home');
+});
 
 // Ruta pública (sin login)
 Route::get('/calculadora-idtgb-beni', [CalculadoraBeniController::class, 'formulario'])->name('calculadora.beni.form');
 Route::post('/calculadora-idtgb-beni', [CalculadoraBeniController::class, 'calcular'])->name('calculadora.beni.calcular');
+Route::post('/calculadora-idtgb-beni-pdf', [CalculadoraBeniController::class, 'descargarPdf']);
 
 // url link
 // Route::get('/verificar/{hash}', [CalculadoraBeniController::class, 'show'])
