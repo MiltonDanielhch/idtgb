@@ -75,6 +75,16 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
         Route::delete('/{parentesco}', [ParentescoController::class, 'destroy'])->name('admin.parentescos.destroy');
     });
 
+    Route::prefix('exenciones')->group(function () {
+        Route::get('/', [ExencionController::class, 'index'])->name('admin.exenciones.index');
+        Route::get('/create', [ExencionController::class, 'create'])->name('admin.exenciones.create');
+        Route::get('/ajax/list', [ExencionController::class, 'list'])->name('admin.exenciones.ajax.list');
+        Route::get('/{exencion}', [ExencionController::class, 'show'])->name('admin.exenciones.show');
+        Route::post('/', [ExencionController::class, 'store'])->name('admin.exenciones.store');
+        Route::get('/{exencion}/edit', [ExencionController::class, 'edit'])->name('admin.exenciones.edit');
+        Route::put('/{exencion}', [ExencionController::class, 'update'])->name('admin.exenciones.update');
+        Route::delete('/{exencion}', [ExencionController::class, 'destroy'])->name('admin.exenciones.destroy');
+    });
     Route::prefix('tasas')->group(function () {
         Route::get('/', [TasaController::class, 'index'])->name('admin.tasas.index');
         Route::get('/create', [TasaController::class, 'create'])->name('admin.tasas.create');

@@ -4,65 +4,95 @@ namespace App\Http\Controllers;
 
 use App\Models\Exencion;
 use Illuminate\Http\Request;
+use App\Http\Requests\StoreExencionRequest;
+use App\Http\Requests\UpdateExencionRequest;
+use Illuminate\Support\Facades\Log;
 
 class ExencionController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth');
+    }
+
+    /* ----------  LISTADO  ---------- */
     public function index()
     {
-        $exenciones = Exencion::orderBy('nombre')->paginate(20);
-        return view('admin.exenciones.index', compact('exenciones'));
+        $this->authorize('viewAny', Exencion::class);
+        return view('admin.exenciones.browse');
     }
 
+    public function list(Request $request)
+    {
+        $this->authorize('viewAny', Exencion::class);
+
+        $search   = $request->get('search', '');
+        $paginate = $request->get('paginate', 10);
+
+        $exenciones = Exencion::when($search, function ($query) use ($search) {
+                $query->where('nombre', 'like', '%' . $search . '%');
+            })
+            ->orderBy('id', 'desc')
+            ->paginate($paginate);
+
+        return view('admin.exenciones.list', compact('exenciones'));
+    }
+
+    public function show(Exencion $exencion)
+    {
+        $this->authorize('view', $exencion);
+        return view('admin.exenciones.read', compact('exencion'));
+    }
+
+    /* ----------  ALTA  ---------- */
     public function create()
     {
-        return view('admin.exenciones.create');
+        $this->authorize('create', Exencion::class);
+        return view('admin.exenciones.edit-add', ['exencion' => new Exencion()]);
     }
 
-    public function store(Request $request)
+    public function store(StoreExencionRequest $request)
     {
-        $request->validate([
-            'nombre'        => 'required|string|max:100|unique:exenciones',
-            'descripcion'   => 'required|string',
-            'tipo'          => 'required|in:porcentaje,monto_fijo',
-            'valor'         => 'required|numeric|min:0',
-            'monto_maximo'  => 'nullable|numeric|min:0',
-            'vigente_desde' => 'required|date',
-            'vigente_hasta' => 'nullable|date|after_or_equal:vigente_desde',
-        ]);
-
-        Exencion::create($request->all());
+        Exencion::create($request->validated());
 
         return redirect()->route('admin.exenciones.index')
             ->with(['message' => 'Exención creada.', 'alert-type' => 'success']);
     }
 
+    /* ----------  EDICIÓN  ---------- */
     public function edit(Exencion $exencion)
     {
-        return view('admin.exenciones.edit', compact('exencion'));
+        $this->authorize('update', $exencion);
+        return view('admin.exenciones.edit-add', compact('exencion'));
     }
 
-    public function update(Request $request, Exencion $exencion)
+    public function update(UpdateExencionRequest $request, Exencion $exencion)
     {
-        $request->validate([
-            'nombre'        => 'required|string|max:100|unique:exenciones,nombre,'.$exencion->id,
-            'descripcion'   => 'required|string',
-            'tipo'          => 'required|in:porcentaje,monto_fijo',
-            'valor'         => 'required|numeric|min:0',
-            'monto_maximo'  => 'nullable|numeric|min:0',
-            'vigente_desde' => 'required|date',
-            'vigente_hasta' => 'nullable|date|after_or_equal:vigente_desde',
-        ]);
-
-        $exencion->update($request->all());
+        $exencion->update($request->validated());
 
         return redirect()->route('admin.exenciones.index')
             ->with(['message' => 'Exención actualizada.', 'alert-type' => 'success']);
     }
 
+    /* ----------  BORRADO  ---------- */
     public function destroy(Exencion $exencion)
     {
-        $exencion->delete();
-        return redirect()->route('admin.exenciones.index')
-            ->with(['message' => 'Exención eliminada.', 'alert-type' => 'success']);
+        $this->authorize('delete', $exencion);
+
+        // Verificar si tiene trámites asociados (pivot tramite_exenciones)
+        if ($exencion->tramites()->count() > 0) {
+            return redirect()->route('admin.exenciones.index')
+                ->with(['message' => 'No se puede eliminar: la exención está siendo usada en trámites.', 'alert-type' => 'error']);
+        }
+
+        try {
+            $exencion->delete();
+            return redirect()->route('admin.exenciones.index')
+                ->with(['message' => 'Exención eliminada.', 'alert-type' => 'success']);
+        } catch (\Exception $e) {
+            Log::error("Error al eliminar Exención #{$exencion->id}: " . $e->getMessage());
+            return redirect()->route('admin.exenciones.index')
+                ->with(['message' => 'Error al eliminar la exención.', 'alert-type' => 'error']);
+        }
     }
 }

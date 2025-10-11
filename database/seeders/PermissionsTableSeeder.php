@@ -16,7 +16,7 @@ class PermissionsTableSeeder extends Seeder
     public function run()
     {
 
-        
+
         \DB::table('permissions')->delete();
 
         Permission::firstOrCreate([
@@ -74,7 +74,6 @@ class PermissionsTableSeeder extends Seeder
             ]);
         }
 
-
         // Parentescos
         $permissionsParentesco = [
             'browse_parentescos' => 'Ver lista de parentescos',
@@ -90,6 +89,24 @@ class PermissionsTableSeeder extends Seeder
                 'keyDescription'=> $description,
                 'table_name' => 'parentescos',
                 'tableDescription'=>'Parentescos'
+            ]);
+        }
+
+        // Exenciones
+        $permissionsExencion = [
+            'browse_exenciones' => 'Ver lista de exenciones',
+            'read_exenciones'   => 'Ver detalles de una exención',
+            'edit_exenciones'   => 'Editar información de exenciones',
+            'add_exenciones'    => 'Agregar nuevas exenciones',
+            'delete_exenciones' => 'Eliminar exenciones',
+        ];
+
+        foreach ($permissionsExencion as $key => $description) {
+            Permission::firstOrCreate([
+                'key'            => $key,
+                'keyDescription' => $description,
+                'table_name'     => 'exenciones',
+                'tableDescription'=> 'Exenciones IDTGB'
             ]);
         }
     }
