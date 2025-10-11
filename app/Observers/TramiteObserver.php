@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Jobs\ExportarAlSINJob;
 use App\Models\Tramite;
 use App\Services\IdtgbCalculator;
 
@@ -15,6 +16,10 @@ class TramiteObserver
     public function updated(Tramite $tramite): void
     {
         $this->calcular($tramite);
+
+        if ($tramite->isDirty('estado') && $tramite->estado === 'Finalizado') {
+            dispatch(new ExportarAlSINJob($tramite));
+        }
     }
 
     private function calcular(Tramite $tramite): void

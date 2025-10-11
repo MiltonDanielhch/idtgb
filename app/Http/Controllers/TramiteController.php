@@ -161,7 +161,18 @@ class TramiteController extends Controller
     {
         $this->authorize('view', $tramite);
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.tramites.pdf.a01', compact('tramite'));
+        // Cargar relaciones para que estén disponibles en el PDF
+        $tramite->load(['inmuebles', 'tipoTransmision', 'adquirentes.persona', 'disponentes.persona', 'exenciones']);
+
+        // Genera el hash de validación si no existe
+        $hash = $tramite->hash_validacion ?: $tramite->generateHashValidacion();
+
+        // Genera la URL de validación y el código QR
+        $validation_url = route('tramite.validar', ['hash' => $hash]);
+        $qr = base64_encode(\SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(200)->generate($validation_url));
+
+        // Carga la vista del PDF y pasa los datos
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.tramites.pdf.a01', compact('tramite', 'qr', 'hash'));
         return $pdf->stream('Form-A01-'.$tramite->nro_tramite.'.pdf');
     }
 }

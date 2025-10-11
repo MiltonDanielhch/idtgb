@@ -1,58 +1,136 @@
 <?php
 
 namespace App\Http\Controllers;
+// app/Http/Controllers/UfvController.php
+namespace App\Http\Controllers;
 
 use App\Models\Ufv;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class UfvController extends Controller
 {
-    public function index()
+    public function __construct()
     {
-        $ufvs = Ufv::orderBy('fecha', 'desc')->paginate(31); // 1 mes por página
-        return view('admin.ufvs.index', compact('ufvs'));
+        $this->middleware('auth');
     }
 
+    /* ---------- LISTADO (AJAX) ---------- */
+    public function index()
+    {
+        $this->authorize('viewAny', Ufv::class);
+        return view('admin.ufvs.browse');
+    }
+
+    public function list()
+    {
+        $this->authorize('viewAny', Ufv::class);
+
+        $search   = request('search');
+        $paginate = request('paginate', 10);
+
+        $data = Ufv::when($search, fn($q) => $q->where('fecha', 'like', "%{$search}%"))
+            ->orderBy('fecha', 'desc')
+            ->paginate($paginate);
+
+        return view('admin.ufvs.list', compact('data'));
+    }
+
+    /* ---------- LECTURA ---------- */
+    public function show(Ufv $ufv)
+    {
+        $this->authorize('view', $ufv);
+        return view('admin.ufvs.read', compact('ufv'));
+    }
+
+    /* ---------- ALTA UNITARIA ---------- */
     public function create()
     {
+        $this->authorize('create', Ufv::class);
         return view('admin.ufvs.create');
     }
 
     public function store(Request $request)
     {
+        $this->authorize('create', Ufv::class);
+
         $request->validate([
-            'fecha' => 'required|date|unique:ufvs,fecha',
-            'valor' => 'required|numeric|min:0|max:999.99999',
+            'fecha' => 'required|date|before_or_equal:today|unique:ufvs,fecha',
+            'valor' => 'required|numeric|min:0.00001',
+        ], [
+            'fecha.unique' => 'Ya existe un valor UFV para esa fecha.',
         ]);
 
-        Ufv::create($request->only('fecha', 'valor'));
-
-        return redirect()->route('admin.ufvs.index')
-            ->with(['message' => 'UFV registrada.', 'alert-type' => 'success']);
-    }
-
-    public function edit(Ufv $ufv)
-    {
-        return view('admin.ufvs.edit', compact('ufv'));
-    }
-
-    public function update(Request $request, Ufv $ufv)
-    {
-        $request->validate([
-            'fecha' => 'required|date|unique:ufvs,fecha,'.$ufv->id,
-            'valor' => 'required|numeric|min:0|max:999.99999',
+        Ufv::create([
+            'fecha' => $request->fecha,
+            'valor' => $request->valor,
+            'created_by' => auth()->id(),
+            'updated_by' => auth()->id(),
         ]);
 
-        $ufv->update($request->only('fecha', 'valor'));
-
         return redirect()->route('admin.ufvs.index')
-            ->with(['message' => 'UFV actualizada.', 'alert-type' => 'success']);
+            ->with(['message' => 'Valor UFV guardado.', 'alert-type' => 'success']);
     }
 
-    public function destroy(Ufv $ufv)
+    /* ---------- IMPORTAR CSV ---------- */
+    public function import(Request $request)
     {
-        $ufv->delete();
-        return redirect()->route('admin.ufvs.index')
-            ->with(['message' => 'UFV eliminada.', 'alert-type' => 'success']);
+        $this->authorize('create', Ufv::class);
+
+        $request->validate([
+            'archivo' => 'required|file|mimes:csv,txt|max:2048',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $file = $request->file('archivo');
+            $handle = fopen($file->getRealPath(), 'r');
+            $errors = [];
+
+            while (($line = fgetcsv($handle, 0, ',')) !== false) {
+                if (count($line) < 2) continue;
+
+                $fecha = trim($line[0]);
+                $valor = trim($line[1]);
+
+                if (!strtotime($fecha)) {
+                    $errors[] = "Fecha inválida: {$fecha}";
+                    continue;
+                }
+                if (!is_numeric($valor) || $valor <= 0) {
+                    $errors[] = "Valor inválido: {$valor}";
+                    continue;
+                }
+
+                // Evitar duplicados
+                if (Ufv::where('fecha', $fecha)->exists()) {
+                    $errors[] = "Fecha duplicada: {$fecha}";
+                    continue;
+                }
+
+                Ufv::create([
+                    'fecha' => $fecha,
+                    'valor' => $valor,
+                    'created_by' => auth()->id(),
+                    'updated_by' => auth()->id(),
+                ]);
+            }
+            fclose($handle);
+
+            DB::commit();
+
+            if (!empty($errors)) {
+                return back()->with(['message' => 'Importado con advertencias: ' . implode(', ', $errors), 'alert-type' => 'warning']);
+            }
+
+            return redirect()->route('admin.ufvs.index')
+                ->with(['message' => 'UFVs importados.', 'alert-type' => 'success']);
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return back()->withInput()->with(['message' => $e->getMessage(), 'alert-type' => 'error']);
+        }
     }
 }

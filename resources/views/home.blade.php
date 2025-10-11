@@ -1,65 +1,8 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Portal Ciudadano | IDTGB - GAD Beni</title>
+@extends('layouts.app')
 
-    <!-- Bootstrap 5 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- FontAwesome 6 -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+@section('title', 'Portal Ciudadano | IDTGB - GAD Beni')
 
-    <style>
-        :root {
-            --beni-green: #007A33;
-            --beni-green-light: #00A652;
-            --beni-yellow: #FCD116;
-        }
-        body {
-            background-color: #f8f9fa;
-            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-        }
-        .navbar-custom {
-            background: linear-gradient(135deg, var(--beni-green), var(--beni-green-light));
-        }
-        .navbar-custom .navbar-brand,
-        .navbar-custom .nav-link {
-            color: #fff !important;
-        }
-        .card-icon {
-            font-size: 1.5rem;
-            margin-right: 0.5rem;
-        }
-        .footer {
-            background-color: #f1f3f5;
-            padding: 20px 0;
-            margin-top: 40px;
-        }
-    </style>
-</head>
-<body>
-
-<!-- NAVBAR -->
-<nav class="navbar navbar-expand-lg navbar-custom shadow-sm">
-    <div class="container">
-        <a class="navbar-brand d-flex align-items-center" href="/">
-            <i class="fas fa-landmark me-2"></i>
-            GAD Beni - IDTGB
-        </a>
-        <div class="navbar-nav ms-auto">
-            <a class="nav-link" href="/calculadora-idtgb-beni">
-                <i class="fas fa-calculator me-1"></i>Calculadora
-            </a>
-            <a class="nav-link" href="/admin/login">
-                <i class="fas fa-lock me-1"></i>Funcionarios
-            </a>
-        </div>
-    </div>
-</nav>
-
-<!-- MAIN CONTENT -->
+@section('content')
 <div class="container py-5">
     <div class="text-center mb-5">
         <h1 class="display-5 fw-bold" style="color: var(--beni-green);">
@@ -145,27 +88,4 @@
         </small>
     </div>
 </div>
-
-<!-- FOOTER -->
-<footer class="footer">
-    <div class="container text-center">
-        <p class="mb-0">
-            <small>
-                © {{ date('Y') }} Gobierno Autónomo Departamental del Beni |
-                Dirección de Recaudaciones |
-                Todos los derechos reservados
-            </small>
-        </p>
-        <p class="mb-0 mt-1">
-            <small class="text-muted">
-                Sistema de Gestión Tributaria IDTGB v1.0
-            </small>
-        </p>
-    </div>
-</footer>
-
-<!-- Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-
-</body>
-</html>
+@endsection

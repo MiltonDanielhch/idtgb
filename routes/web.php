@@ -23,7 +23,7 @@ use App\Http\Controllers\DisponenteTramiteController;
 use App\Http\Controllers\DocumentoController;
 use App\Http\Controllers\TramiteInmuebleController;
 use App\Http\Controllers\UfvController;
-
+use App\Http\Controllers\ValidacionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -46,6 +46,8 @@ Route::post('/calculadora-idtgb-beni-pdf', [CalculadoraBeniController::class, 'd
 // url link
 // Route::get('/verificar/{hash}', [CalculadoraBeniController::class, 'show'])
 //      ->name('qr.verificar');
+
+Route::get('/validar/{hash}', [ValidacionController::class, 'show'])->name('tramite.validar');
 
 // Grupo principal con middleware personalizado
 Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
@@ -187,7 +189,16 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
         Route::delete('/{pago}', [PagoController::class, 'destroy'])->name('destroy');
     });
 
-    Route::resource('ufvs', UfvController::class)->names('admin.ufvs');
+    // Route::resource('ufvs', UfvController::class)->names('admin.ufvs');
+
+    Route::prefix('ufvs')->name('admin.ufvs.')->group(function () {
+        Route::get('/', [UfvController::class, 'index'])->name('index');
+        Route::get('/list', [UfvController::class, 'list'])->name('ajax.list');
+        Route::get('/create', [UfvController::class, 'create'])->name('create');
+        Route::post('/', [UfvController::class, 'store'])->name('store');
+        Route::post('/import', [UfvController::class, 'import'])->name('import');
+        Route::get('/{ufv}', [UfvController::class, 'show'])->name('show');
+    });
 
     // ──────────────── USUARIOS ────────────────
     Route::prefix('users')->group(function () {

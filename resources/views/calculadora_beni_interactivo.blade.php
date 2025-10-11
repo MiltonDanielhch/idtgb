@@ -1,52 +1,24 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Portal Ciudadano | IDTGB - Beni</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root { --beni-green: #007A33; --beni-green-light: #00A652; --beni-yellow: #FCD116; }
-        body { background-color: #f4f7fa; font-family: "Segoe UI", Arial, sans-serif; }
-        .navbar-custom { background: linear-gradient(135deg, var(--beni-green), var(--beni-green-light)); }
-        .navbar-custom .navbar-brand, .navbar-custom .nav-link { color: #fff !important; }
-        .card-header-primary { background: linear-gradient(135deg, var(--beni-green), var(--beni-green-light)); color: #fff; }
-        .btn-primary { background-color: var(--beni-green); border-color: var(--beni-green); }
-        .btn-primary:hover { background-color: var(--beni-green-light); border-color: var(--beni-green-light); }
-        .btn-outline-warning { border-color: #ffc107; color: #856404; }
-        .btn-outline-warning:hover { background-color: #ffc107; color: #212529; }
-        .step-header { font-weight: 600; font-size: 1.1rem; margin-bottom: 1rem; }
-        .result-box { background: #e9f5ff; border-left: 5px solid var(--beni-green); }
-        .final-amount { font-size: 1.75rem; font-weight: 700; color: var(--beni-green); }
-        .icon-size { font-size: 1.2rem; margin-right: 0.4rem; }
-        .disclaimer { background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 12px; border-radius: 6px; margin-top: 15px; }
-    </style>
-</head>
-<body>
+@extends('layouts.app')
 
-<!-- HEADER -->
-<nav class="navbar navbar-expand-lg navbar-custom shadow-sm">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="#"><i class="fas fa-building"></i> Portal Ciudadano - GAD Beni</a>
-        <div class="navbar-nav ms-auto">
-            <a class="nav-link" href="#"><i class="fas fa-home"></i> Inicio</a>
-        </div>
-    </div>
-</nav>
+@section('title', 'Calculadora IDTGB - Beni')
 
+@push('styles')
+<style>
+    .disclaimer { background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 12px; border-radius: 6px; margin-top: 15px; }
+</style>
+@endpush
+
+@section('content')
 <!-- BREADCRUMB -->
 <div class="container py-2">
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb mb-0">
-            <li class="breadcrumb-item"><a href="#">Inicio</a></li>
+            <li class="breadcrumb-item"><a href="/">Inicio</a></li>
             <li class="breadcrumb-item active" aria-current="page">Calculá el IDTGB</li>
         </ol>
     </nav>
 </div>
 
-<!-- CONTENIDO -->
 <div class="container pb-5">
     <div class="card shadow">
         <div class="card-header card-header-primary d-flex align-items-center">
@@ -55,13 +27,13 @@
         </div>
         <div class="card-body">
 
-        <!-- ADVERTENCIA IMPORTANTE -->
-        <div class="alert alert-warning">
-            <i class="fas fa-exclamation-triangle"></i>
-            <strong>Atención:</strong> Este cálculo es <strong>estimado y orientativo</strong>.
-            El monto final puede variar según avalúos, exenciones y normativa vigente.
-            Próximamente podrá iniciar un trámite oficial directamente desde esta plataforma.
-        </div>
+            <!-- ADVERTENCIA IMPORTANTE -->
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>Atención:</strong> Este cálculo es <strong>estimado y orientativo</strong>.
+                El monto final puede variar según avalúos, exenciones y normativa vigente.
+                Próximamente podrá iniciar un trámite oficial directamente desde esta plataforma.
+            </div>
 
             <!-- PARÁMETROS -->
             <div class="step-header"><i class="fas fa-list-ol text-primary"></i> Parámetros</div>
@@ -141,13 +113,11 @@
                 </small>
             </div>
         </div>
-        <div class="card-footer text-muted text-center">
-            <small>Este cálculo es referencial y no reemplaza el trámite oficial ante la GAD-Beni.</small>
-        </div>
     </div>
 </div>
+@endsection
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+@push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('form-calculadora');
@@ -235,6 +205,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 </script>
-
-</body>
-</html>
+@endpush

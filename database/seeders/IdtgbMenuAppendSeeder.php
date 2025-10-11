@@ -31,6 +31,7 @@ class IdtgbMenuAppendSeeder extends Seeder
             // ['title' => 'Tipos de Inmueble',     'route' => 'admin.tipos-inmueble.index',      'icon_class' => 'fa-solid fa-house-chimney',        'order' => 6],
             ['title' => 'Tasas',                 'route' => 'admin.tasas.index',               'icon_class' => 'fa-solid fa-percent',              'order' => 7],
             ['title' => 'Exenciones',            'route' => 'admin.exenciones.index',          'icon_class' => 'fa-solid fa-gift',                 'order' => 8],
+            ['title' => 'UFVs', 'route' => 'admin.ufvs.index', 'icon_class' => 'fa-solid fa-calendar-day', 'order' => 9],
         ],
     ],
     [

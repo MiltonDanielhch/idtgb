@@ -29,9 +29,12 @@
 
     <h4>2. Inmueble</h4>
     <table class="table">
-        <tr><th>Catástro</th><td>{{ $tramite->inmueble->catastro }}</td></tr>
-        <tr><th>Dirección</th><td>{{ $tramite->inmueble->direccion ?? '-' }}</td></tr>
-        <tr><th>Valor Catastral</th><td>Bs {{ number_format($tramite->inmueble->valor_catastral, 2) }}</td></tr>
+        @php
+            $inmueble = $tramite->inmuebles->first();
+        @endphp
+        <tr><th>Catástro</th><td>{{ optional($inmueble)->catastro ?? 'No asignado' }}</td></tr>
+        <tr><th>Dirección</th><td>{{ optional($inmueble)->direccion ?? '-' }}</td></tr>
+        <tr><th>Valor Catastral</th><td>Bs {{ number_format(optional($inmueble)->valor_catastral ?? 0, 2) }}</td></tr>
     </table>
 
     <h4>3. Base Imponible y Cálculo del IDTGB</h4>
@@ -81,6 +84,28 @@
             <li>Ninguna</li>
         @endforelse
     </ul>
+
+    <div style="margin-top: 40px;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <tbody>
+                <tr>
+                    <td style="width: 70%; vertical-align: top; border: none; padding: 0;">
+                        <h4>7. Validación</h4>
+                        <p style="font-size: 10px; margin: 0; word-break: break-all;">
+                            <strong>Hash:</strong> {{ $hash }}
+                        </p>
+                        <p style="font-size: 11px; margin-top: 10px;">
+                            Verifique la autenticidad de este documento en:<br>
+                            <a href="{{ route('tramite.validar', ['hash' => $hash]) }}">{{ route('tramite.validar', ['hash' => $hash]) }}</a>
+                        </p>
+                    </td>
+                    <td style="width: 30%; text-align: right; vertical-align: top; border: none; padding: 0;">
+                        <img src="data:image/svg+xml;base64,{{ $qr }}" alt="QR Code" style="width: 120px; height: 120px;">
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 
     <div style="margin-top:40px; text-align:right;">
         <p>_________________________</p>

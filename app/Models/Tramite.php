@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Tramite extends Model
 {
@@ -116,5 +117,18 @@ class Tramite extends Model
         $mora  = $this->base_imponible * $tasa * $meses;
 
         return min($mora, $this->base_imponible * 0.50); // tope 50 %
+    }
+
+    public function generateHashValidacion(): string
+    {
+        if ($this->hash_validacion) {
+            return $this->hash_validacion;
+        }
+
+        // Genera un hash único combinando datos del trámite y un elemento aleatorio
+        $this->hash_validacion = hash('sha256', $this->id . '|' . $this->nro_tramite . '|' . now()->timestamp . '|' . Str::random(10));
+        $this->save();
+
+        return $this->hash_validacion;
     }
 }

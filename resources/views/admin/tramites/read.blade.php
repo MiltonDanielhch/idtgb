@@ -49,7 +49,7 @@
                 <div class="col-md-3"><a href="{{ route('admin.tramites.documentos.index', $tramite) }}" class="btn btn-block btn-default"><i class="voyager-folder"></i> Documentos</a></div>
                 <div class="col-md-3">
                     @if($tramite->estado !== 'Pagado')
-                        <a href="{{ route('admin.tramites.pagar', $tramite) }}" class="btn btn-block btn-success"><i class="voyager-dollar"></i> Registrar pago</a>
+                        <a href="{{ route('admin.tramites.pagos.create', $tramite) }}" class="btn btn-block btn-success"><i class="voyager-dollar"></i> Registrar pago</a>
                     @else
                         <a href="{{ route('admin.pago.comprobante', $tramite->pago) }}" target="_blank" class="btn btn-block btn-primary"><i class="voyager-check"></i> Comprobante</a>
                     @endif
