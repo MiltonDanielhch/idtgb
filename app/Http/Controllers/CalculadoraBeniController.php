@@ -4,11 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Departamento;
 use Illuminate\Http\Request;
-use App\Models\Inmueble;
 use App\Models\Parentesco;
-use App\Models\Tasa;
+use App\Models\TipoTransmision;
 use App\Models\UFV;
-use App\Models\Person;
+use App\Services\IdtgbCalculator;
 use Carbon\Carbon;
 
 class CalculadoraBeniController extends Controller
@@ -18,72 +17,49 @@ class CalculadoraBeniController extends Controller
      */
     public function formulario()
     {
-        // Obtener ID del departamento Beni
-        $beniId = Departamento::where('codigo', 'BE')->firstOrFail()->id;
+        // ✅ Solo cargar listas básicas (sin JOINs complejos)
+        $parentescos = Parentesco::all();
+        $tipos_transmision = TipoTransmision::all();
 
-        // Cargar parentescos con su tasa VIGENTE del Beni
-        $parentescos = Parentesco::leftJoin('tasas', function($join) use ($beniId) {
-                $join->on('parentescos.id', '=', 'tasas.parentesco_id')
-                    ->where('tasas.departamento_id', '=', $beniId)
-                    ->where('tasas.vigente_desde', '<=', now())
-                    ->where(function($q) {
-                        $q->whereNull('tasas.vigente_hasta')
-                        ->orWhere('tasas.vigente_hasta', '>=', now());
-                    });
-            })
-            ->select('parentescos.*', 'tasas.tasa as tasa_vigente')
-            ->get();
-
-        $inmuebles = Inmueble::whereHas('municipio.provincia.departamento', function ($q) {
-            $q->where('codigo', 'BE');
-        })->get();
-
-        $personas = Person::all();
-
-        return view('calculadora_beni_interactivo', compact('inmuebles', 'parentescos', 'personas'));
+        return view('calculadora_beni_interactivo', compact('parentescos', 'tipos_transmision'));
     }
 
     /**
-     * PASO 2: Calcular estimación del IDTGB (sin descuentos ni QR)
+     * PASO 2: Calcular estimación del IDTGB usando el servicio centralizado
      */
-    public function calcular(Request $request)
+    public function calcular(Request $request, IdtgbCalculator $calculator)
     {
         $request->validate([
             'tipo_contribuyente' => 'required|in:Natural,Jurídica',
             'parentesco_id'      => 'required|exists:parentescos,id',
             'fecha_transmision'  => 'required|date',
             'base_imponible'     => 'required|numeric|min:0.01',
-            'tipo_transmision'   => 'required|string|in:Entre vivos,Testamento',
+            'tipo_transmision'   => 'required|string|in:Herencia,Donación,Legado',
         ]);
 
-        // Obtener datos
-        $parentesco = Parentesco::findOrFail($request->parentesco_id);
+        // 1. Obtener IDs y datos necesarios
+        $beniId = Departamento::where('codigo', 'BE')->firstOrFail()->id;
+        $tipoTransmisionId = TipoTransmision::where('nombre', $request->tipo_transmision)->firstOrFail()->id;
         $fecha_transmision = Carbon::parse($request->fecha_transmision);
         $fecha_vencimiento = $fecha_transmision->copy()->addDays(30);
-        $dias_mora = max(0, Carbon::now()->diffInDays($fecha_vencimiento, false));
 
-        // Obtener UFV vigente
+        // 2. Llamar al servicio para el cálculo
+        $calculo = $calculator->calculateEstimate(
+            (float)$request->base_imponible,
+            $beniId,
+            (int)$request->parentesco_id,
+            $tipoTransmisionId,
+            $fecha_transmision->toDateString(),
+            $fecha_vencimiento->toDateString()
+        );
+
+        // 3. Preparar el resultado para la vista
+        $parentesco = Parentesco::find($request->parentesco_id);
         $ufv = UFV::whereDate('fecha', '<=', $fecha_transmision)
                    ->orderBy('fecha', 'desc')
                    ->first()?->valor ?? 1.00000;
+        $dias_mora = max(0, Carbon::now()->diffInDays($fecha_vencimiento, false));
 
-        // Obtener tasa del Beni (vigente en la fecha de transmisión)
-        $tasa = Tasa::where('parentesco_id', $request->parentesco_id)
-                    ->whereHas('departamento', fn($q) => $q->where('codigo', 'BE'))
-                    ->whereDate('vigente_desde', '<=', $fecha_transmision)
-                    ->where(function($q) use ($fecha_transmision) {
-                        $q->whereNull('vigente_hasta')
-                          ->orWhereDate('vigente_hasta', '>=', $fecha_transmision);
-                    })
-                    ->orderBy('vigente_desde', 'desc')
-                    ->first()?->tasa ?? 0.00;
-
-        // 🔥 CÁLCULO REAL DEL BENI: SIN DESCUENTO DEL 15%
-        $base_imponible  = $request->base_imponible;
-        $tributo_omitido = $base_imponible * ($tasa / 100);
-        $monto_final     = $tributo_omitido; // ✅ Sin descuentos
-
-        // Preparar resultado
         $resultado = [
             'tipo_contribuyente' => $request->tipo_contribuyente,
             'parentesco'         => $parentesco,
@@ -91,60 +67,57 @@ class CalculadoraBeniController extends Controller
             'fecha_transmision'  => $fecha_transmision->format('d/m/Y'),
             'fecha_vencimiento'  => $fecha_vencimiento->format('d/m/Y'),
             'dias_mora'          => $dias_mora,
-            'base_imponible'     => round($base_imponible, 2),
+            'base_imponible'     => round($calculo['base'], 2),
             'ufv'                => $ufv,
-            'tasa'               => $tasa,
-            'tributo_omitido'    => round($tributo_omitido, 2),
-            'monto_final'        => round($monto_final, 2),
-            'cuenta_banco'       => '1000000000000', // Solo para referencia
+            'tasa'               => $calculo['detalles_tasas'][0]['tasa_aplicada'],
+            'tributo_omitido'    => round($calculo['tasas'], 2),
+            'monto_final'        => round($calculo['final'], 2),
+            'cuenta_banco'       => '1000000000000',
         ];
 
-        // ❌ NO se genera PDF ni QR en la calculadora rápida
         return response()->json($resultado);
     }
 
     /**
      * Generar PDF del cálculo estimado (NO es formulario A-01 oficial)
      */
-    public function descargarPdf(Request $request)
+    public function descargarPdf(Request $request, IdtgbCalculator $calculator)
     {
         $request->validate([
             'tipo_contribuyente' => 'required|in:Natural,Jurídica',
             'parentesco_id'      => 'required|exists:parentescos,id',
             'fecha_transmision'  => 'required|date',
             'base_imponible'     => 'required|numeric|min:0.01',
-            'tipo_transmision'   => 'required|string|in:Entre vivos,Testamento',
+            'tipo_transmision'   => 'required|string|in:Herencia,Donación,Legado',
         ]);
 
-        // Reutilizar lógica de cálculo
-        // $inmueble = Inmueble::findOrFail($request->inmueble_id);
-        $parentesco = Parentesco::findOrFail($request->parentesco_id);
+        $beniId = Departamento::where('codigo', 'BE')->firstOrFail()->id;
+        $tipoTransmisionId = TipoTransmision::where('nombre', $request->tipo_transmision)->firstOrFail()->id;
         $fecha_transmision = Carbon::parse($request->fecha_transmision);
         $fecha_vencimiento = $fecha_transmision->copy()->addDays(30);
-        $ufv = UFV::whereDate('fecha', '<=', $fecha_transmision)->orderBy('fecha', 'desc')->first()?->valor ?? 1.00000;
-        $tasa = Tasa::where('parentesco_id', $request->parentesco_id)
-                    ->whereHas('departamento', fn($q) => $q->where('codigo', 'BE'))
-                    ->whereDate('vigente_desde', '<=', $fecha_transmision)
-                    ->where(fn($q) => $q->whereNull('vigente_hasta')->orWhereDate('vigente_hasta', '>=', $fecha_transmision))
-                    ->orderBy('vigente_desde', 'desc')
-                    ->first()?->tasa ?? 0.00;
 
-        $base_imponible = $request->base_imponible;
-        $tributo_omitido = $base_imponible * ($tasa / 100);
-        $monto_final = $tributo_omitido;
+        $calculo = $calculator->calculateEstimate(
+            (float)$request->base_imponible,
+            $beniId,
+            (int)$request->parentesco_id,
+            $tipoTransmisionId,
+            $fecha_transmision->toDateString(),
+            $fecha_vencimiento->toDateString()
+        );
+
+        $parentesco = Parentesco::find($request->parentesco_id);
 
         $data = [
             'tipo_contribuyente' => $request->tipo_contribuyente,
-            // 'inmueble' => $inmueble,
-            'parentesco' => $parentesco,
-            'tipo_transmision' => $request->tipo_transmision,
-            'fecha_transmision' => $fecha_transmision->format('d/m/Y'),
-            'fecha_vencimiento' => $fecha_vencimiento->format('d/m/Y'),
-            'base_imponible' => round($base_imponible, 2),
-            'tasa' => $tasa,
-            'tributo_omitido' => round($tributo_omitido, 2),
-            'monto_final' => round($monto_final, 2),
-            'es_calculo_estimado' => true, // Para la vista PDF
+            'parentesco'         => $parentesco,
+            'tipo_transmision'   => $request->tipo_transmision,
+            'fecha_transmision'  => $fecha_transmision->format('d/m/Y'),
+            'fecha_vencimiento'  => $fecha_vencimiento->format('d/m/Y'),
+            'base_imponible'     => round($calculo['base'], 2),
+            'tasa'               => $calculo['detalles_tasas'][0]['tasa_aplicada'],
+            'tributo_omitido'    => round($calculo['tasas'], 2),
+            'monto_final'        => round($calculo['final'], 2),
+            'es_calculo_estimado' => true,
         ];
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.calculo_estimado_beni', $data);

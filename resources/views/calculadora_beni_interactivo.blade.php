@@ -48,23 +48,19 @@
                     </select>
                 </div>
 
-                 <div class="col-md-6">
+                <div class="col-md-6">
                     <label class="form-label">Valor del inmueble (Bs.)</label>
                     <input type="number" name="base_imponible" class="form-control" value="100000" min="0.01" step="0.01" required>
                     <div class="form-text">Ingrese el valor catastral o comercial del inmueble.</div>
                 </div>
 
-                {{-- <div class="col-md-6">
-                    <label class="form-label">Base imponible (Bs.)</label>
-                    <input type="number" name="base_imponible" class="form-control" value="1000" min="0.01" step="0.01" required>
-                </div> --}}
-
-
                 <div class="col-md-6">
                     <label class="form-label">Tipo de transmisión</label>
                     <select name="tipo_transmision" class="form-select" required>
-                        <option value="Entre vivos">Entre vivos (Donación)</option>
-                        <option value="Testamento">Sucesión (Herencia/Testamento)</option>
+                        <option value="">-- Seleccione --</option>
+                        @foreach($tipos_transmision as $tipo)
+                            <option value="{{ $tipo->nombre }}">{{ $tipo->nombre }}</option>
+                        @endforeach
                     </select>
                 </div>
 
@@ -74,16 +70,11 @@
                 </div>
 
                 <div class="col-md-6">
-                    <label class="form-label">Parentesco / Alicuota</label>
+                    <label class="form-label">Parentesco</label>
                     <select name="parentesco_id" class="form-select" required>
                         <option value="">--Seleccione--</option>
                         @foreach($parentescos as $p)
-                            @php
-                                $tasa = $p->tasa_vigente ?? 0.00;
-                            @endphp
-                            <option value="{{ $p->id }}" data-tasa="{{ $tasa }}">
-                                {{ $p->nombre }} ({{ number_format($tasa, 2) }}%)
-                            </option>
+                            <option value="{{ $p->id }}">{{ $p->nombre }}</option>
                         @endforeach
                     </select>
                     <div class="form-text">Seleccione el parentesco para aplicar la alícuota del Beni.</div>
@@ -144,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="col-md-6">
                         <p><strong>Fecha de transmisión:</strong> ${json.fecha_transmision}</p>
                         <p><strong>Fecha de vencimiento:</strong> ${json.fecha_vencimiento}</p>
-                        <p><strong>Base imponible:</strong> Bs. ${parseFloat(json.base_imponible).toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        <p><strong>Valor del inmueble:</strong> Bs. ${parseFloat(json.base_imponible).toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                         <p><strong>Tasa aplicada:</strong> ${json.tasa}%</p>
                         <p><strong>UFV:</strong> ${json.ufv}</p>
                     </div>
