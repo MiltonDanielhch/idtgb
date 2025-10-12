@@ -50,7 +50,6 @@ class CalculadoraBeniController extends Controller
     {
         $request->validate([
             'tipo_contribuyente' => 'required|in:Natural,Jurídica',
-            'inmueble_id'        => 'required|exists:inmuebles,id',
             'parentesco_id'      => 'required|exists:parentescos,id',
             'fecha_transmision'  => 'required|date',
             'base_imponible'     => 'required|numeric|min:0.01',
@@ -58,7 +57,6 @@ class CalculadoraBeniController extends Controller
         ]);
 
         // Obtener datos
-        $inmueble   = Inmueble::findOrFail($request->inmueble_id);
         $parentesco = Parentesco::findOrFail($request->parentesco_id);
         $fecha_transmision = Carbon::parse($request->fecha_transmision);
         $fecha_vencimiento = $fecha_transmision->copy()->addDays(30);
@@ -88,7 +86,6 @@ class CalculadoraBeniController extends Controller
         // Preparar resultado
         $resultado = [
             'tipo_contribuyente' => $request->tipo_contribuyente,
-            'inmueble'           => $inmueble,
             'parentesco'         => $parentesco,
             'tipo_transmision'   => $request->tipo_transmision,
             'fecha_transmision'  => $fecha_transmision->format('d/m/Y'),
@@ -113,7 +110,6 @@ class CalculadoraBeniController extends Controller
     {
         $request->validate([
             'tipo_contribuyente' => 'required|in:Natural,Jurídica',
-            'inmueble_id'        => 'required|exists:inmuebles,id',
             'parentesco_id'      => 'required|exists:parentescos,id',
             'fecha_transmision'  => 'required|date',
             'base_imponible'     => 'required|numeric|min:0.01',
@@ -121,7 +117,7 @@ class CalculadoraBeniController extends Controller
         ]);
 
         // Reutilizar lógica de cálculo
-        $inmueble = Inmueble::findOrFail($request->inmueble_id);
+        // $inmueble = Inmueble::findOrFail($request->inmueble_id);
         $parentesco = Parentesco::findOrFail($request->parentesco_id);
         $fecha_transmision = Carbon::parse($request->fecha_transmision);
         $fecha_vencimiento = $fecha_transmision->copy()->addDays(30);
@@ -139,7 +135,7 @@ class CalculadoraBeniController extends Controller
 
         $data = [
             'tipo_contribuyente' => $request->tipo_contribuyente,
-            'inmueble' => $inmueble,
+            // 'inmueble' => $inmueble,
             'parentesco' => $parentesco,
             'tipo_transmision' => $request->tipo_transmision,
             'fecha_transmision' => $fecha_transmision->format('d/m/Y'),

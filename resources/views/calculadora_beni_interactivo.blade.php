@@ -48,17 +48,17 @@
                     </select>
                 </div>
 
-                <div class="col-md-6">
-                    <label class="form-label">Inmueble (catastro Beni)</label>
-                    <select name="inmueble_id" class="form-select" required>
-                        <option value="">--Seleccione--</option>
-                        @foreach($inmuebles as $inm)
-                            <option value="{{ $inm->id }}">
-                                {{ $inm->catastro }} - {{ $inm->direccion }}, {{ $inm->municipio->nombre }}
-                            </option>
-                        @endforeach
-                    </select>
+                 <div class="col-md-6">
+                    <label class="form-label">Valor del inmueble (Bs.)</label>
+                    <input type="number" name="base_imponible" class="form-control" value="100000" min="0.01" step="0.01" required>
+                    <div class="form-text">Ingrese el valor catastral o comercial del inmueble.</div>
                 </div>
+
+                {{-- <div class="col-md-6">
+                    <label class="form-label">Base imponible (Bs.)</label>
+                    <input type="number" name="base_imponible" class="form-control" value="1000" min="0.01" step="0.01" required>
+                </div> --}}
+
 
                 <div class="col-md-6">
                     <label class="form-label">Tipo de transmisión</label>
@@ -71,11 +71,6 @@
                 <div class="col-md-6">
                     <label class="form-label">Fecha de transmisión</label>
                     <input type="date" name="fecha_transmision" class="form-control" required>
-                </div>
-
-                <div class="col-md-6">
-                    <label class="form-label">Base imponible (Bs.)</label>
-                    <input type="number" name="base_imponible" class="form-control" value="1000" min="0.01" step="0.01" required>
                 </div>
 
                 <div class="col-md-6">

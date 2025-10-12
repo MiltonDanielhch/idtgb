@@ -24,6 +24,7 @@ use App\Http\Controllers\DocumentoController;
 use App\Http\Controllers\TramiteInmuebleController;
 use App\Http\Controllers\UfvController;
 use App\Http\Controllers\ValidacionController;
+use App\Http\Controllers\ReporteController;
 
 /*
 |--------------------------------------------------------------------------
@@ -55,8 +56,12 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
     // Rutas de Voyager
     Voyager::routes();
 
- Route::prefix('people')->group(function () {
-        Route::get('/', [PersonController::class, 'index'])->name('admin.people.index');
+    // ──────────────── REPORTES ────────────────
+    Route::prefix('reportes')->name('admin.reportes.')->group(function () {
+        Route::get('/', [ReporteController::class, 'index'])->name('index');
+    });
+
+    Route::prefix('people')->group(function () {        Route::get('/', [PersonController::class, 'index'])->name('admin.people.index');
         Route::get('/ajax/list', [PersonController::class, 'list'])->name('admin.people.ajax.list');
         Route::get('/create', [PersonController::class, 'create'])->name('admin.people.create');
         Route::post('/', [PersonController::class, 'store'])->name('admin.people.store');

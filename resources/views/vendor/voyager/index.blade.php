@@ -1,4 +1,4 @@
-@extends('voyager::master')
+hice este '''@extends('voyager::master')
 
 @section('page_header')
     <div class="page-content container-fluid">
@@ -9,7 +9,7 @@
                         <div class="row">
                             <div class="col-md-8">
                                 <h2>Hola, {{ Auth::user()->name }}</h2>
-                                <p class="text-muted">Resumen de rendimiento - {{ now()->format('d F Y') }}</p>
+                                <p class="text-muted">Resumen del sistema IDTGB - {{ now()->format('d F Y') }}</p>
                             </div>
                             <div class="col-md-4 text-right">
                                 <div class="btn-group">
@@ -27,7 +27,7 @@
                                     </ul>
                                 </div>
                             </div>
-                        </div>                        
+                        </div>
                     </div>
                 </div>
             </div>
@@ -37,9 +37,9 @@
 
 @section('content')
     @php
-        $meses = array('', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre');       
+        $meses = array('', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre');
     @endphp
-    
+
     <div class="page-content container-fluid">
         @include('voyager::alerts')
         @include('voyager::dimmers')
@@ -52,10 +52,10 @@
                         <div class="kpi-icon">
                             <i class="voyager-dollar"></i>
                         </div>
-                        <h3 class="kpi-value">$24,580</h3>
-                        <p class="kpi-label">Ventas Totales</p>
+                        <h3 class="kpi-value">1,250,000 Bs.</h3>
+                        <p class="kpi-label">Recaudación del Mes</p>
                         <div class="kpi-trend trend-up">
-                            <i class="voyager-up"></i> 12.5%
+                            <i class="voyager-up"></i> 8.2%
                         </div>
                     </div>
                 </div>
@@ -64,12 +64,12 @@
                 <div class="panel panel-bordered dashboard-kpi">
                     <div class="panel-body text-center">
                         <div class="kpi-icon">
-                            <i class="voyager-bag"></i>
+                            <i class="voyager-file-text"></i>
                         </div>
-                        <h3 class="kpi-value">328</h3>
-                        <p class="kpi-label">Pedidos Hoy</p>
+                        <h3 class="kpi-value">152</h3>
+                        <p class="kpi-label">Trámites Registrados (Mes)</p>
                         <div class="kpi-trend trend-up">
-                            <i class="voyager-up"></i> 5.2%
+                            <i class="voyager-up"></i> 5.7%
                         </div>
                     </div>
                 </div>
@@ -78,12 +78,12 @@
                 <div class="panel panel-bordered dashboard-kpi">
                     <div class="panel-body text-center">
                         <div class="kpi-icon">
-                            <i class="voyager-person"></i>
+                            <i class="voyager-check"></i>
                         </div>
-                        <h3 class="kpi-value">42</h3>
-                        <p class="kpi-label">Nuevos Clientes</p>
+                        <h3 class="kpi-value">138</h3>
+                        <p class="kpi-label">Trámites Finalizados (Mes)</p>
                         <div class="kpi-trend trend-down">
-                            <i class="voyager-down"></i> 3.1%
+                            <i class="voyager-down"></i> 1.1%
                         </div>
                     </div>
                 </div>
@@ -92,12 +92,12 @@
                 <div class="panel panel-bordered dashboard-kpi">
                     <div class="panel-body text-center">
                         <div class="kpi-icon">
-                            <i class="voyager-bar-chart"></i>
+                            <i class="voyager-watch"></i>
                         </div>
-                        <h3 class="kpi-value">$78.50</h3>
-                        <p class="kpi-label">Ticket Promedio</p>
+                        <h3 class="kpi-value">45</h3>
+                        <p class="kpi-label">Trámites Pendientes</p>
                         <div class="kpi-trend trend-up">
-                            <i class="voyager-up"></i> 8.7%
+                            <i class="voyager-up"></i> 2.0%
                         </div>
                     </div>
                 </div>
@@ -105,49 +105,49 @@
         </div>
 
         <div class="row">
-            <!-- Gráfico de ventas mensuales -->
+            <!-- Gráfico de recaudación mensual -->
             <div class="col-md-6">
                 <div class="panel panel-bordered">
                     <div class="panel-heading">
-                        <h3 class="panel-title">Ventas Mensuales</h3>
+                        <h3 class="panel-title">Recaudación Mensual (Bs.)</h3>
                     </div>
                     <div class="panel-body">
-                        <canvas id="ventasMensualesChart" height="250"></canvas>
+                        <canvas id="recaudacionMensualChart" height="250"></canvas>
                     </div>
                 </div>
             </div>
 
-            <!-- Gráfico de productos más vendidos -->
+            <!-- Gráfico de trámites por tipo -->
             <div class="col-md-6">
                 <div class="panel panel-bordered">
                     <div class="panel-heading">
-                        <h3 class="panel-title">Productos Más Vendidos</h3>
+                        <h3 class="panel-title">Trámites por Tipo</h3>
                     </div>
                     <div class="panel-body">
-                        <canvas id="topProductosChart" height="250"></canvas>
+                        <canvas id="tramitesTipoChart" height="250"></canvas>
                     </div>
                 </div>
             </div>
         </div>
 
         <div class="row">
-            <!-- Gráfico de ventas por día de la semana -->
+            <!-- Gráfico de trámites por estado -->
             <div class="col-md-6">
                 <div class="panel panel-bordered">
                     <div class="panel-heading">
-                        <h3 class="panel-title">Ventas por Día de la Semana</h3>
+                        <h3 class="panel-title">Trámites por Estado</h3>
                     </div>
                     <div class="panel-body">
-                        <canvas id="ventasDiasChart" height="250"></canvas>
+                        <canvas id="tramitesEstadoChart" height="250"></canvas>
                     </div>
                 </div>
             </div>
 
-            <!-- Gráfico de comparación año actual vs año anterior -->
+            <!-- Gráfico de comparación anual de recaudación -->
             <div class="col-md-6">
                 <div class="panel panel-bordered">
                     <div class="panel-heading">
-                        <h3 class="panel-title">Comparación Anual</h3>
+                        <h3 class="panel-title">Comparación Anual de Recaudación</h3>
                     </div>
                     <div class="panel-body">
                         <canvas id="comparacionAnualChart" height="250"></canvas>
@@ -155,74 +155,74 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="row">
-            <!-- Tabla de últimos pedidos -->
+            <!-- Tabla de últimos trámites -->
             <div class="col-md-12">
                 <div class="panel panel-bordered">
                     <div class="panel-heading">
-                        <h3 class="panel-title">Pedidos Recientes</h3>
+                        <h3 class="panel-title">Últimos Trámites Registrados</h3>
                     </div>
                     <div class="panel-body">
                         <div class="table-responsive">
                             <table class="table table-hover">
                                 <thead>
                                     <tr>
-                                        <th># Pedido</th>
-                                        <th>Cliente</th>
-                                        <th>Fecha</th>
-                                        <th>Total</th>
+                                        <th># Trámite</th>
+                                        <th>Contribuyente</th>
+                                        <th>Fecha Presentación</th>
+                                        <th>Monto Final (Bs.)</th>
                                         <th>Estado</th>
                                         <th>Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr>
-                                        <td>#12345</td>
+                                        <td>TR-2023-11-00123</td>
                                         <td>Juan Pérez</td>
-                                        <td>20 Nov 2023</td>
-                                        <td>$125.80</td>
-                                        <td><span class="label label-success">Completado</span></td>
+                                        <td>20 Oct 2025</td>
+                                        <td>12,580.00</td>
+                                        <td><span class="label label-success">Finalizado</span></td>
                                         <td>
                                             <a href="#" class="btn btn-sm btn-primary">Ver</a>
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td>#12344</td>
+                                        <td>TR-2023-11-00122</td>
                                         <td>María García</td>
-                                        <td>20 Nov 2023</td>
-                                        <td>$89.50</td>
-                                        <td><span class="label label-warning">Procesando</span></td>
+                                        <td>20 Oct 2025</td>
+                                        <td>8,950.50</td>
+                                        <td><span class="label label-warning">En Proceso</span></td>
                                         <td>
                                             <a href="#" class="btn btn-sm btn-primary">Ver</a>
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td>#12343</td>
+                                        <td>TR-2023-11-00121</td>
                                         <td>Carlos López</td>
-                                        <td>19 Nov 2023</td>
-                                        <td>$210.00</td>
-                                        <td><span class="label label-success">Completado</span></td>
+                                        <td>19 Oct 2025</td>
+                                        <td>21,000.00</td>
+                                        <td><span class="label label-info">Iniciado</span></td>
                                         <td>
                                             <a href="#" class="btn btn-sm btn-primary">Ver</a>
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td>#12342</td>
+                                        <td>TR-2023-11-00120</td>
                                         <td>Ana Martínez</td>
-                                        <td>19 Nov 2023</td>
-                                        <td>$56.90</td>
-                                        <td><span class="label label-danger">Cancelado</span></td>
+                                        <td>19 Oct 2025</td>
+                                        <td>5,690.00</td>
+                                        <td><span class="label label-danger">Observado</span></td>
                                         <td>
                                             <a href="#" class="btn btn-sm btn-primary">Ver</a>
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td>#12341</td>
+                                        <td>TR-2023-11-00119</td>
                                         <td>Pedro Sánchez</td>
-                                        <td>18 Nov 2023</td>
-                                        <td>$178.30</td>
-                                        <td><span class="label label-success">Completado</span></td>
+                                        <td>18 Oct 2025</td>
+                                        <td>17,830.00</td>
+                                        <td><span class="label label-success">Finalizado</span></td>
                                         <td>
                                             <a href="#" class="btn btn-sm btn-primary">Ver</a>
                                         </td>
@@ -283,68 +283,64 @@
 
 @section('javascript')
     <!-- Incluir Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js  "></script>
 
     <script>
-        $(document).ready(function(){   
+        $(document).ready(function(){
             // Configuración de rangos de fecha
             $('.dropdown-menu a').click(function(e) {
                 e.preventDefault();
                 let range = $(this).data('range');
                 $('#refresh-dashboard').html('<i class="voyager-refresh"></i> Actualizando...');
-                
+
                 // Simular carga de datos
                 setTimeout(function() {
                     $('#refresh-dashboard').html('<i class="voyager-refresh"></i> Actualizar');
                     toastr.success('Datos actualizados para el período: ' + range);
                 }, 1500);
             });
-            
-            // Datos de ejemplo
-            const ventasMensualesData = {
+
+            // Datos de ejemplo para IDTGB
+            const recaudacionMensualData = {
                 labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
                 datasets: [{
-                    label: 'Ventas 2023',
-                    data: [120000, 190000, 150000, 180000, 210000, 230000, 250000, 220000, 240000, 260000, 280000, 300000],
+                    label: 'Recaudación {{ date("Y") }}',
+                    data: [850000, 950000, 1100000, 1050000, 1200000, 1300000, 1250000, 1400000, 1350000, 1500000, 1600000, 1800000],
                     backgroundColor: 'rgba(54, 162, 235, 0.2)',
                     borderColor: 'rgba(54, 162, 235, 1)',
                     borderWidth: 2
                 }]
             };
 
-            const topProductosData = {
-                labels: ['Hamburguesa', 'Pizza', 'Ensalada', 'Bebida', 'Postre'],
+            const tramitesTipoData = {
+                labels: ['Sucesión (Herencia)', 'Donación', 'Legado', 'Otros'],
                 datasets: [{
-                    label: 'Unidades Vendidas',
-                    data: [1200, 800, 500, 1500, 300],
+                    label: 'Nro. de Trámites',
+                    data: [85, 42, 15, 10],
                     backgroundColor: [
                         'rgba(255, 99, 132, 0.7)',
                         'rgba(54, 162, 235, 0.7)',
                         'rgba(255, 206, 86, 0.7)',
-                        'rgba(75, 192, 192, 0.7)',
-                        'rgba(153, 102, 255, 0.7)'
+                        'rgba(75, 192, 192, 0.7)'
                     ],
                     borderColor: [
                         'rgba(255, 99, 132, 1)',
                         'rgba(54, 162, 235, 1)',
                         'rgba(255, 206, 86, 1)',
-                        'rgba(75, 192, 192, 1)',
-                        'rgba(153, 102, 255, 1)'
+                        'rgba(75, 192, 192, 1)'
                     ],
                     borderWidth: 1
                 }]
             };
 
-            const ventasDiasData = {
-                labels: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
+            const tramitesEstadoData = {
+                labels: ['Iniciado', 'En Proceso', 'Observado', 'Finalizado', 'Anulado'],
                 datasets: [{
-                    label: 'Ventas promedio',
-                    data: [80000, 85000, 90000, 95000, 120000, 150000, 130000],
+                    label: 'Cantidad de Trámites',
+                    data: [45, 82, 15, 250, 5],
                     backgroundColor: 'rgba(75, 192, 192, 0.2)',
                     borderColor: 'rgba(75, 192, 192, 1)',
-                    borderWidth: 2,
-                    tension: 0.3,
-                    fill: true
+                    borderWidth: 2
                 }]
             };
 
@@ -352,8 +348,8 @@
                 labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
                 datasets: [
                     {
-                        label: '2022',
-                        data: [100000, 150000, 130000, 160000, 190000, 210000, 230000, 200000, 220000, 240000, 260000, 280000],
+                        label: '{{ date("Y") - 1 }}',
+                        data: [750000, 850000, 1000000, 950000, 1100000, 1200000, 1150000, 1300000, 1250000, 1400000, 1500000, 1700000],
                         borderColor: 'rgba(201, 203, 207, 1)',
                         backgroundColor: 'rgba(201, 203, 207, 0.2)',
                         borderWidth: 2,
@@ -361,8 +357,8 @@
                         fill: true
                     },
                     {
-                        label: '2023',
-                        data: [120000, 190000, 150000, 180000, 210000, 230000, 250000, 220000, 240000, 260000, 280000, 300000],
+                        label: '{{ date("Y") }}',
+                        data: [850000, 950000, 1100000, 1050000, 1200000, 1300000, 1250000, 1400000, 1350000, 1500000, 1600000, 1800000],
                         borderColor: 'rgba(54, 162, 235, 1)',
                         backgroundColor: 'rgba(54, 162, 235, 0.2)',
                         borderWidth: 2,
@@ -382,24 +378,33 @@
                     },
                     tooltip: {
                         mode: 'index',
-                        intersect: false
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += new Intl.NumberFormat('es-BO', { style: 'currency', currency: 'BOB' }).format(context.parsed.y);
+                                }
+                                return label;
+                            }
+                        }
                     }
                 },
                 scales: {
                     y: {
                         beginAtZero: true,
-                        grid: {
-                            drawBorder: false
-                        }
-                    },
-                    x: {
-                        grid: {
-                            display: false
+                        ticks: {
+                            callback: function(value, index, values) {
+                                return new Intl.NumberFormat('es-BO').format(value);
+                            }
                         }
                     }
                 }
             };
-            
+
             const pieChartOptions = {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -410,23 +415,38 @@
                 }
             };
 
+            const barChartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                 scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            };
+
             // Crear los gráficos
-            new Chart(document.getElementById('ventasMensualesChart'), {
+            new Chart(document.getElementById('recaudacionMensualChart'), {
                 type: 'bar',
-                data: ventasMensualesData,
+                data: recaudacionMensualData,
                 options: chartOptions
             });
 
-            new Chart(document.getElementById('topProductosChart'), {
+            new Chart(document.getElementById('tramitesTipoChart'), {
                 type: 'pie',
-                data: topProductosData,
+                data: tramitesTipoData,
                 options: pieChartOptions
             });
 
-            new Chart(document.getElementById('ventasDiasChart'), {
-                type: 'line',
-                data: ventasDiasData,
-                options: chartOptions
+            new Chart(document.getElementById('tramitesEstadoChart'), {
+                type: 'bar',
+                data: tramitesEstadoData,
+                options: barChartOptions
             });
 
             new Chart(document.getElementById('comparacionAnualChart'), {
@@ -437,3 +457,4 @@
         });
     </script>
 @stop
+''

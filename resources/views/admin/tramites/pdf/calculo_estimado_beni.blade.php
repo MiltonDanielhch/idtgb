@@ -94,11 +94,11 @@
             <th>Tipo de contribuyente</th>
             <td>{{ $tipo_contribuyente }}</td>
         </tr>
-        <tr>
+        {{-- <tr>
             <th>Inmueble (Catastro)</th>
             <td>{{ $inmueble->catastro }}<br>
                 {{ $inmueble->direccion }}, {{ $inmueble->municipio->nombre }}</td>
-        </tr>
+        </tr> --}}
         <tr>
             <th>Tipo de transmisión</th>
             <td>
