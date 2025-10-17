@@ -27,16 +27,16 @@
                     {{-- Persona --}}
                     <div class="col-md-4">
                         <label>Persona <span class="required">*</span></label>
-                        <select name="persona_id" class="form-control select2" required {{ ($item->exists ?? false) ? 'disabled' : '' }}>
+                        <select name="person_id" class="form-control select2" required {{ ($item->exists ?? false) ? 'disabled' : '' }}>
                             <option value="">Elija...</option>
                             @foreach($personas as $p)
                                 <option value="{{ $p->id }}"
-                                    {{ old('persona_id', optional($item)->persona_id) == $p->id ? 'selected' : '' }}>
+                                    {{ old('person_id', optional($item)->person_id) == $p->id ? 'selected' : '' }}>
                                     {{ $p->fullName }} - {{ $p->tipo_doc }} {{ $p->ci }}
                                 </option>
                             @endforeach
                         </select>
-                        @error('persona_id') <small class="text-danger">{{ $message }}</small> @enderror
+                        @error('person_id') <small class="text-danger">{{ $message }}</small> @enderror
                     </div>
 
                     {{-- Tipo --}}

@@ -240,7 +240,7 @@ class IdtgbCompletoSeeder extends Seeder
         // Adquirente
         AdquirenteTramite::create([
             'tramite_id'        => $tramite->id,
-            'persona_id'        => $adquirente->id,
+            'person_id'        => $adquirente->id,
             'parentesco_id'     => Parentesco::where('nombre','Hijo/a')->first()->id,
             'tasa_aplicada'     => $tasa,
             'porcentaje'        => 100.00,
@@ -250,7 +250,7 @@ class IdtgbCompletoSeeder extends Seeder
         // Disponente
         DisponenteTramite::create([
             'tramite_id'         => $tramite->id,
-            'persona_id'         => $causante->id,
+            'person_id'         => $causante->id,
             'tipo'               => 'Causante',
             'fecha_fallecimiento'=> now()->subMonths(2),
             'es_discapacitado'   => false,
@@ -293,7 +293,7 @@ class IdtgbCompletoSeeder extends Seeder
                 'tipo_doc'   => $d['tipo'],
                 'file_path'  => 'documentos/'.$d['file'],
                 'hash_sha256'=> hash('sha256',$d['file']),
-                'persona_id' => $adquirente->id,
+                'person_id' => $adquirente->id,
                 'vigente'    => true,
                 'version'    => 1,
             ]);

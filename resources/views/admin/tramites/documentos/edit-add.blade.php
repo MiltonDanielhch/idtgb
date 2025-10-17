@@ -55,16 +55,16 @@
                     {{-- Persona (opcional) --}}
                     <div class="col-md-5">
                         <label>Persona (opcional)</label>
-                        <select name="persona_id" class="form-control select2">
+                        <select name="person_id" class="form-control select2">
                             <option value="">-- Ninguna --</option>
                             @foreach($personas as $p)
                                 <option value="{{ $p->id }}"
-                                    {{ old('persona_id', optional($item)->persona_id) == $p->id ? 'selected' : '' }}>
+                                    {{ old('person_id', optional($item)->person_id) == $p->id ? 'selected' : '' }}>
                                     {{ $p->fullName }} - {{ $p->tipo_doc }} {{ $p->ci }}
                                 </option>
                             @endforeach
                         </select>
-                        @error('persona_id') <small class="text-danger">{{ $message }}</small> @enderror
+                        @error('person_id') <small class="text-danger">{{ $message }}</small> @enderror
                     </div>
                 </div>
 

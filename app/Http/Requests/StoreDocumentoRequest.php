@@ -17,7 +17,7 @@ class StoreDocumentoRequest extends FormRequest
         return [
             'tipo_doc' => 'required|in:Escritura,Testamento,Partida,CI,Avaluo,Poder,Otro',
             'archivo' => 'required|file|mimes:pdf,jpg,jpeg,png|max:2048',
-            'persona_id' => 'nullable|exists:people,id',
+            'person_id' => 'nullable|exists:people,id',
         ];
     }
 }

@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('disponentes_tramite', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tramite_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('persona_id')->constrained('people');
+            $table->foreignId('person_id')->constrained('people');
             $table->enum('tipo', ['Causante', 'Donante', 'Testador']);
             $table->date('fecha_fallecimiento')->nullable();
             $table->boolean('es_discapacitado')->default(false);

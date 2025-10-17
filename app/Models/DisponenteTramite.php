@@ -13,7 +13,7 @@ class DisponenteTramite extends Model
 
     protected $fillable = [
         'tramite_id',
-        'persona_id',
+        'person_id',
         'tipo',
         'fecha_fallecimiento',
         'es_discapacitado',
@@ -32,6 +32,6 @@ class DisponenteTramite extends Model
 
     public function persona()
     {
-        return $this->belongsTo(Person::class, 'persona_id');
+        return $this->belongsTo(Person::class, 'person_id');
     }
 }

@@ -93,7 +93,7 @@ class DocumentoController extends Controller
                 'tipo_doc' => $request->tipo_doc,
                 'file_path' => $path,
                 'hash_sha256' => $hash,
-                'persona_id' => $request->persona_id,
+                'person_id' => $request->person_id,
                 'vigente' => true,
                 'version' => $version,
                 'created_by' => auth()->id(),

@@ -86,7 +86,7 @@ class AdquirenteTramiteController extends Controller
 
             AdquirenteTramite::create([
                 'tramite_id' => $tramite->id,
-                'persona_id' => $request->persona_id,
+                'person_id' => $request->person_id,
                 'parentesco_id' => $request->parentesco_id,
                 'tasa_aplicada' => $tasa,
                 'porcentaje' => $request->porcentaje,
