@@ -17,7 +17,7 @@ return new class extends Migration
             $table->enum('tipo_doc', ['Escritura', 'Testamento', 'Partida', 'CI', 'Avaluo', 'Poder', 'Otro']);
             $table->string('file_path', 250);
             $table->char('hash_sha256', 64)->nullable();
-            $table->foreignId('persona_id')->nullable()->constrained('people');
+            $table->foreignId('person_id')->nullable()->constrained('people');
             $table->boolean('vigente')->default(true);
             $table->unsignedTinyInteger('version')->default(1);
             $table->timestamps();

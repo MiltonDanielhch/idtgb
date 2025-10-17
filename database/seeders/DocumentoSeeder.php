@@ -24,7 +24,7 @@ class DocumentoSeeder extends Seeder
             if ($disponente1 && $adquirente1) {
                 // Partida de defunción del disponente
                 Documento::updateOrCreate(
-                    ['tramite_id' => $tramite1->id, 'tipo_doc' => 'Partida', 'persona_id' => $disponente1->id],
+                    ['tramite_id' => $tramite1->id, 'tipo_doc' => 'Partida', 'person_id' => $disponente1->id],
                     [
                         'file_path' => 'documentos/BE-2025-0001/partida_defuncion_pedro.pdf',
                         'hash_sha256' => 'a1b2c3d4e5f67890123456789012345678901234567890123456789012345678', // hash simulado
@@ -35,7 +35,7 @@ class DocumentoSeeder extends Seeder
 
                 // CI del adquirente (hijo)
                 Documento::updateOrCreate(
-                    ['tramite_id' => $tramite1->id, 'tipo_doc' => 'CI', 'persona_id' => $adquirente1->id],
+                    ['tramite_id' => $tramite1->id, 'tipo_doc' => 'CI', 'person_id' => $adquirente1->id],
                     [
                         'file_path' => 'documentos/BE-2025-0001/ci_hijo.pdf',
                         'hash_sha256' => 'b2c3d4e5f6789012345678901234567890123456789012345678901234567890',
@@ -46,7 +46,7 @@ class DocumentoSeeder extends Seeder
 
                 // Testamento (a nombre del disponente)
                 Documento::updateOrCreate(
-                    ['tramite_id' => $tramite1->id, 'tipo_doc' => 'Testamento', 'persona_id' => $disponente1->id],
+                    ['tramite_id' => $tramite1->id, 'tipo_doc' => 'Testamento', 'person_id' => $disponente1->id],
                     [
                         'file_path' => 'documentos/BE-2025-0001/testamento_pedro.pdf',
                         'hash_sha256' => 'c3d4e5f678901234567890123456789012345678901234567890123456789012',
@@ -68,7 +68,7 @@ class DocumentoSeeder extends Seeder
             if ($disponente2 && $adquirente2) {
                 // Escritura de donación
                 Documento::updateOrCreate(
-                    ['tramite_id' => $tramite2->id, 'tipo_doc' => 'Escritura', 'persona_id' => $disponente2->id],
+                    ['tramite_id' => $tramite2->id, 'tipo_doc' => 'Escritura', 'person_id' => $disponente2->id],
                     [
                         'file_path' => 'documentos/BE-2025-0002/escritura_donacion.pdf',
                         'hash_sha256' => 'd4e5f67890123456789012345678901234567890123456789012345678901234',
@@ -79,7 +79,7 @@ class DocumentoSeeder extends Seeder
 
                 // CI del adquirente
                 Documento::updateOrCreate(
-                    ['tramite_id' => $tramite2->id, 'tipo_doc' => 'CI', 'persona_id' => $adquirente2->id],
+                    ['tramite_id' => $tramite2->id, 'tipo_doc' => 'CI', 'person_id' => $adquirente2->id],
                     [
                         'file_path' => 'documentos/BE-2025-0002/ci_tercero.pdf',
                         'hash_sha256' => 'e5f6789012345678901234567890123456789012345678901234567890123456',
@@ -101,7 +101,7 @@ class DocumentoSeeder extends Seeder
             if ($disponente3 && $adquirente3) {
                 // Partida de defunción
                 Documento::updateOrCreate(
-                    ['tramite_id' => $tramite3->id, 'tipo_doc' => 'Partida', 'persona_id' => $disponente3->id],
+                    ['tramite_id' => $tramite3->id, 'tipo_doc' => 'Partida', 'person_id' => $disponente3->id],
                     [
                         'file_path' => 'documentos/BE-2025-0003/partida_defuncion_pedro2.pdf',
                         'hash_sha256' => 'f678901234567890123456789012345678901234567890123456789012345678',
@@ -112,7 +112,7 @@ class DocumentoSeeder extends Seeder
 
                 // Certificado de matrimonio (como sustento de exención)
                 Documento::updateOrCreate(
-                    ['tramite_id' => $tramite3->id, 'tipo_doc' => 'Otro', 'persona_id' => $adquirente3->id],
+                    ['tramite_id' => $tramite3->id, 'tipo_doc' => 'Otro', 'person_id' => $adquirente3->id],
                     [
                         'file_path' => 'documentos/BE-2025-0003/cert_matrimonio.pdf',
                         'hash_sha256' => '7890123456789012345678901234567890123456789012345678901234567890',

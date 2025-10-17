@@ -22,7 +22,7 @@
                             </div>
                             <div class="col-md-4">
                                 <label>Persona (opcional)</label>
-                                <select name="persona_id" class="form-control select2">
+                                <select name="person_id" class="form-control select2">
                                     <option value="">Ninguno</option>
                                     @foreach($personas as $p)
                                         <option value="{{ $p->id }}">{{ $p->first_name.' '.$p->paternal_surname }}</option>

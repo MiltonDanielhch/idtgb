@@ -23,7 +23,7 @@ class DisponenteTramiteSeeder extends Seeder
                 DisponenteTramite::updateOrCreate(
                     [
                         'tramite_id' => $tramite1->id,
-                        'persona_id' => $personaFallecida->id,
+                        'person_id' => $personaFallecida->id,
                     ],
                     [
                         'tipo' => 'Causante',
@@ -45,7 +45,7 @@ class DisponenteTramiteSeeder extends Seeder
                 DisponenteTramite::updateOrCreate(
                     [
                         'tramite_id' => $tramite2->id,
-                        'persona_id' => $personaDonante->id,
+                        'person_id' => $personaDonante->id,
                     ],
                     [
                         'tipo' => 'Donante',
@@ -62,7 +62,7 @@ class DisponenteTramiteSeeder extends Seeder
             DisponenteTramite::updateOrCreate(
                 [
                     'tramite_id' => $tramite3->id,
-                    'persona_id' => $personaFallecida->id,
+                    'person_id' => $personaFallecida->id,
                 ],
                 [
                     'tipo' => 'Causante',

@@ -1,4 +1,3 @@
-
 <?php
 
 use Illuminate\Support\Facades\Route;
@@ -25,6 +24,7 @@ use App\Http\Controllers\TramiteInmuebleController;
 use App\Http\Controllers\UfvController;
 use App\Http\Controllers\ValidacionController;
 use App\Http\Controllers\ReporteController;
+use App\Http\Controllers\Admin\TramiteWizardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -61,8 +61,11 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
         Route::get('/', [ReporteController::class, 'index'])->name('index');
     });
 
-    Route::prefix('people')->group(function () {        Route::get('/', [PersonController::class, 'index'])->name('admin.people.index');
-        Route::get('/ajax/list', [PersonController::class, 'list'])->name('admin.people.ajax.list');
+    Route::prefix('people')->group(function () {
+        // Route::get('/', [PersonController::class, 'index'])->name('admin.people.index');
+        Route::get('/', [PersonController::class, 'list'])->name('admin.people.index');
+        Route::get('/ajax/list', [PersonController::class, 'datatable'])->name('admin.people.ajax.list');
+        Route::get('/datatable', [PersonController::class, 'datatable'])->name('admin.people.datatable');
         Route::get('/create', [PersonController::class, 'create'])->name('admin.people.create');
         Route::post('/', [PersonController::class, 'store'])->name('admin.people.store');
         Route::get('/{person}/edit', [PersonController::class, 'edit'])->name('admin.people.edit');
@@ -92,6 +95,8 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
         Route::put('/{exencion}', [ExencionController::class, 'update'])->name('admin.exenciones.update');
         Route::delete('/{exencion}', [ExencionController::class, 'destroy'])->name('admin.exenciones.destroy');
     });
+    // Route::resource('exenciones', ExencionController::class)->names('admin.exenciones');
+
     Route::prefix('tasas')->group(function () {
         Route::get('/', [TasaController::class, 'index'])->name('admin.tasas.index');
         Route::get('/create', [TasaController::class, 'create'])->name('admin.tasas.create');
@@ -103,12 +108,11 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
         Route::delete('/{tasa}', [TasaController::class, 'destroy'])->name('admin.tasas.destroy');
     });
 
-    Route::resource('exenciones', ExencionController::class)->names('admin.exenciones');
 
     Route::prefix('inmuebles')->group(function () {
         Route::get('/', [InmuebleController::class, 'index'])->name('admin.inmuebles.index');
         Route::get('/create', [InmuebleController::class, 'create'])->name('admin.inmuebles.create');
-        Route::get('/ajax/list', [InmuebleController::class, 'list'])->name('admin.inmuebles.ajax.list');
+        Route::get('/ajax/list', [InmuebleController::class, 'datatable'])->name('admin.inmuebles.ajax.list');
         Route::get('/{inmueble}', [InmuebleController::class, 'show'])->name('admin.inmuebles.show');
         Route::post('/', [InmuebleController::class, 'store'])->name('admin.inmuebles.store');
         Route::get('/{inmueble}/edit', [InmuebleController::class, 'edit'])->name('admin.inmuebles.edit');
@@ -126,6 +130,38 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
         Route::put('/{avaluo}', [AvaluoController::class, 'update'])->name('admin.avaluos.update');
         Route::delete('/{avaluo}', [AvaluoController::class, 'destroy'])->name('admin.avaluos.destroy');
         Route::get('/{avaluo}/download', [AvaluoController::class, 'download'])->name('admin.avaluos.download');
+    });
+
+        // Asistente para creación de trámites
+    Route::prefix('tramites/wizard')->name('admin.tramites.wizard.')->group(function () {
+        Route::get('create-step-1', [TramiteWizardController::class, 'createStep1'])->name('create.step1');
+        Route::post('post-step-1', [TramiteWizardController::class, 'postStep1'])->name('post.step1');
+        Route::get('create-step-2', [TramiteWizardController::class, 'createStep2'])->name('create.step2');
+        Route::post('post-step-2', [TramiteWizardController::class, 'postStep2'])->name('post.step2');
+        Route::post('add-disponente', [TramiteWizardController::class, 'addDisponente'])->name('add.disponente');
+        Route::get('remove-disponente/{person_id}', [TramiteWizardController::class, 'removeDisponente'])->name('remove.disponente');
+
+        // Step 3: Adquirentes
+        Route::get('create-step-3', [TramiteWizardController::class, 'createStep3'])->name('create.step3');
+        Route::post('post-step-3', [TramiteWizardController::class, 'postStep3'])->name('post.step3');
+        Route::post('add-adquirente', [TramiteWizardController::class, 'addAdquirente'])->name('add.adquirente');
+        Route::get('remove-adquirente/{person_id}', [TramiteWizardController::class, 'removeAdquirente'])->name('remove.adquirente');
+
+        // Step 4: Inmueble
+        Route::get('create-step-4', [TramiteWizardController::class, 'createStep4'])->name('create.step4');
+        Route::post('post-step-4', [TramiteWizardController::class, 'postStep4'])->name('post.step4');
+        Route::post('add-inmueble', [TramiteWizardController::class, 'addInmueble'])->name('add.inmueble');
+        Route::delete('remove-inmueble', [TramiteWizardController::class, 'removeInmueble'])->name('remove.inmueble');
+
+        // Step 5: Resumen y Guardar
+        Route::get('create-step-5', [TramiteWizardController::class, 'createStep5'])->name('create.step5');
+        Route::post('store', [TramiteWizardController::class, 'store'])->name('store');
+
+        // Cancelar
+        Route::get('cancel', [TramiteWizardController::class, 'cancelWizard'])->name('cancel');
+
+        // Rutas AJAX para el asistente
+        Route::get('ajax/person-list', [TramiteWizardController::class, 'ajaxPersonList'])->name('ajax.personList');
     });
 
     Route::prefix('tramites')->group(function () {
@@ -220,7 +256,7 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
 
     // ──────────────── AJAX GENÉRICO ────────────────
     Route::prefix('ajax')->group(function () {
-        Route::get('/personList', [AjaxController::class, 'personList']);
+        Route::get('/personList', [AjaxController::class, 'personList'])->name('admin.ajax.personList');
         Route::post('/person/store', [AjaxController::class, 'personStore']);
     });
 

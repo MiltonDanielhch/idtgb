@@ -8,6 +8,7 @@ use App\Models\Municipio;
 use App\Http\Requests\StoreInmuebleRequest;
 use App\Http\Requests\UpdateInmuebleRequest;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
 
 class InmuebleController extends Controller
 {
@@ -82,6 +83,66 @@ class InmuebleController extends Controller
         $inmueble->update($request->validated());
         return redirect()->route('admin.inmuebles.index')
             ->with(['message' => 'Inmueble actualizado.', 'alert-type' => 'success']);
+    }
+
+    public function datatable(Request $request)
+    {
+        $this->authorize('viewAny', Inmueble::class);
+
+        $draw = $request->get('draw');
+        $start = $request->get("start");
+        $rowperpage = $request->get("length"); // Rows display per page
+
+        $columnIndex_arr = $request->get('order');
+        $columnName_arr = $request->get('columns');
+        $order_arr = $request->get('order');
+        $search_arr = $request->get('search');
+
+        $columnIndex = $columnIndex_arr[0]['column']; // Column index
+        $columnName = $columnName_arr[$columnIndex]['data']; // Column name
+        $columnSortOrder = $order_arr[0]['dir']; // asc or desc
+        $searchValue = $search_arr['value']; // Search value
+
+        // Total records
+        $totalRecords = Inmueble::count();
+        
+        $query = Inmueble::query();
+        if ($searchValue) {
+            $query->where(function ($q) use ($searchValue) {
+                $q->where('numero_matricula', 'like', '%' . $searchValue . '%')
+                      ->orWhere('direccion', 'like', '%' . $searchValue . '%')
+                      ->orWhere('superficie_terreno', 'like', '%' . $searchValue . '%');
+            });
+        }
+        $totalRecordswithFilter = $query->count();
+
+        // Fetch records
+        $records = $query->select('inmuebles.*')
+            ->orderBy($columnName, $columnSortOrder)
+            ->skip($start)
+            ->take($rowperpage)
+            ->get();
+
+        $data_arr = array();
+        
+        foreach ($records as $record) {
+            $data_arr[] = array(
+                "id" => $record->id,
+                "numero_matricula" => $record->numero_matricula,
+                "direccion" => $record->direccion,
+                "superficie_terreno" => $record->superficie_terreno,
+                "action" => '' // Action column will be populated by JS in the view
+            );
+        }
+
+        $response = array(
+            "draw" => intval($draw),
+            "recordsTotal" => $totalRecords,
+            "recordsFiltered" => $totalRecordswithFilter,
+            "data" => $data_arr,
+        );
+
+        return response()->json($response);
     }
 
     /* ----------  BORRADO  ---------- */

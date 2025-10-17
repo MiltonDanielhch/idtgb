@@ -70,7 +70,7 @@ class DisponenteTramiteController extends Controller
         try {
             DisponenteTramite::create([
                 'tramite_id' => $tramite->id,
-                'persona_id' => $request->persona_id,
+                'person_id' => $request->person_id,
                 'tipo' => $request->tipo,
                 'fecha_fallecimiento' => $request->fecha_fallecimiento,
                 'es_discapacitado' => $request->boolean('es_discapacitado'),

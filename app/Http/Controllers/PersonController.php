@@ -142,4 +142,70 @@ class PersonController extends Controller
         }
         return $file ? $file->store('people', 'public') : null;
     }
+
+    public function datatable(Request $request)
+    {
+        $this->authorize('viewAny', Person::class);
+
+        $draw = $request->get('draw');
+        $start = $request->get("start");
+        $rowperpage = $request->get("length"); // Rows display per page
+
+        if ($start < 0) $start = 0;
+        if ($rowperpage < 1) $rowperpage = 10;
+
+        $columnIndex_arr = $request->get('order');
+        $columnName_arr = $request->get('columns');
+        $order_arr = $request->get('order');
+        $search_arr = $request->get('search');
+
+        // $columnIndex = $columnIndex_arr[0]['column']; // Column index
+        // $columnName = $columnName_arr[$columnIndex]['data']; // Column name
+        // $columnSortOrder = $order_arr[0]['dir']; // asc or desc
+        // $searchValue = $search_arr['value']; // Search value
+
+        // Seguridad para evitar null
+        $columnIndex = isset($columnIndex_arr[0]['column']) ? (int) $columnIndex_arr[0]['column'] : 0;
+        $columnName = isset($columnName_arr[$columnIndex]['data']) ? $columnName_arr[$columnIndex]['data'] : 'id';
+        $columnSortOrder = isset($order_arr[0]['dir']) && in_array(strtolower($order_arr[0]['dir']), ['asc', 'desc']) ? $order_arr[0]['dir'] : 'asc';
+        $searchValue = isset($search_arr['value']) ? trim($search_arr['value']) : '';
+
+        // Total records
+        $totalRecords = Person::count();
+        $query = Person::query();
+        $query->where(function ($q) use ($searchValue) {
+            $q->where('first_name', 'like', '%' . $searchValue . '%')
+                  ->orWhere('paternal_surname', 'like', '%' . $searchValue . '%')
+                  ->orWhere('maternal_surname', 'like', '%' . $searchValue . '%')
+                  ->orWhere('ci', 'like', '%' . $searchValue . '%');
+        });
+        $totalRecordswithFilter = $query->count();
+
+        // Fetch records
+        $records = $query->select('people.*')
+            ->orderBy($columnName, $columnSortOrder)
+            ->skip($start)
+            ->take($rowperpage)
+            ->get();
+
+        $data_arr = array();
+
+        foreach ($records as $record) {
+            $data_arr[] = array(
+                "id" => $record->id,
+                "full_name" => $record->full_name, // Assuming full_name is an accessor
+                "ci" => $record->ci,
+                "action" => '' // Action column will be populated by JS in the view
+            );
+        }
+
+        $response = array(
+            "draw" => intval($draw),
+            "recordsTotal" => $totalRecords,
+            "recordsFiltered" => $totalRecordswithFilter,
+            "data" => $data_arr,
+        );
+
+        return response()->json($response);
+    }
 }

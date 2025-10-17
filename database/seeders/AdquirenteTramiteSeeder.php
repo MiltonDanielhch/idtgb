@@ -23,7 +23,7 @@ class AdquirenteTramiteSeeder extends Seeder
                 AdquirenteTramite::updateOrCreate(
                     [
                         'tramite_id' => $tramite1->id,
-                        'persona_id' => $personaHijo->id,
+                        'person_id' => $personaHijo->id,
                     ],
                     [
                         'parentesco_id' => $parentescoHijo->id,
@@ -47,7 +47,7 @@ class AdquirenteTramiteSeeder extends Seeder
                 AdquirenteTramite::updateOrCreate(
                     [
                         'tramite_id' => $tramite2->id,
-                        'persona_id' => $personaTercero->id,
+                        'person_id' => $personaTercero->id,
                     ],
                     [
                         'parentesco_id' => $parentescoSin->id,
@@ -71,7 +71,7 @@ class AdquirenteTramiteSeeder extends Seeder
                 AdquirenteTramite::updateOrCreate(
                     [
                         'tramite_id' => $tramite3->id,
-                        'persona_id' => $personaConyuge->id,
+                        'person_id' => $personaConyuge->id,
                     ],
                     [
                         'parentesco_id' => $parentescoConyuge->id,

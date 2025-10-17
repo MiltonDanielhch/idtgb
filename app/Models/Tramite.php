@@ -86,12 +86,12 @@ class Tramite extends Model
 
     public function adquirentes()
     {
-        return $this->hasMany(AdquirenteTramite::class);
+        return $this->belongsToMany(Person::class, 'adquirentes_tramite', 'tramite_id', 'person_id');
     }
 
     public function disponentes()
     {
-        return $this->hasMany(DisponenteTramite::class);
+        return $this->belongsToMany(Person::class, 'disponentes_tramite', 'tramite_id', 'person_id');
     }
 
     public function pagos()

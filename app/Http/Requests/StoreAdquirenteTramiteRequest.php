@@ -15,7 +15,7 @@ class StoreAdquirenteTramiteRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'persona_id' => 'required|exists:people,id',
+            'person_id' => 'required|exists:people,id',
             'parentesco_id' => 'required|exists:parentescos,id',
             'porcentaje' => 'required|numeric|min:0.01|max:100',
             'es_beneficiario_exencion' => 'boolean',
@@ -27,8 +27,8 @@ class StoreAdquirenteTramiteRequest extends FormRequest
     {
         $validator->after(function ($v) {
             $tramite = $this->route('tramite');
-            if ($tramite->adquirentes()->where('persona_id', $this->persona_id)->exists()) {
-                $v->errors()->add('persona_id', 'Esta persona ya está agregada como adquirente.');
+            if ($tramite->adquirentes()->where('person_id', $this->person_id)->exists()) {
+                $v->errors()->add('person_id', 'Esta persona ya está agregada como adquirente.');
             }
         });
     }

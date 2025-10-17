@@ -53,6 +53,8 @@ class IdtgbMenuAppendSeeder extends Seeder
         'url'        => '',
         'children'   => [
             ['title' => 'Trámites',            'route' => 'admin.tramites.index',            'icon_class' => 'fa-solid fa-folder-open',     'order' => 1],
+            // ✅ Sugerencia: Agregar acceso directo al wizard
+            ['title' => 'Nuevo Trámite (Wizard)', 'route' => 'admin.tramites.wizard.step1', 'icon_class' => 'fa-solid fa-wand-magic-sparkles', 'order' => 2],
         ],
     ],
     [

@@ -27,13 +27,13 @@
                     {{-- Persona --}}
                     <div class="col-md-5">
                         <label>Persona <span class="required">*</span></label>
-                        <select name="persona_id" class="form-control select2" required {{ ($item->exists ?? false) ? 'disabled' : '' }}>
+                        <select name="person_id" class="form-control select2" required {{ ($item->exists ?? false) ? 'disabled' : '' }}>
                             <option value="">Elija...</option>
                            @foreach($personas as $p)
                                 <option value="{{ $p->id }}">{{ $p->nombre_completo }} - {{ $p->tipo_doc }} {{ $p->ci }}</option>
                             @endforeach
                         </select>
-                        @error('persona_id') <small class="text-danger">{{ $message }}</small> @enderror
+                        @error('person_id') <small class="text-danger">{{ $message }}</small> @enderror
                     </div>
 
                     {{-- Parentesco --}}

@@ -92,12 +92,12 @@ class Person extends Model
      * ------------------------------------------------- */
     public function adquirentesTramite()
     {
-        return $this->hasMany(AdquirenteTramite::class, 'persona_id');
+        return $this->hasMany(AdquirenteTramite::class, 'person_id');
     }
 
     public function disponentesTramite()
     {
-        return $this->hasMany(DisponenteTramite::class, 'persona_id');
+        return $this->hasMany(DisponenteTramite::class, 'person_id');
     }
 
     public function registerUser()

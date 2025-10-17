@@ -16,7 +16,7 @@ class Documento extends Model
         'tipo_doc',
         'file_path',
         'hash_sha256',
-        'persona_id',
+        'person_id',
         'vigente',
         'version',
     ];
@@ -34,7 +34,7 @@ class Documento extends Model
 
     public function persona()
     {
-        return $this->belongsTo(Person::class, 'persona_id');
+        return $this->belongsTo(Person::class, 'person_id');
     }
 
     /* ================== HELPERS ================== */

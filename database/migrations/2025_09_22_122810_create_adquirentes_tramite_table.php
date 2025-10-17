@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('adquirentes_tramite', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tramite_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('persona_id')->constrained('people');
+            $table->foreignId('person_id')->constrained('people');
             $table->foreignId('parentesco_id')->constrained('parentescos');
             $table->decimal('tasa_aplicada', 5, 2);
             $table->decimal('porcentaje', 5, 2);

@@ -143,8 +143,14 @@ class IdtgbCalculator
         $idtgb = round(max(0, $totalTasas - $totalExenciones), 2);
 
         // 3. Recargo por mora
-        $diasMora = \Carbon\Carbon::now()->diffInDays(\Carbon\Carbon::parse($fechaVencimiento), false);
-        $recargo  = $diasMora > 0 ? round($idtgb * 0.01 * min($diasMora, 60), 2) : 0;
+        $recargo = 0;
+        $ahora = \Carbon\Carbon::now()->startOfDay();
+        $vencimiento = \Carbon\Carbon::parse($fechaVencimiento)->startOfDay();
+
+        if ($ahora->isAfter($vencimiento)) {
+            $diasMora = $ahora->diffInDays($vencimiento);
+            $recargo = round($idtgb * 0.01 * min($diasMora, 60), 2);
+        }
 
         $final = round($idtgb + $recargo, 2);
 

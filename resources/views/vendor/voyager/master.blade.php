@@ -72,7 +72,7 @@
         }
     </style>
 
-    @if(!empty(config('voyager.additional_css')))<!-- Additional CSS -->
+    @if(!empty(config('voyager.additional_css')))<!—Additional CSS —>
         @foreach(config('voyager.additional_css') as $css)<link rel="stylesheet" type="text/css" href="{{ asset($css) }}">@endforeach
     @endif
 
@@ -90,6 +90,7 @@
     @endif
 </div>
 
+@auth
 <?php
 if (\Illuminate\Support\Str::startsWith(Auth::user()->avatar, 'http://') || \Illuminate\Support\Str::startsWith(Auth::user()->avatar, 'https://')) {
     $user_avatar = Auth::user()->avatar;
@@ -97,6 +98,7 @@ if (\Illuminate\Support\Str::startsWith(Auth::user()->avatar, 'http://') || \Ill
     $user_avatar = Voyager::image(Auth::user()->avatar);
 }
 ?>
+@endauth
 
 <div class="app-container">
     <div class="fadetoblack visible-xs"></div>
@@ -451,7 +453,7 @@ if (\Illuminate\Support\Str::startsWith(Auth::user()->avatar, 'http://') || \Ill
 @include('voyager::media.manager')
 @yield('javascript')
 @stack('javascript')
-@if(!empty(config('voyager.additional_js')))<!-- Additional Javascript -->
+@if(!empty(config('voyager.additional_js')))<!—Additional Javascript —>
     @foreach(config('voyager.additional_js') as $js)<script type="text/javascript" src="{{ asset($js) }}"></script>@endforeach
 @endif
 

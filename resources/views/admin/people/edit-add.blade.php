@@ -31,6 +31,9 @@
                             <option value="Natural" {{ old('person_type', optional($person)->person_type) == 'Natural' ? 'selected' : '' }}>Natural</option>
                             <option value="Jurídica" {{ old('person_type', optional($person)->person_type) == 'Jurídica' ? 'selected' : '' }}>Jurídica</option>
                         </select>
+                        @error('person_type')
+                            <span class="text-danger">{{ $message }}</span>
+                        @enderror
                     </div>
 
                     {{-- Tipo de documento --}}
@@ -41,28 +44,43 @@
                             <option value="NIT" {{ old('tipo_doc', optional($person)->tipo_doc) == 'NIT' ? 'selected' : '' }}>NIT</option>
                             <option value="PASS" {{ old('tipo_doc', optional($person)->tipo_doc) == 'PASS' ? 'selected' : '' }}>PASS</option>
                         </select>
+                        @error('tipo_doc')
+                            <span class="text-danger">{{ $message }}</span>
+                        @enderror
                     </div>
 
                     {{-- CI y Complemento (solo Natural) --}}
                     <div class="col-md-2 natural-field" style="{{ optional($person)->person_type == 'Jurídica' ? 'display:none' : '' }}">
                         <label>Documento</label>
                         <input type="text" name="ci" class="form-control" value="{{ old('ci', optional($person)->ci) }}">
+                        @error('ci')
+                            <span class="text-danger">{{ $message }}</span>
+                        @enderror
                     </div>
                     <div class="col-md-2 natural-field" style="{{ optional($person)->person_type == 'Jurídica' ? 'display:none' : '' }}">
                         <label>Comp.</label>
                         <input type="text" name="ci_complemento" class="form-control" value="{{ old('ci_complemento', optional($person)->ci_complemento) }}">
+                        @error('ci_complemento')
+                            <span class="text-danger">{{ $message }}</span>
+                        @enderror
                     </div>
 
                     {{-- NIT (solo Jurídica) --}}
                     <div class="col-md-4 juridica-field" style="{{ optional($person)->person_type != 'Jurídica' ? 'display:none' : '' }}">
                         <label>NIT <span class="required">*</span></label>
                         <input type="text" name="nit" class="form-control" value="{{ old('nit', optional($person)->nit) }}">
+                        @error('nit')
+                            <span class="text-danger">{{ $message }}</span>
+                        @enderror
                     </div>
 
                     {{-- Razón social (solo Jurídica) --}}
                     <div class="col-md-8 juridica-field" style="{{ optional($person)->person_type != 'Jurídica' ? 'display:none' : '' }}">
                         <label>Razón social</label>
                         <input type="text" name="legal_name" class="form-control" value="{{ old('legal_name', optional($person)->legal_name) }}" required>
+                        @error('legal_name')
+                            <span class="text-danger">{{ $message }}</span>
+                        @enderror
                     </div>
 
                     {{-- Nombres y apellidos (solo Natural) --}}

@@ -27,7 +27,7 @@ class AjaxController extends Controller
                         })
                         ->where('deleted_at', null)
                         ->get();
-        return response()->json($data);
+        return response()->json(['results' => $data]);
     }
 
     public function personStore(Request $request){
