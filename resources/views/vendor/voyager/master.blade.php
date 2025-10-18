@@ -78,6 +78,20 @@
     @endif
 
     @yield('head')
+    {{-- Solución para el error de fuente Voyager --}}
+    <style>
+    @font-face {
+        font-family: 'voyager';
+        src: url('{{ asset('fonts/voyager.eot') }}');
+        src: url('{{ asset('fonts/voyager.eot') }}?#iefix') format('embedded-opentype'),
+            url('{{ asset('fonts/voyager.woff') }}') format('woff'),
+            url('{{ asset('fonts/voyager.ttf') }}') format('truetype'),
+            url('{{ asset('fonts/voyager.svg') }}?v=1.0.0#voyager') format('svg');
+        font-weight: normal;
+        font-style: normal;
+        font-display: swap;
+    }
+    </style>
 </head>
 
 <body class="voyager @if(isset($dataType) && isset($dataType->slug)){{ $dataType->slug }}@endif">
