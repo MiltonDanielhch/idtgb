@@ -98,6 +98,28 @@
     </div>
 </div>
 
+{{-- Script para paginación dinámica (solo si usas AJAX) --}}
+@if(request()->ajax())
 <script>
-    bindPageLinks();   // ← se ejecuta después de cargar el HTML via AJAX
+    $(document).ready(function(){
+        $('.page-link').click(function(e){
+            e.preventDefault();
+            let url = new URL($(this).attr('href'));
+            let page = url.searchParams.get('page') || 1;
+
+            // Si tienes una función list() para AJAX
+            if (typeof list === 'function') {
+                list(page);
+            } else {
+                // Si no, redirige normalmente
+                window.location.href = $(this).attr('href');
+            }
+        });
+    });
+</script>
+@endif
+
+
+{{-- <script>
+    bindPageLinks();   // ← se ejecuta después de cargar el HTML via AJAX --}}
 </script>
