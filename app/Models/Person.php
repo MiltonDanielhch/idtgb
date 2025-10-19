@@ -14,7 +14,7 @@ class Person extends Model
     /* -------------------------------------------------
      *  CONFIGURACIÓN
      * ------------------------------------------------- */
-    protected $table = 'people';               // <-- faltaba
+    protected $table = 'people';
     protected $dates = ['deleted_at', 'birth_date'];
     protected $casts = [
         'status' => 'integer',
