@@ -78,7 +78,41 @@ class Person extends Model
             ])->filter()->join(' ')
         );
     }
+    // En el modelo Person
+    public function getDisplayImageAttribute()
+    {
+        return $this->image ? asset('storage/'.$this->image) : asset('images/default.jpg');
+    }
 
+    public function getDisplayNameAttribute()
+    {
+        if ($this->person_type === 'Jurídica') {
+            return strtoupper($this->legal_name ?? 'Sin razón social');
+        }
+
+        return strtoupper($this->full_name ?: 'Nombre no definido');
+    }
+
+    public function getDisplayDocumentAttribute()
+    {
+        if ($this->person_type === 'Jurídica') {
+            return $this->nit ?: 'Sin NIT';
+        }
+
+        return $this->ci . ($this->ci_complemento ? ' ' . $this->ci_complemento : '') ?: 'Sin CI';
+    }
+
+    public function getDisplayAgeAttribute()
+    {
+        if (!$this->birth_date) return '-';
+
+        return \Carbon\Carbon::parse($this->birth_date)->age . ' años';
+    }
+
+    public function getFormattedBirthDateAttribute()
+    {
+        return $this->birth_date ? $this->birth_date->format('d/m/Y') : null;
+    }
     /* -------------------------------------------------
      *  SCOPES
      * ------------------------------------------------- */

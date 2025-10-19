@@ -14,29 +14,16 @@
         </thead>
         <tbody>
             @forelse ($data as $item)
-                @php
-                    $image = $item->image ? asset('storage/'.$item->image) : asset('images/default.jpg');
-                    $fullName = $item->person_type === 'Jurídica'
-                        ? $item->legal_name
-                        : trim($item->first_name.' '.$item->middle_name.' '.$item->paternal_surname.' '.$item->maternal_surname);
-                        if ($item->person_type === 'Jurídica') {
-                            $doc = $item->nit ?: 'Sin NIT';
-                        } else {
-                            $doc = $item->ci ?: 'Sin CI';
-                            if ($item->ci_complemento) $doc .= ' '.$item->ci_complemento;
-                        }
-                    $age = $item->birth_date ? \Carbon\Carbon::parse($item->birth_date)->age : '-';
-                @endphp
                 <tr>
                     <td style="text-align: center">{{ $item->id }}</td>
                     <td style="text-align: center">
-                        <img src="{{ $image }}" alt="{{ $fullName }}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;">
+                        <img src="{{ $item->display_image }}" alt="{{ $item->display_name }}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;">
                     </td>
-                    <td>{{ strtoupper($fullName) }}</td>
-                    <td style="text-align: center">{{ $doc }}</td>
+                    <td>{{ $item->display_name }}</td>
+                    <td style="text-align: center">{{ $item->display_document }}</td>
                     <td style="text-align: center">
                         @if($item->birth_date)
-                            {{ \Carbon\Carbon::parse($item->birth_date)->format('d/m/Y') }}<br><small>{{ $age }} años</small>
+                            {{ $item->formatted_birth_date }}<br><small>{{ $item->display_age }}</small>
                         @else
                             <small>Sin datos</small>
                         @endif
@@ -59,14 +46,14 @@
                             </a>
                         @endcan
                         @can('delete', $item)
-                            <form action="{{ route('admin.people.destroy', $item) }}" method="POST"
-                                style="display: inline-block;"
-                                onsubmit="return confirm('¿Borrar este registro?')">
-                                @csrf @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-danger" title="Borrar">
-                                    <i class="voyager-trash"></i> Borrar
-                                </button>
-                            </form>
+                            <button type="button"
+                                    class="btn btn-sm btn-danger"
+                                    title="Borrar"
+                                    onclick="deleteItem('{{ route('admin.people.destroy', $item) }}', '{{ $item->display_name }}', 'persona')"
+                                    data-toggle="modal"
+                                    data-target="#modal-delete">
+                                <i class="voyager-trash"></i> Borrar
+                            </button>
                         @endcan
                     </td>
                 </tr>
@@ -98,7 +85,7 @@
     </div>
 </div>
 
-{{-- Script para paginación dinámica (solo si usas AJAX) --}}
+{{-- Script para paginación dinámica --}}
 @if(request()->ajax())
 <script>
     $(document).ready(function(){
@@ -107,19 +94,12 @@
             let url = new URL($(this).attr('href'));
             let page = url.searchParams.get('page') || 1;
 
-            // Si tienes una función list() para AJAX
             if (typeof list === 'function') {
                 list(page);
             } else {
-                // Si no, redirige normalmente
                 window.location.href = $(this).attr('href');
             }
         });
     });
 </script>
 @endif
-
-
-{{-- <script>
-    bindPageLinks();   // ← se ejecuta después de cargar el HTML via AJAX --}}
-</script>

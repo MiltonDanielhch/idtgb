@@ -58,7 +58,7 @@
         </div>
     </div>
 
-    {{-- Modal eliminar --}}
+    {{-- Modal eliminar personalizado --}}
     @include('partials.modal-delete')
 @stop
 
@@ -69,6 +69,41 @@
 <script>
     let countPage = 10;
     let timeout   = null;
+
+    // ✅ FUNCIÓN DELETEITEM MEJORADA - PARA USO GENERAL
+    function deleteItem(url, itemName = null, itemType = 'registro') {
+        // Actualizar la acción del formulario
+        const deleteForm = document.getElementById('delete_form');
+        if (deleteForm) {
+            deleteForm.action = url;
+        }
+
+        // Resetear el formulario (limpiar campos anteriores)
+        deleteForm.reset();
+
+        // Actualizar mensajes dinámicos
+        const deleteModalTitle = document.getElementById('delete_modal_title');
+        const deleteModalMessage = document.getElementById('delete_modal_message');
+        const deleteSubmitBtn = document.getElementById('delete_submit_btn');
+
+        if (itemName) {
+            // Si se proporciona un nombre específico
+            if (deleteModalTitle) {
+                deleteModalTitle.textContent = `¿Estás seguro que quieres eliminar ${itemType}?`;
+            }
+            if (deleteModalMessage) {
+                deleteModalMessage.innerHTML = `¿Estás seguro que quieres eliminar <span style="color: #333;">${itemName}</span>?`;
+            }
+        } else {
+            // Mensaje genérico
+            if (deleteModalTitle) {
+                deleteModalTitle.textContent = '¿Estás seguro que quieres eliminar?';
+            }
+            if (deleteModalMessage) {
+                deleteModalMessage.textContent = `¿Estás seguro que quieres eliminar este ${itemType}?`;
+            }
+        }
+    }
 
     $(document).ready(() => {
         list();
@@ -109,10 +144,6 @@
                 console.error(xhr.responseText);
             }
         });
-    }
-
-    function deleteItem(url) {
-        $('#delete_form').attr('action', url);
     }
 </script>
 @endpush
