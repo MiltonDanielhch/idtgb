@@ -1,4 +1,3 @@
-
 <?php
 
 use Illuminate\Support\Facades\Route;
@@ -61,7 +60,8 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
         Route::get('/', [ReporteController::class, 'index'])->name('index');
     });
 
-    Route::prefix('people')->group(function () {        Route::get('/', [PersonController::class, 'index'])->name('admin.people.index');
+    Route::prefix('people')->group(function () {
+        Route::get('/', [PersonController::class, 'index'])->name('admin.people.index');
         Route::get('/ajax/list', [PersonController::class, 'list'])->name('admin.people.ajax.list');
         Route::get('/create', [PersonController::class, 'create'])->name('admin.people.create');
         Route::post('/', [PersonController::class, 'store'])->name('admin.people.store');
@@ -102,8 +102,6 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
         Route::put('/{tasa}', [TasaController::class, 'update'])->name('admin.tasas.update');
         Route::delete('/{tasa}', [TasaController::class, 'destroy'])->name('admin.tasas.destroy');
     });
-
-    Route::resource('exenciones', ExencionController::class)->names('admin.exenciones');
 
     Route::prefix('inmuebles')->group(function () {
         Route::get('/', [InmuebleController::class, 'index'])->name('admin.inmuebles.index');
@@ -193,8 +191,6 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
         Route::get('/{pago}', [PagoController::class, 'show'])->name('show');
         Route::delete('/{pago}', [PagoController::class, 'destroy'])->name('destroy');
     });
-
-    // Route::resource('ufvs', UfvController::class)->names('admin.ufvs');
 
     Route::prefix('ufvs')->name('admin.ufvs.')->group(function () {
         Route::get('/', [UfvController::class, 'index'])->name('index');
