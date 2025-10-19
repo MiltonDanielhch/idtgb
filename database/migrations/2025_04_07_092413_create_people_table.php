@@ -47,7 +47,8 @@ return new class extends Migration
             $table->string('deleteRole')->nullable();
             $table->text('deleteObservation')->nullable();
 
-            $table->unique(['tipo_doc', 'ci', 'ci_complemento']); // 🔹 Solo para CI
+            $table->unique(['ci', 'ci_complemento']);
+            $table->unique(['nit']);
         });
     }
 

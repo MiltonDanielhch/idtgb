@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('tramite_inmuebles', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tramite_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('inmueble_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('inmueble_id')->constrained()->cascadeOnDelete(); //restrictOnDelete()
             $table->timestamps();
         });
     }

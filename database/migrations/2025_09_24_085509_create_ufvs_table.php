@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('ufvs', function (Blueprint $table) {
             $table->id();
-            $table->date('fecha');
+            $table->date('fecha')->unique();
             $table->decimal('valor', 8, 5);
             $table->timestamps();
         });
