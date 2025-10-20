@@ -3,6 +3,21 @@
 @section('title', 'Portal Ciudadano | IDTGB - GAD Beni')
 
 @section('content')
+<style>
+    /* Definición de colores de Beni para el ejemplo. Asume que se define en el CSS global */
+    :root {
+        --beni-green: #008000; /* Verde de la bandera */
+        --beni-yellow: #FFD700; /* Amarillo de la bandera */
+        --beni-blue: #ee7606; /* Azul para contraste */
+    }
+    .display-5 {
+        font-family: 'Inter', sans-serif;
+    }
+    .card-icon {
+        color: var(--beni-yellow);
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+    }
+</style>
 <div class="container py-5">
     <div class="text-center mb-5">
         <h1 class="display-5 fw-bold" style="color: var(--beni-green);">
@@ -37,7 +52,8 @@
                         </small>
                     </div>
                     <ul class="small mb-4">
-                        <li>Estimación con tasas reales del Beni (0%, 1.5%, 3%, 5%)</li>
+                        {{-- CORREGIDO: Las tasas se ajustan a la Ley Departamental del IDTGB (1%, 10%, 20%) --}}
+                        <li>Estimación con las alícuotas legales del Beni (1%, 10%, 20%)</li>
                         <li>Sin necesidad de registro ni login</li>
                         <li>Descarga de resultado en PDF para su referencia</li>
                     </ul>
@@ -53,7 +69,7 @@
         <!-- FUNCIONARIOS -->
         <div class="col-lg-6">
             <div class="card h-100 shadow-sm border-primary">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header bg-secondary text-white">
                     <h3 class="h5 mb-0">
                         <i class="fas fa-user-tie card-icon"></i>
                         Para funcionarios
