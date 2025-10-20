@@ -14,15 +14,15 @@ class UpdatePersonRequest extends FormRequest
 
     public function rules()
     {
-        $person = $this->route('person');
-        $personId = $person ? $person->id : null;
+        $personId = $this->route('person')->id;
 
-        $rules = [
+        $rules = [  // ✅ CORREGIDO: faltaba el array inicial
             'person_type' => 'required|in:Natural,Jurídica',
             'tipo_doc' => 'required|in:CI,NIT,PASS',
             'email' => 'nullable|email|max:100',
             'phone' => 'nullable|max:50',
             'address' => 'nullable|max:255',
+            'municipio_id' => 'nullable|exists:municipios,id', // ✅ AÑADIDO
             'image' => 'nullable|image|max:2048',
             'status' => 'nullable|in:0,1,2',
             'estado_persona' => 'nullable|in:Activo,Inactivo,Fallecido',
@@ -67,6 +67,7 @@ class UpdatePersonRequest extends FormRequest
             'legal_name.required' => 'La razón social es obligatoria para personas jurídicas.',
             'image.image' => 'El archivo debe ser una imagen válida.',
             'image.max' => 'La imagen no debe pesar más de 2MB.',
+            'municipio_id.exists' => 'El municipio seleccionado no es válido.', // ✅ AÑADIDO
         ];
     }
 
@@ -84,6 +85,7 @@ class UpdatePersonRequest extends FormRequest
             'maternal_surname' => 'apellido materno',
             'birth_date' => 'fecha de nacimiento',
             'estado_persona' => 'estado de persona',
+            'municipio_id' => 'municipio', // ✅ AÑADIDO
         ];
     }
 }

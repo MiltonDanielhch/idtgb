@@ -24,6 +24,7 @@ use App\Http\Controllers\TramiteInmuebleController;
 use App\Http\Controllers\UfvController;
 use App\Http\Controllers\ValidacionController;
 use App\Http\Controllers\ReporteController;
+use App\Http\Controllers\Admin\TramiteWizardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -85,9 +86,45 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
     Route::resource('inmuebles', InmuebleController::class)->names('admin.inmuebles');
     Route::get('inmuebles/ajax/list', [InmuebleController::class, 'list'])->name('admin.inmuebles.ajax.list');
 
+    Route::get('inmuebles/ajax/search', [InmuebleController::class, 'ajaxSearch'])->name('admin.inmuebles.ajax.search');
+
     Route::resource('avaluos', AvaluoController::class)->names('admin.avaluos');
     Route::get('avaluos/ajax/list', [AvaluoController::class, 'list'])->name('admin.avaluos.ajax.list');
     Route::get('avaluos/{avaluo}/download', [AvaluoController::class, 'download'])->name('admin.avaluos.download');
+
+    // Asistente para creación de trámites
+    Route::prefix('tramites/wizard')->name('admin.tramites.wizard.')->group(function () {
+        Route::get('create-step-1', [TramiteWizardController::class, 'createStep1'])->name('create.step1');
+        Route::post('post-step-1', [TramiteWizardController::class, 'postStep1'])->name('post.step1');
+        Route::get('create-step-2', [TramiteWizardController::class, 'createStep2'])->name('create.step2');
+        Route::post('post-step-2', [TramiteWizardController::class, 'postStep2'])->name('post.step2');
+        Route::post('add-disponente', [TramiteWizardController::class, 'addDisponente'])->name('add.disponente');
+        Route::get('remove-disponente/{person_id}', [TramiteWizardController::class, 'removeDisponente'])->name('remove.disponente');
+
+        // Step 3: Adquirentes
+        Route::get('create-step-3', [TramiteWizardController::class, 'createStep3'])->name('create.step3');
+        Route::post('post-step-3', [TramiteWizardController::class, 'postStep3'])->name('post.step3');
+        Route::post('add-adquirente', [TramiteWizardController::class, 'addAdquirente'])->name('add.adquirente');
+        Route::get('remove-adquirente/{person_id}', [TramiteWizardController::class, 'removeAdquirente'])->name('remove.adquirente');
+
+        // Step 4: Inmueble
+        Route::get('create-step-4', [TramiteWizardController::class, 'createStep4'])->name('create.step4');
+        Route::post('post-step-4', [TramiteWizardController::class, 'postStep4'])->name('post.step4');
+        Route::post('add-inmueble', [TramiteWizardController::class, 'addInmueble'])->name('add.inmueble');
+        Route::delete('remove-inmueble', [TramiteWizardController::class, 'removeInmueble'])->name('remove.inmueble');
+
+        // Step 5: Resumen y Guardar
+        Route::get('create-step-5', [TramiteWizardController::class, 'createStep5'])->name('create.step5');
+        Route::post('store', [TramiteWizardController::class, 'store'])->name('store');
+
+        // Cancelar
+        Route::get('cancel', [TramiteWizardController::class, 'cancelWizard'])->name('cancel');
+
+        // Rutas AJAX para el asistente
+        Route::get('ajax/person-list', [TramiteWizardController::class, 'ajaxPersonList'])->name('ajax.personList');
+    });
+
+
 
     // ──────────────── TRÁMITES ────────────────
     // Ruta personalizada que debe ir ANTES que el resource para no ser capturada por el método show del resource.

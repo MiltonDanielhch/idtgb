@@ -1,5 +1,5 @@
 <?php
-
+// app/Models/DisponenteTramite.php
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -30,7 +30,8 @@ class DisponenteTramite extends Model
         return $this->belongsTo(Tramite::class);
     }
 
-    public function persona()
+    // ✅ Usar 'person' para consistencia
+    public function person()
     {
         return $this->belongsTo(Person::class, 'person_id');
     }

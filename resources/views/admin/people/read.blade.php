@@ -78,6 +78,20 @@
                                 <td>{{ $person->address ?? 'SN' }}</td>
                             </tr>
                             <tr>
+                                <th>Ubicación</th>
+                                <td>
+                                    {{ $person->ubicacion_segura }}
+                                    @if($person->municipio)
+                                        <br>
+                                        <small class="text-muted">
+                                            <strong>Municipio:</strong> {{ $person->municipio->nombre }} |
+                                            <strong>Provincia:</strong> {{ $person->municipio->provincia->nombre }} |
+                                            <strong>Departamento:</strong> {{ $person->municipio->provincia->departamento->nombre }}
+                                        </small>
+                                    @endif
+                                </td>
+                            </tr>
+                            <tr>
                                 <th>Fotografía</th>
                                 <td>
                                     @if($person->image)

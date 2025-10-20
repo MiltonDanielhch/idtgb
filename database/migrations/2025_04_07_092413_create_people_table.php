@@ -32,6 +32,7 @@ return new class extends Migration
             $table->string('email')->nullable();
             $table->string('phone')->nullable();
             $table->text('address')->nullable();
+            $table->foreignId('municipio_id')->nullable()->constrained();
 
             $table->enum('gender', ['Masculino', 'Femenino'])->nullable();
             $table->string('image')->nullable();

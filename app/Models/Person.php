@@ -36,6 +36,7 @@ class Person extends Model
         'email',
         'phone',
         'address',
+        'municipio_id',
         'gender',
         'image',
         'status',
@@ -47,6 +48,9 @@ class Person extends Model
         'deleteObservation',
     ];
 
+      // Agregar los accesores a los appends
+    protected $appends = ['ubicacion_completa', 'ubicacion_segura'];
+    
     /* -------------------------------------------------
      *  CONSTANTES
      * ------------------------------------------------- */
@@ -119,6 +123,48 @@ class Person extends Model
     public function scopeActive($query)
     {
         return $query->where('status', self::STATUS_ACTIVE);
+    }
+
+
+     /**
+     * Relación con municipio
+     */
+    public function municipio()
+    {
+        return $this->belongsTo(Municipio::class);
+    }
+  /**
+     * Accesor para la ubicación completa
+     */
+    public function getUbicacionCompletaAttribute()
+    {
+        if (!$this->municipio) {
+            return 'Ubicación no especificada';
+        }
+
+        $ubicacion = $this->municipio->nombre;
+
+        if ($this->municipio->provincia) {
+            $ubicacion .= ', ' . $this->municipio->provincia->nombre;
+        }
+
+        if ($this->municipio->provincia && $this->municipio->provincia->departamento) {
+            $ubicacion .= ', ' . $this->municipio->provincia->departamento->nombre;
+        }
+
+        return $ubicacion;
+    }
+
+    /**
+     * Accesor para mostrar información de ubicación segura
+     */
+    public function getUbicacionSeguraAttribute()
+    {
+        try {
+            return $this->ubicacion_completa;
+        } catch (\Exception $e) {
+            return 'Ubicación no disponible';
+        }
     }
 
     /* -------------------------------------------------

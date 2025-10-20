@@ -162,6 +162,23 @@
                         @enderror
                     </div>
 
+                    {{-- Municipio --}}
+                    <div class="col-md-6">
+                        <label>Municipio</label>
+                        <select name="municipio_id" class="form-control select2 @error('municipio_id') is-invalid @enderror">
+                            <option value="">Seleccione un municipio</option>
+                            @foreach($municipios as $municipio)
+                                <option value="{{ $municipio->id }}"
+                                    {{ old('municipio_id', optional($person)->municipio_id) == $municipio->id ? 'selected' : '' }}>
+                                    {{ $municipio->nombre }} - {{ $municipio->provincia->nombre }} - {{ $municipio->provincia->departamento->nombre }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('municipio_id')
+                            <span class="text-danger">{{ $message }}</span>
+                        @enderror
+                    </div>
+
                     {{-- Fotografía --}}
                     <div class="col-md-6">
                         <label>Fotografía</label>
@@ -248,6 +265,12 @@
     $(document).ready(function() {
         // Inicializar
         toggleFields();
+
+        // Inicializar Select2 para municipio
+        $('.select2').select2({
+            placeholder: 'Seleccione un municipio',
+            allowClear: true
+        });
 
         // Evento change
         $('#person_type').change(toggleFields);

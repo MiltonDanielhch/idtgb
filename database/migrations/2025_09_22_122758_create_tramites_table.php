@@ -24,6 +24,7 @@ return new class extends Migration
             $table->decimal('monto_final', 14, 2)->default(0);
             $table->decimal('ufv_aplicada', 8, 5)->default(1);
             $table->enum('estado', ['Borrador', 'Pagado', 'Observado', 'Anulado', 'Finalizado'])->default('Borrador');
+            $table->char('hash_validacion', 64)->unique()->nullable();
             $table->date('fecha_transmision');
             $table->date('fecha_vencimiento');
             $table->text('observaciones')->nullable();

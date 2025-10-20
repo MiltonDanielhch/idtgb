@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Person;
+use App\Models\Municipio;
 use Illuminate\Http\Request;
 use App\Http\Requests\StorePersonRequest;
 use App\Http\Requests\UpdatePersonRequest;
@@ -27,6 +28,7 @@ class PersonController extends Controller
     public function show(Person $person)
     {
         $this->authorize('view', $person); // ✅ POLICY
+        $person->load('municipio.provincia.departamento');
         return view('admin.people.read', compact('person'));
     }
 
@@ -46,6 +48,7 @@ class PersonController extends Controller
         ))";
 
         $data = Person::query()
+            ->with(['municipio.provincia.departamento'])
             ->select('*')
             ->selectRaw("$fullNameRaw as full_name")
             ->when($search, function ($q) use ($search, $fullNameRaw) {
@@ -77,7 +80,8 @@ class PersonController extends Controller
     public function create()
     {
         $this->authorize('create', Person::class); // ✅ POLICY
-        return view('admin.people.edit-add', ['person' => new Person()]);
+        $municipios = Municipio::with('provincia.departamento')->get();
+        return view('admin.people.edit-add', ['person' => new Person(), 'municipios' => $municipios ]);
     }
 
     public function store(StorePersonRequest $request)
@@ -101,7 +105,12 @@ class PersonController extends Controller
     public function edit(Person $person)
     {
         $this->authorize('update', $person); // ✅ POLICY
-        return view('admin.people.edit-add', compact('person'));
+        $municipios = Municipio::with('provincia.departamento')->get();
+        $person->load('municipio');
+        return view('admin.people.edit-add', [
+            'person' => $person,
+            'municipios' => $municipios // ✅ PASAR A LA VISTA
+        ]);
     }
 
     public function update(UpdatePersonRequest $request, Person $person)

@@ -29,6 +29,7 @@ class Tramite extends Model
         'user_id',
         'created_by',
         'updated_by',
+        'hash_validacion',
     ];
 
     protected $casts = [
@@ -41,12 +42,13 @@ class Tramite extends Model
         'recargo_mora' => 'decimal:2',
         'monto_final' => 'decimal:2',
         'ufv_aplicada' => 'decimal:5',
+        'hash_validacion' => 'string',
     ];
 
     /* ================== RELACIONES ================== */
- public function tipoTransmision()
+    public function tipoTransmision()
     {
-        return $this->belongsTo(TipoTransmision::class);
+        return $this->belongsTo(TipoTransmision::class, 'tipo_transmision_id');
     }
 
     public function user()
@@ -64,17 +66,13 @@ class Tramite extends Model
         return $this->belongsTo(User::class, 'updated_by');
     }
 
-    // public function inmuebles()
-    // {
-    //     return $this->belongsToMany(Inmueble::class, 'tramite_inmuebles');
-    // }
     public function inmuebles()
     {
         return $this->belongsToMany(
             Inmueble::class,
-            'tramite_inmuebles', // nombre de la tabla pivote
-            'tramite_id',        // FK de trámite en la pivote
-            'inmueble_id'        // FK de inmueble en la pivote
+            'tramite_inmuebles',
+            'tramite_id',
+            'inmueble_id'
         );
     }
 
@@ -84,6 +82,7 @@ class Tramite extends Model
                     ->withPivot('monto_aplicado');
     }
 
+    // ✅ CORREGIDO - hasMany con modelos pivote
     public function adquirentes()
     {
         return $this->hasMany(AdquirenteTramite::class);
@@ -102,6 +101,38 @@ class Tramite extends Model
     public function documentos()
     {
         return $this->hasMany(Documento::class);
+    }
+
+    /* ================== RELACIONES INDIRECTAS ================== */
+
+    /**
+     * Obtener personas adquirentes a través del modelo pivote
+     */
+    public function personasAdquirentes()
+    {
+        return $this->hasManyThrough(
+            Person::class,
+            AdquirenteTramite::class,
+            'tramite_id', // FK en adquirentes_tramite
+            'id',         // FK en people
+            'id',         // Local key en tramites
+            'person_id'   // FK en adquirentes_tramite que apunta a people
+        );
+    }
+
+    /**
+     * Obtener personas disponentes a través del modelo pivote
+     */
+    public function personasDisponentes()
+    {
+        return $this->hasManyThrough(
+            Person::class,
+            DisponenteTramite::class,
+            'tramite_id', // FK en disponentes_tramite
+            'id',         // FK en people
+            'id',         // Local key en tramites
+            'person_id'   // FK en disponentes_tramite que apunta a people
+        );
     }
 
     /* ================== HELPERS ================== */
@@ -125,10 +156,67 @@ class Tramite extends Model
             return $this->hash_validacion;
         }
 
-        // Genera un hash único combinando datos del trámite y un elemento aleatorio
         $this->hash_validacion = hash('sha256', $this->id . '|' . $this->nro_tramite . '|' . now()->timestamp . '|' . Str::random(10));
         $this->save();
 
         return $this->hash_validacion;
+    }
+
+    /* ================== SCOPES ================== */
+
+    public function scopeConRelacionesCompletas($query)
+    {
+        return $query->with([
+            'tipoTransmision',
+            'user',
+            'inmuebles.tipoInmueble',
+            'inmuebles.municipio.provincia.departamento',
+            'adquirentes.person.municipio.provincia.departamento',
+            'adquirentes.parentesco',
+            'disponentes.person.municipio.provincia.departamento',
+            'pagos',
+            'documentos'
+        ]);
+    }
+
+    /* ================== ACCESORES ================== */
+
+    /**
+     * Obtener adquirentes con información completa
+     */
+    public function getAdquirentesCompletosAttribute()
+    {
+        return $this->adquirentes()->with(['person.municipio.provincia.departamento', 'parentesco'])->get();
+    }
+
+    /**
+     * Obtener disponentes con información completa
+     */
+    public function getDisponentesCompletosAttribute()
+    {
+        return $this->disponentes()->with(['person.municipio.provincia.departamento'])->get();
+    }
+
+    /**
+     * Obtener inmuebles con información completa
+     */
+    public function getInmueblesCompletosAttribute()
+    {
+        return $this->inmuebles()->with(['tipoInmueble', 'municipio.provincia.departamento'])->get();
+    }
+
+    /**
+     * Estado del trámite con color para UI
+     */
+    public function getEstadoColorAttribute()
+    {
+        return match($this->estado) {
+            'Borrador' => 'secondary',
+            'Pagado' => 'success',
+            'Observado' => 'warning',
+            'Anulado' => 'danger',
+            'Finalizado' => 'info',
+            default => 'secondary'
+        };
     }
 }

@@ -8,6 +8,7 @@
                 <th style="text-align: center">Documento</th>
                 <th style="text-align: center">Edad</th>
                 <th style="text-align: center">Teléfono</th>
+                <th style="text-align: center">Ubicación</th> <!-- ✅ NUEVA COLUMNA AÑADIDA -->
                 <th style="text-align: center">Estado</th>
                 <th style="text-align: center">Acciones</th>
             </tr>
@@ -29,6 +30,9 @@
                         @endif
                     </td>
                     <td style="text-align: center">{{ $item->phone ?? 'SN' }}</td>
+                    <td style="text-align: center">
+                        {{ $item->ubicacion_segura }} <!-- ✅ MOSTRANDO LA UBICACIÓN -->
+                    </td>
                     <td style="text-align: center">
                         <span class="label label-{{ $item->status == 1 ? 'success' : 'warning' }}">
                             {{ $item->estado_persona }}
@@ -59,7 +63,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="8">
+                    <td colspan="9"> <!-- ✅ ACTUALIZADO: Cambiado de 8 a 9 columnas -->
                         <h5 class="text-center" style="margin-top: 50px">
                             <img src="{{ asset('images/empty.png') }}" width="120px" alt="" style="opacity: 0.8">
                             <br><br>

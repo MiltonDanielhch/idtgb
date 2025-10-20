@@ -52,7 +52,8 @@ class IdtgbMenuAppendSeeder extends Seeder
         'route'      => null,
         'url'        => '',
         'children'   => [
-            ['title' => 'Trámites',            'route' => 'admin.tramites.index',            'icon_class' => 'fa-solid fa-folder-open',     'order' => 1],
+            ['title' => 'Nuevo Trámite (Wizard)', 'route' => 'admin.tramites.wizard.create.step1', 'icon_class' => 'fa-solid fa-wand-magic-sparkles', 'order' => 1],
+            ['title' => 'Lista de Trámites',      'route' => 'admin.tramites.index',            'icon_class' => 'fa-solid fa-folder-open',     'order' => 2],
         ],
     ],
     [
@@ -63,6 +64,7 @@ class IdtgbMenuAppendSeeder extends Seeder
         'url'        => '',
     ],
 ];
+
     public function run()
     {
         $menu = Menu::where('name', 'admin')->firstOrFail();

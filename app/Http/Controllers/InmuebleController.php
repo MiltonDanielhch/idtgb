@@ -8,6 +8,7 @@ use App\Models\Municipio;
 use App\Http\Requests\StoreInmuebleRequest;
 use App\Http\Requests\UpdateInmuebleRequest;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
 
 class InmuebleController extends Controller
 {
@@ -95,5 +96,32 @@ class InmuebleController extends Controller
         $inmueble->delete();
         return redirect()->route('admin.inmuebles.index')
             ->with(['message' => 'Inmueble eliminado.', 'alert-type' => 'success']);
+    }
+
+    public function ajaxSearch(Request $request)
+    {
+        $term = $request->get('q', '');
+
+        $inmuebles = Inmueble::where(function($query) use ($term) {
+                $query->where('catastro', 'LIKE', "%{$term}%")
+                    ->orWhere('direccion', 'LIKE', "%{$term}%")
+                    ->orWhere('matricula_rr', 'LIKE', "%{$term}%");
+            })
+            ->with('tipoInmueble')
+            ->limit(20)
+            ->get();
+
+        $formatted = $inmuebles->map(function($inmueble) {
+            return [
+                'id' => $inmueble->id,
+                'text' => $inmueble->catastro . ' - ' . $inmueble->direccion,
+                'catastro' => $inmueble->catastro,
+                'direccion' => $inmueble->direccion,
+                'tipo_inmueble' => $inmueble->tipoInmueble->nombre ?? 'N/A',
+                'valor_catastral' => $inmueble->valor_catastral
+            ];
+        });
+
+        return response()->json(['results' => $formatted]);
     }
 }
