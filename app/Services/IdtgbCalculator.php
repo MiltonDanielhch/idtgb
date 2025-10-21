@@ -16,6 +16,11 @@ class IdtgbCalculator
      */
     public function calculateAndSave(Tramite $tramite): array
     {
+        $inmueble = $tramite->inmuebles->first();
+        if (!$inmueble || !$inmueble->municipio) {
+            throw new \Exception("El trámite no tiene un inmueble con municipio asociado para el cálculo.");
+        }
+
         // 1. Preparar datos para el cálculo desde el modelo Tramite
         $adquirentesData = $tramite->adquirentes->map(function ($adq) {
             return [
@@ -35,7 +40,7 @@ class IdtgbCalculator
         // 2. Realizar el cálculo puro
         $resultados = $this->performCalculation(
             $tramite->base_imponible,
-            $tramite->inmueble->municipio->provincia->departamento_id,
+            $inmueble->municipio->provincia->departamento_id,
             $tramite->tipo_transmision_id,
             $tramite->fecha_presentacion,
             $tramite->fecha_vencimiento,
@@ -143,8 +148,15 @@ class IdtgbCalculator
         $idtgb = round(max(0, $totalTasas - $totalExenciones), 2);
 
         // 3. Recargo por mora
-        $diasMora = \Carbon\Carbon::now()->diffInDays(\Carbon\Carbon::parse($fechaVencimiento), false);
-        $recargo  = $diasMora > 0 ? round($idtgb * 0.01 * min($diasMora, 60), 2) : 0;
+        $recargo = 0;
+        $ahora = \Carbon\Carbon::parse($fechaPresentacion)->startOfDay();
+        $vencimiento = \Carbon\Carbon::parse($fechaVencimiento)->startOfDay();
+
+        $diasMora = 0;
+        if ($ahora->isAfter($vencimiento)) {
+            $diasMora = $ahora->diffInDays($vencimiento);
+            $recargo = round($idtgb * 0.01 * min($diasMora, 60), 2);
+        }
 
         $final = round($idtgb + $recargo, 2);
 
@@ -155,6 +167,7 @@ class IdtgbCalculator
             'idtgb'          => $idtgb,
             'recargo'        => $recargo,
             'final'          => $final,
+            'dias_mora'      => $diasMora,
             'detalles_tasas' => $detallesTasas, // Para uso interno en calculateAndSave
         ];
     }

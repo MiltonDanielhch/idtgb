@@ -200,8 +200,8 @@ $(document).ready(function () {
         // Pequeño delay para asegurar que el modal esté completamente visible
         setTimeout(function() {
             initializePersonSelect();
-            // Enfocar el Select2 automáticamente cuando se abre el modal
-            $('#person-select').select2('open');
+            // Ya no se abre automáticamente para evitar la sensación de "ya buscando"
+            // $('#person-select').select2('open');
         }, 100);
     });
 
@@ -280,16 +280,12 @@ $(document).ready(function () {
             method: 'POST',
             data: $(this).serialize(),
             success: function(response) {
-                if (response.success) {
-                    // Cerrar modal y recargar página
-                    $('#searchPersonModal').modal('hide');
-                    location.reload();
-                } else {
-                    alert('Error: ' + (response.message || 'No se pudo agregar el adquirente'));
-                }
+                // Si la petición AJAX tiene éxito (HTTP 2xx), recargamos la página.
+                $('#searchPersonModal').modal('hide');
+                location.reload();
             },
             error: function(xhr) {
-                var errorMessage = 'Error de servidor';
+                var errorMessage = 'Error de servidor. No se pudo agregar el adquirente.';
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMessage = xhr.responseJSON.message;
                 } else if (xhr.status === 422) {

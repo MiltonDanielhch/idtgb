@@ -58,7 +58,6 @@ class CalculadoraBeniController extends Controller
         $ufv = UFV::whereDate('fecha', '<=', $fecha_transmision)
                    ->orderBy('fecha', 'desc')
                    ->first()?->valor ?? 1.00000;
-        $dias_mora = max(0, Carbon::now()->diffInDays($fecha_vencimiento, false));
 
         $resultado = [
             'tipo_contribuyente' => $request->tipo_contribuyente,
@@ -66,7 +65,7 @@ class CalculadoraBeniController extends Controller
             'tipo_transmision'   => $request->tipo_transmision,
             'fecha_transmision'  => $fecha_transmision->format('d/m/Y'),
             'fecha_vencimiento'  => $fecha_vencimiento->format('d/m/Y'),
-            'dias_mora'          => $dias_mora,
+            'dias_mora'          => $calculo['dias_mora'],
             'base_imponible'     => round($calculo['base'], 2),
             'ufv'                => $ufv,
             'tasa'               => $calculo['detalles_tasas'][0]['tasa_aplicada'],

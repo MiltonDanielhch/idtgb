@@ -378,9 +378,10 @@ class TramiteWizardController extends Controller
             // 4. Asociar inmuebles
             $tramite->inmuebles()->sync($wizardData['step4']['inmuebles']);
 
-            // 5. Calcular impuestos
-            $calculator = new IdtgbCalculator();
-            $calculator->calculateAndSave($tramite);
+            // Es crucial recargar la relación para que esté disponible en el objeto $tramite
+            $tramite->load('inmuebles');
+
+            // 5. El observador se encargará de calcular los impuestos automáticamente
 
             DB::commit();
 

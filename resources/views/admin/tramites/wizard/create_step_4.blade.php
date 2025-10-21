@@ -185,8 +185,8 @@ $(document).ready(function () {
         // Pequeño delay para asegurar que el modal esté completamente visible
         setTimeout(function() {
             initializeInmuebleSelect();
-            // Enfocar el Select2 automáticamente cuando se abre el modal
-            $('#inmueble-select').select2('open');
+            // Ya no se abre automáticamente para evitar la sensación de "ya buscando"
+            // $('#inmueble-select').select2('open');
         }, 100);
     });
 
@@ -244,16 +244,12 @@ $(document).ready(function () {
             method: 'POST',
             data: $(this).serialize(),
             success: function(response) {
-                if (response.success) {
-                    // Cerrar modal y recargar página
-                    $('#searchInmuebleModal').modal('hide');
-                    location.reload();
-                } else {
-                    alert('Error: ' + (response.message || 'No se pudo agregar el inmueble'));
-                }
+                // Si la petición AJAX tiene éxito (HTTP 2xx), recargamos la página.
+                $('#searchInmuebleModal').modal('hide');
+                location.reload();
             },
             error: function(xhr) {
-                var errorMessage = 'Error de servidor';
+                var errorMessage = 'Error de servidor. No se pudo agregar el inmueble.';
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMessage = xhr.responseJSON.message;
                 } else if (xhr.status === 422) {

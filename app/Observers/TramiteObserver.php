@@ -33,6 +33,6 @@ class TramiteObserver
             return;
         }
 
-        app(IdtgbCalculator::class)->calcular($tramite);
+        app(IdtgbCalculator::class)->calculateAndSave($tramite);
     }
 }

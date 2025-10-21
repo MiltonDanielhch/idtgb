@@ -184,8 +184,8 @@ $(document).ready(function () {
         // Pequeño delay para asegurar que el modal esté completamente visible
         setTimeout(function() {
             initializeSelect2();
-            // Enfocar el Select2 automáticamente cuando se abre el modal
-            $('#person-select').select2('open');
+            // Ya no se abre automáticamente para evitar la sensación de "ya buscando"
+            // $('#person-select').select2('open');
         }, 100);
     });
 
@@ -232,18 +232,22 @@ $(document).ready(function () {
             method: 'POST',
             data: $(this).serialize(),
             success: function(response) {
-                if (response.success) {
-                    // Cerrar modal y recargar página
-                    $('#searchPersonModal').modal('hide');
-                    location.reload();
-                } else {
-                    alert('Error: ' + (response.message || 'No se pudo agregar el disponente'));
-                }
+                // Si la petición AJAX tiene éxito (HTTP 2xx), recargamos la página.
+                // Esto soluciona el problema donde el backend funciona pero el frontend
+                // muestra un error porque no recibe `response.success === true`.
+                $('#searchPersonModal').modal('hide');
+                location.reload();
             },
             error: function(xhr) {
-                alert('Error: ' + (xhr.responseJSON?.message || 'Error de servidor'));
+                // Intentar obtener un mensaje de error más específico del JSON de respuesta
+                var errorMessage = 'Error de servidor. No se pudo agregar el disponente.';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
+                alert('Error: ' + errorMessage);
             },
             complete: function() {
+                // Esto se ejecuta después de success o error
                 submitBtn.html(originalText).prop('disabled', false);
             }
         });
