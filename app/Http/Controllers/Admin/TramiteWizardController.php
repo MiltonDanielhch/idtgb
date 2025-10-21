@@ -365,11 +365,13 @@ class TramiteWizardController extends Controller
 
             // 3. Asociar adquirentes
             foreach ($wizardData['step3']['adquirentes'] as $adqData) {
+                // dd($adqData);
                 $tramite->adquirentes()->create([
                     'person_id' => $adqData['person_id'],
                     'parentesco_id' => $adqData['parentesco_id'],
                     'tasa_aplicada' => 0,
-                    'porcentaje' => 0,
+                    // 'porcentaje' => 0,
+                    'porcentaje' => $adqData['porcentaje'] ?? 0, // <--- ¡SOLUCIÓN! Usar el valor de la sesión.
                     'idtgb_proporcional' => 0,
                     'es_beneficiario_exencion' => false
                 ]);
@@ -382,6 +384,16 @@ class TramiteWizardController extends Controller
             $tramite->load('inmuebles');
 
             // 5. El observador se encargará de calcular los impuestos automáticamente
+
+            // 5. Cargar las relaciones para que el servicio tenga acceso a ellas
+            $tramite->load('adquirentes', 'inmuebles');
+
+            // 6. REALIZAR EL CÁLCULO DESPUÉS DE QUE TODO ESTÉ GUARDADO
+            // Pausar los eventos del modelo para evitar un bucle infinito con el observador
+            $tramite->withoutEvents(function () use ($tramite) {
+                app(IdtgbCalculator::class)->calculateAndSave($tramite);
+            });
+
 
             DB::commit();
 

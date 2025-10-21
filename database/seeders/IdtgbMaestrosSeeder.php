@@ -9,6 +9,7 @@ class IdtgbMaestrosSeeder extends Seeder
     public function run(): void
     {
         $this->call([
+            UsersTableSeeder::class,
             // Geografía
             DepartamentoSeeder::class,
             ProvinciaSeeder::class,

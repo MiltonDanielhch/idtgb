@@ -8,10 +8,10 @@ use App\Services\IdtgbCalculator;
 
 class TramiteObserver
 {
-    public function created(Tramite $tramite): void
-    {
-        $this->calcular($tramite);
-    }
+    // public function created(Tramite $tramite): void
+    // {
+    //     $this->calcular($tramite);
+    // }
 
     public function updated(Tramite $tramite): void
     {

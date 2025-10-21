@@ -29,6 +29,8 @@ class IdtgbCalculator
             ];
         })->all();
 
+        // dd($adquirentesData);
+
         $exencionesData = $tramite->exenciones->map(function ($ex) {
             return [
                 'tipo' => $ex->tipo,
@@ -124,8 +126,11 @@ class IdtgbCalculator
                 $fechaPresentacion
             );
 
+            // dd($tasa);
+
             $tasaAplicada = $tasa ? $tasa->tasa : 0;
-            $porcentaje   = max(0, min(100, $adq['porcentaje']));
+            // $porcentaje   = max(0, min(100, $adq['porcentaje']));
+            $porcentaje   = max(0, min(100, (float) $adq['porcentaje']));
             $proporcional = round($base * ($porcentaje / 100) * ($tasaAplicada / 100), 2);
 
             $totalTasas += $proporcional;
