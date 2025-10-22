@@ -29,8 +29,17 @@
                         <label>Persona <span class="required">*</span></label>
                         <select name="person_id" class="form-control select2" required {{ ($item->exists ?? false) ? 'disabled' : '' }}>
                             <option value="">Elija...</option>
-                           @foreach($personas as $p)
-                                <option value="{{ $p->id }}">{{ $p->nombre_completo }} - {{ $p->tipo_doc }} {{ $p->ci }}</option>
+                            @foreach($personas as $p)
+                                <option value="{{ $p->id }}"
+                                    {{ old('person_id', optional($item)->person_id) == $p->id ? 'selected' : '' }}>
+                                    {{-- Usamos el accesor display_name que funciona para Natural y Jurídica --}}
+                                    {{ $p->display_name }} -
+                                    @if($p->person_type === 'Jurídica')
+                                        NIT: {{ $p->nit }}
+                                    @else
+                                        {{ $p->tipo_doc }}: {{ $p->ci }}
+                                    @endif
+                                </option>
                             @endforeach
                         </select>
                         @error('person_id') <small class="text-danger">{{ $message }}</small> @enderror

@@ -15,8 +15,8 @@
         <tbody>
             @forelse ($data as $item)
                 <tr>
-                    <td><strong>{{ $item->persona->fullName }}</strong></td>
-                    <td>{{ $item->persona->ci }}</td>
+                    <td><strong>{{ $item->person->fullName }}</strong></td>
+                    <td>{{ $item->person->ci }}</td>
                     <td>{{ $item->parentesco->nombre }}</td>
                     <td class="text-center">{{ $item->porcentaje }} %</td>
                     <td class="text-center">

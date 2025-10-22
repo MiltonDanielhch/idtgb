@@ -54,7 +54,7 @@
         <tbody>
             @foreach($tramite->adquirentes as $a)
             <tr>
-                <td>{{ $a->persona->first_name.' '.$a->persona->paternal_surname }}</td>
+                <td>{{ $a->person->first_name.' '.$a->person->paternal_surname }}</td>
                 <td>{{ $a->parentesco->nombre }}</td>
                 <td>{{ $a->porcentaje }} %</td>
                 <td>{{ $a->tasa_aplicada }} %</td>
@@ -69,7 +69,7 @@
         <tbody>
             @foreach($tramite->disponentes as $d)
             <tr>
-                <td>{{ $d->persona->first_name.' '.$d->persona->paternal_surname }}</td>
+                <td>{{ $d->person->first_name.' '.$d->person->paternal_surname }}</td>
                 <td>{{ $d->tipo }}</td>
                 <td>{{ optional($d->fecha_fallecimiento)->format('d/m/Y') ?? 'Vivo' }}</td>
             </tr>

@@ -28,13 +28,13 @@
                 {{-- Persona --}}
                 <div class="col-md-3">
                     <label>Persona</label>
-                    <p class="form-control-static"><strong>{{ $item->persona->nombre_completo }}</strong></p>
+                    <p class="form-control-static"><strong>{{ $item->person->nombre_completo }}</strong></p>
                 </div>
 
                 {{-- CI --}}
                 <div class="col-md-2">
                     <label>CI</label>
-                    <p class="form-control-static">{{ $item->persona->ci }}</p>
+                    <p class="form-control-static">{{ $item->person->ci }}</p>
                 </div>
 
                 {{-- Parentesco --}}

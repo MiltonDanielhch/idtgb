@@ -130,8 +130,11 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
     // Ruta personalizada que debe ir ANTES que el resource para no ser capturada por el método show del resource.
     Route::get('tramites/{tramite}/a01', [TramiteController::class, 'a01'])->name('admin.tramites.a01');
 
-    // Route::resource('tramites', TramiteController::class)->names('admin.tramites');
+    // El resource se mantiene para las rutas show, edit, update, destroy.
+    // Los métodos create y store se excluyen porque ahora los maneja el TramiteWizardController.
     Route::resource('tramites', TramiteController::class)->names('admin.tramites')->except(['create', 'store']);
+    // Redirigimos la ruta de creación al primer paso del asistente.
+    Route::get('tramites/create', fn() => redirect()->route('admin.tramites.wizard.create.step1'))->name('admin.tramites.create');
     Route::get('tramites/ajax/list', [TramiteController::class, 'list'])->name('admin.tramites.ajax.list');
 
     // ──────────────── RECURSOS ANIDADOS (Pivotes de Trámite) ────────────────

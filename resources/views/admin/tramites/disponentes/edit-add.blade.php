@@ -25,14 +25,20 @@
             <div class="panel-body">
                 <div class="row">
                     {{-- Persona --}}
-                    <div class="col-md-4">
+                    <div class="col-md-5">
                         <label>Persona <span class="required">*</span></label>
                         <select name="person_id" class="form-control select2" required {{ ($item->exists ?? false) ? 'disabled' : '' }}>
                             <option value="">Elija...</option>
                             @foreach($personas as $p)
                                 <option value="{{ $p->id }}"
                                     {{ old('person_id', optional($item)->person_id) == $p->id ? 'selected' : '' }}>
-                                    {{ $p->fullName }} - {{ $p->tipo_doc }} {{ $p->ci }}
+                                    {{-- Usamos el accesor display_name que funciona para Natural y Jurídica --}}
+                                    {{ $p->display_name }} -
+                                    @if($p->person_type === 'Jurídica')
+                                        NIT: {{ $p->nit }}
+                                    @else
+                                        {{ $p->tipo_doc }}: {{ $p->ci }}
+                                    @endif
                                 </option>
                             @endforeach
                         </select>

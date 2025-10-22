@@ -33,9 +33,9 @@ class AdquirenteTramiteController extends Controller
         $search   = request('search');
         $paginate = request('paginate', 10);
 
-        $data = AdquirenteTramite::with(['persona', 'parentesco'])
+        $data = AdquirenteTramite::with(['person', 'parentesco'])
             ->where('tramite_id', $tramite->id)
-            ->when($search, fn($q) => $q->whereHas('persona', fn($sq) => $sq->where('ci', 'like', "%{$search}%")->orWhere('first_name', 'like', "%{$search}%")->orWhere('paternal_surname', 'like', "%{$search}%")))
+            ->when($search, fn($q) => $q->whereHas('person', fn($sq) => $sq->where('ci', 'like', "%{$search}%")->orWhere('first_name', 'like', "%{$search}%")->orWhere('paternal_surname', 'like', "%{$search}%")))
             ->orderBy('id')
             ->paginate($paginate);
 
@@ -63,7 +63,11 @@ class AdquirenteTramiteController extends Controller
         // dd($personas);
         $parentescos = Parentesco::orderBy('nombre')->get();
 
-        return view('admin.tramites.adquirentes.create', compact('tramite', 'personas', 'parentescos'));
+        // Es necesario crear una instancia vacía para que la vista 'edit-add'
+        // funcione correctamente en modo 'creación'.
+        $item = new AdquirenteTramite();
+
+        return view('admin.tramites.adquirentes.edit-add', compact('tramite', 'personas', 'parentescos', 'item'));
     }
 
     public function store(StoreAdquirenteTramiteRequest $request, Tramite $tramite)

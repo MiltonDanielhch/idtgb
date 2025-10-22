@@ -29,9 +29,9 @@ class DisponenteTramiteController extends Controller
         $search   = request('search');
         $paginate = request('paginate', 10);
 
-        $data = DisponenteTramite::with(['persona'])
+        $data = DisponenteTramite::with(['person'])
             ->where('tramite_id', $tramite->id)
-            ->when($search, fn($q) => $q->whereHas('persona', fn($sq) => $sq->where('ci', 'like', "%{$search}%")->orWhere('first_name', 'like', "%{$search}%")->orWhere('paternal_surname', 'like', "%{$search}%")))
+            ->when($search, fn($q) => $q->whereHas('person', fn($sq) => $sq->where('ci', 'like', "%{$search}%")->orWhere('first_name', 'like', "%{$search}%")->orWhere('paternal_surname', 'like', "%{$search}%")))
             ->orderBy('id')
             ->paginate($paginate);
 
@@ -59,7 +59,11 @@ class DisponenteTramiteController extends Controller
 
         $tipos = ['Causante', 'Donante', 'Testador'];
 
-        return view('admin.tramites.disponentes.create', compact('tramite', 'personas', 'tipos'));
+        // Es necesario crear una instancia vacía para que la vista 'edit-add'
+        // funcione correctamente en modo 'creación'.
+        $item = new DisponenteTramite();
+
+        return view('admin.tramites.disponentes.edit-add', compact('tramite', 'personas', 'tipos', 'item'));
     }
 
     public function store(StoreDisponenteTramiteRequest $request, Tramite $tramite)

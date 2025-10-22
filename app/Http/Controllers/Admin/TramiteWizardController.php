@@ -455,15 +455,19 @@ class TramiteWizardController extends Controller
                 $query->where('first_name', 'LIKE', "%{$term}%")
                       ->orWhere('paternal_surname', 'LIKE', "%{$term}%")
                       ->orWhere('ci', 'LIKE', "%{$term}%")
-                      ->orWhere('legal_name', 'LIKE', "%{$term}%");
+                      ->orWhere('legal_name', 'LIKE', "%{$term}%")
+                      ->orWhere('nit', 'LIKE', "%{$term}%"); // Añadido para buscar por NIT
             })
             ->limit(20)
-            ->get(['id', 'first_name', 'middle_name', 'paternal_surname', 'maternal_surname', 'legal_name', 'ci', 'person_type']);
+            // Aseguramos que se seleccionen todos los campos necesarios para los accesores
+            ->get(['id', 'first_name', 'middle_name', 'paternal_surname', 'maternal_surname', 'legal_name', 'ci', 'person_type', 'nit', 'tipo_doc']);
 
         $formatted = $people->map(function($person) {
             return [
                 'id' => $person->id,
-                'text' => $person->display_name . ' - ' . ($person->person_type === 'Jurídica' ? 'NIT: ' . $person->nit : 'CI: ' . $person->ci)
+                'text' => $person->display_name . ' - ' . ($person->person_type === 'Jurídica' ? 'NIT: ' . $person->nit : 'CI: ' . $person->ci),
+                'person_type' => $person->person_type, // Incluir el tipo de persona
+                'document' => $person->display_document // Incluir el documento formateado
             ];
         });
 

@@ -13,8 +13,8 @@
         <tbody>
             @forelse ($data as $item)
                 <tr>
-                    <td><strong>{{ $item->persona->fullName }}</strong></td>
-                    <td>{{ $item->persona->ci }}</td>
+                    <td><strong>{{ $item->person->fullName }}</strong></td>
+                    <td>{{ $item->person->ci }}</td>
                     <td>{{ $item->tipo }}</td>
                     <td class="text-center">
                         @if($item->fecha_fallecimiento)
