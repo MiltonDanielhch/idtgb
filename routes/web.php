@@ -130,7 +130,8 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
     // Ruta personalizada que debe ir ANTES que el resource para no ser capturada por el método show del resource.
     Route::get('tramites/{tramite}/a01', [TramiteController::class, 'a01'])->name('admin.tramites.a01');
 
-    Route::resource('tramites', TramiteController::class)->names('admin.tramites');
+    // Route::resource('tramites', TramiteController::class)->names('admin.tramites');
+    Route::resource('tramites', TramiteController::class)->names('admin.tramites')->except(['create', 'store']);
     Route::get('tramites/ajax/list', [TramiteController::class, 'list'])->name('admin.tramites.ajax.list');
 
     // ──────────────── RECURSOS ANIDADOS (Pivotes de Trámite) ────────────────

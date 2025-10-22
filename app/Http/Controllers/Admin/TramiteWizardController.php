@@ -149,11 +149,27 @@ class TramiteWizardController extends Controller
             if ($person) {
                 $person->parentesco_id = $adq['parentesco_id'];
                 $person->parentesco_nombre = \App\Models\Parentesco::find($adq['parentesco_id'])->nombre ?? '';
+                $person->porcentaje = $adq['porcentaje'] ?? 0;
             }
             return $person;
         })->filter();
 
-        $parentescos = Parentesco::all();
+        // MODIFICADO: Cargar parentescos con sus tasas para el departamento del Beni
+        $beni = \App\Models\Departamento::where('codigo', 'BE')->first();
+        $parentescos = Parentesco::with(['tasas' => function ($query) use ($beni) {
+            if ($beni) {
+                $query->where('departamento_id', $beni->id)
+                      ->where('vigente_desde', '<=', now())
+                      ->where(function ($q) {
+                          $q->whereNull('vigente_hasta')->orWhere('vigente_hasta', '>=', now());
+                      });
+            }
+        }])->get()->map(function ($parentesco) {
+            // Asignar la tasa directamente al modelo de parentesco para fácil acceso en la vista
+            $tasa = $parentesco->tasas->first();
+            $parentesco->tasa_aplicable = $tasa ? $tasa->tasa : 0.00;
+            return $parentesco;
+        });
 
         return view('admin.tramites.wizard.create_step_3', [
             'adquirentes' => $adquirentes,
@@ -168,6 +184,7 @@ class TramiteWizardController extends Controller
         $request->validate([
             'person_id' => 'required|exists:people,id',
             'parentesco_id' => 'required|exists:parentescos,id',
+            'porcentaje' => 'required|numeric|min:0.01|max:100',
         ]);
 
         $wizardData = $this->getWizardData($request);
@@ -186,7 +203,8 @@ class TramiteWizardController extends Controller
         if (!$existing) {
             $wizardData['step3']['adquirentes'][] = [
                 'person_id' => $personId,
-                'parentesco_id' => $request->parentesco_id
+                'parentesco_id' => $request->parentesco_id,
+                'porcentaje' => $request->porcentaje,
             ];
             $this->updateWizardData($request, $wizardData);
         }
@@ -210,6 +228,11 @@ class TramiteWizardController extends Controller
         $wizardData = $this->getWizardData($request);
         if (empty($wizardData['step3']['adquirentes'])) {
             return back()->withErrors('Debe agregar al menos un adquirente.');
+        }
+
+        $totalPorcentaje = collect($wizardData['step3']['adquirentes'])->sum('porcentaje');
+        if ($totalPorcentaje > 100) {
+            return back()->withErrors("La suma de los porcentajes de los adquirentes ({$totalPorcentaje}%) no puede superar el 100%.");
         }
 
         return redirect()->route('admin.tramites.wizard.create.step4');

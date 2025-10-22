@@ -133,4 +133,4 @@
     </div>
 </div>
 
-<script>bindPageLinks();</script>
+{{-- <script>bindPageLinks();</script> --}}

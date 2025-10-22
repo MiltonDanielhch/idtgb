@@ -15,7 +15,7 @@
                         </div>
                         <div class="col-md-4 text-right" style="margin-top: 30px;">
                             @can('create', App\Models\Tramite::class)
-                                <a href="{{ route('admin.tramites.create') }}" class="btn btn-success">
+                                <a href="{{ route('admin.tramites.wizard.create.step1') }}" class="btn btn-success">
                                     <i class="voyager-plus"></i> Nuevo Trámite
                                 </a>
                             @endcan
