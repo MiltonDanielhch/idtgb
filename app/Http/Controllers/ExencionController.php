@@ -53,7 +53,14 @@ class ExencionController extends Controller
 
     public function store(StoreExencionRequest $request)
     {
-        Exencion::create($request->validated());
+        // Obtenemos los datos validados por el Form Request
+        $validatedData = $request->validated();
+        // Nos aseguramos de que el campo 'descripcion' exista, asignándole null si no viene en la petición.
+        // Esto funciona si la columna en tu base de datos permite valores NULL.
+        // Si no permite NULL, usamos un string vacío: ''
+        $validatedData['descripcion'] = $validatedData['descripcion'] ?? '';
+
+        Exencion::create($validatedData);
 
         return redirect()->route('admin.exenciones.index')
             ->with(['message' => 'Exención creada.', 'alert-type' => 'success']);
@@ -80,7 +87,7 @@ class ExencionController extends Controller
         $this->authorize('delete', $exencion);
 
         // Verificar si tiene trámites asociados (pivot tramite_exenciones)
-        if ($exencion->tramites()->count() > 0) {
+        if ($exencion->tramites()->exists()) {
             return redirect()->route('admin.exenciones.index')
                 ->with(['message' => 'No se puede eliminar: la exención está siendo usada en trámites.', 'alert-type' => 'error']);
         }

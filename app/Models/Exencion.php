@@ -36,4 +36,16 @@ class Exencion extends Model
                      ->where(fn ($q) => $q->whereNull('vigente_hasta')
                                            ->orWhere('vigente_hasta', '>=', $fecha));
     }
+
+    /* ================== RELATIONS ================== */
+    /**
+     * The tramites that belong to the Exencion.
+     */
+    public function tramites()
+    {
+        // Defines a many-to-many relationship with the Tramite model.
+        // 'tramite_exenciones' is the pivot table.
+        // 'withPivot' allows access to extra columns on the pivot table, like 'monto_aplicado'.
+        return $this->belongsToMany(Tramite::class, 'tramite_exenciones')->withPivot('monto_aplicado')->withTimestamps();
+    }
 }

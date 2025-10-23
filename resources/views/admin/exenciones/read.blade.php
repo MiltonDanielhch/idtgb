@@ -70,7 +70,9 @@
                                     </tr>
                                     <tr>
                                         <td><strong>Vigente Desde</strong></td>
-                                        <td>{{ $exencion->vigente_desde->format('d/m/Y') }}</td>
+                                        <td>
+                                            {{ optional($exencion->vigente_desde)->format('d/m/Y') }}
+                                        </td>
                                     </tr>
                                     <tr>
                                         <td><strong>Vigente Hasta</strong></td>
@@ -82,18 +84,18 @@
                                     </tr>
                                     <tr>
                                         <td><strong>Creado</strong></td>
-                                        <td>{{ $exencion->created_at->format('d/m/Y H:i') }}</td>
+                                        <td>{{ optional($exencion->created_at)->format('d/m/Y H:i') }}</td>
                                     </tr>
                                     <tr>
                                         <td><strong>Actualizado</strong></td>
-                                        <td>{{ $exencion->updated_at->format('d/m/Y H:i') }}</td>
+                                        <td>{{ optional($exencion->updated_at)->format('d/m/Y H:i') }}</td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
                     </div>
 
-                    @if($exencion->tramites->isNotEmpty())
+                    @if($exencion->tramites && $exencion->tramites->isNotEmpty())
                         <div class="row" style="margin-top: 30px;">
                             <div class="col-md-12">
                                 <h4><i class="voyager-list"></i> Trámites que usan esta exención</h4>

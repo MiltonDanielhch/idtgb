@@ -77,7 +77,7 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
     Route::resource('parentescos', ParentescoController::class)->names('admin.parentescos');
     Route::get('parentescos/ajax/list', [ParentescoController::class, 'list'])->name('admin.parentescos.ajax.list');
 
-    Route::resource('exenciones', ExencionController::class)->names('admin.exenciones');
+    Route::resource('exenciones', ExencionController::class)->names('admin.exenciones')->parameters(['exenciones' => 'exencion']);
     Route::get('exenciones/ajax/list', [ExencionController::class, 'list'])->name('admin.exenciones.ajax.list');
 
     Route::resource('tasas', TasaController::class)->names('admin.tasas');
@@ -99,13 +99,13 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
         Route::get('create-step-2', [TramiteWizardController::class, 'createStep2'])->name('create.step2');
         Route::post('post-step-2', [TramiteWizardController::class, 'postStep2'])->name('post.step2');
         Route::post('add-disponente', [TramiteWizardController::class, 'addDisponente'])->name('add.disponente');
-        Route::get('remove-disponente/{person_id}', [TramiteWizardController::class, 'removeDisponente'])->name('remove.disponente');
+        Route::delete('remove-disponente/{person_id}', [TramiteWizardController::class, 'removeDisponente'])->name('remove.disponente');
 
         // Step 3: Adquirentes
         Route::get('create-step-3', [TramiteWizardController::class, 'createStep3'])->name('create.step3');
         Route::post('post-step-3', [TramiteWizardController::class, 'postStep3'])->name('post.step3');
         Route::post('add-adquirente', [TramiteWizardController::class, 'addAdquirente'])->name('add.adquirente');
-        Route::get('remove-adquirente/{person_id}', [TramiteWizardController::class, 'removeAdquirente'])->name('remove.adquirente');
+        Route::delete('remove-adquirente/{person_id}', [TramiteWizardController::class, 'removeAdquirente'])->name('remove.adquirente');
 
         // Step 4: Inmueble
         Route::get('create-step-4', [TramiteWizardController::class, 'createStep4'])->name('create.step4');
