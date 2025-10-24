@@ -73,7 +73,25 @@
     </div>
 </div>
 
+{{-- Script para paginación dinámica --}}
 @if(request()->ajax())
+<script>
+    $(document).ready(function(){
+        $('.page-link').click(function(e){
+            e.preventDefault();
+            let url = new URL($(this).attr('href'));
+            let page = url.searchParams.get('page') || 1;
+
+            if (typeof list === 'function') {
+                list(page);
+            } else {
+                window.location.href = $(this).attr('href');
+            }
+        });
+    });
+</script>
+
+{{-- @if(request()->ajax())
 <script>
     $('.page-link').click(function(e){
         e.preventDefault();
@@ -81,5 +99,6 @@
         let page = url.searchParams.get('page') || 1;
         if (typeof list === 'function') list(page);
     });
-</script>
+</script> --}}
 @endif
+

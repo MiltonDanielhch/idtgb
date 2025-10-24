@@ -75,7 +75,8 @@
         <div class="panel-body">
             <div class="row text-center">
                 <div class="col-md-3">
-                    <h4>{{ $tramite->inmueble ? 1 : 0 }}</h4>
+                    {{-- <h4>{{ $tramite->inmueble ? 1 : 0 }}</h4> --}}
+                    <h4>{{ $tramite->inmuebles->count() ?? 0 }}</h4>
                     <small>Inmuebles</small>
                 </div>
                 <div class="col-md-3">

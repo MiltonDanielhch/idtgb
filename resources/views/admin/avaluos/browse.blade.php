@@ -74,19 +74,10 @@
         $.get(url, {search, paginate: window.countPage, page, inmueble_id: inmuebleId})
          .done(res => {
              $('#div-results').html(res);
-             bindPageLinks();
          })
          .fail(xhr => console.error(xhr))
          .always(() => $('#div-results').loading('toggle'));
     };
-
-    function bindPageLinks() {
-        $('.page-link').off('click').on('click', function (e) {
-            e.preventDefault();
-            const page = $(this).attr('href').split('page=')[1] || 1;
-            window.list(page);
-        });
-    }
 
     $(function () {
         window.list();

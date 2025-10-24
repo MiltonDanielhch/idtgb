@@ -44,15 +44,17 @@
             <div class="panel panel-bordered">
                 <div class="panel-body">
                     <div class="row">
-                        <div class="col-sm-9" style="margin-bottom: 0">
-                            <label>Mostrar
-                                <select id="select-paginate" class="form-control input-sm">
-                                    <option value="10">10</option>
-                                    <option value="25">25</option>
-                                    <option value="50">50</option>
-                                    <option value="100">100</option>
-                                </select> registros
-                            </label>
+                        <div class="col-sm-9">
+                            <div class="dataTables_length">
+                                <label>Mostrar
+                                    <select id="select-paginate" class="form-control input-sm">
+                                        <option value="10">10</option>
+                                        <option value="25">25</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select> registros
+                                </label>
+                            </div>
                         </div>
                         <div class="col-sm-3" style="margin-bottom: 0">
                             <input type="text" id="input-search" class="form-control" placeholder="Buscar...">
