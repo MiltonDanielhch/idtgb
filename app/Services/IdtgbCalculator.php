@@ -45,6 +45,7 @@ class IdtgbCalculator
             $inmueble->municipio->provincia->departamento_id,
             $tramite->tipo_transmision_id,
             $tramite->fecha_presentacion,
+            $tramite->fecha_transmision->toDateString(), // Pasar fecha_transmision
             $tramite->fecha_vencimiento,
             $adquirentesData,
             $exencionesData
@@ -54,6 +55,7 @@ class IdtgbCalculator
         $tramite->update([
             'total_idtgb'  => $resultados['idtgb'],
             'recargo_mora' => $resultados['recargo'],
+            'ufv_aplicada' => $resultados['ufv_aplicada'], // ✅ Actualizar UFV aplicada
             'monto_final'  => $resultados['final'],
         ]);
 
@@ -77,6 +79,7 @@ class IdtgbCalculator
         int $departamentoId,
         int $parentescoId,
         int $tipoTransmisionId,
+        string $fechaTransmision, // ✅ Añadir fechaTransmision
         string $fechaPresentacion,
         string $fechaVencimiento
     ): array {
@@ -96,6 +99,7 @@ class IdtgbCalculator
             $departamentoId,
             $tipoTransmisionId,
             $fechaPresentacion,
+            $fechaTransmision, // ✅ Pasar fechaTransmision
             $fechaVencimiento,
             $adquirentesData,
             $exencionesData
@@ -110,6 +114,7 @@ class IdtgbCalculator
         int $departamentoId,
         int $tipoTransmisionId,
         string $fechaPresentacion,
+        string $fechaTransmision, // ✅ Añadir fechaTransmision
         string $fechaVencimiento,
         array $adquirentes,
         array $exenciones
@@ -165,6 +170,10 @@ class IdtgbCalculator
 
         $final = round($idtgb + $recargo, 2);
 
+        // 4. Obtener UFV aplicada (la más reciente en o antes de la fecha de transmisión)
+        $ufvAplicada = \App\Models\Ufv::whereDate('fecha', '<=', $fechaTransmision)
+                                       ->orderBy('fecha', 'desc')->first()?->valor ?? 1.00000;
+
         return [
             'base'           => $base,
             'tasas'          => $totalTasas,
@@ -173,6 +182,7 @@ class IdtgbCalculator
             'recargo'        => $recargo,
             'final'          => $final,
             'dias_mora'      => $diasMora,
+            'ufv_aplicada'   => $ufvAplicada, // ✅ Devolver UFV aplicada
             'detalles_tasas' => $detallesTasas, // Para uso interno en calculateAndSave
         ];
     }

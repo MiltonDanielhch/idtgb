@@ -9,6 +9,7 @@ use App\Models\Departamento;
 use App\Models\Parentesco;
 use App\Models\Tasa;
 use App\Models\TipoTransmision;
+use App\Models\Ufv;
 use Carbon\Carbon;
 use Database\Seeders\DepartamentoSeeder;
 use Database\Seeders\ParentescoSeeder;
@@ -35,6 +36,7 @@ class PublicCalculatorTest extends TestCase
         $this->seed(ParentescoSeeder::class);
         $this->seed(TipoTransmisionSeeder::class);
         $this->seed(TasaSeeder::class); // <-- AÑADIDO: Cargar las tasas reales
+        $this->seed(\Database\Seeders\UfvSeeder::class); // <-- AÑADIDO: Cargar las UFVs
 
         // Obtener los modelos que usaremos en las pruebas
         $this->departamento = Departamento::where('codigo', 'BE')->firstOrFail();
@@ -74,6 +76,11 @@ class PublicCalculatorTest extends TestCase
         $response->assertJsonStructure([
             // ... (la estructura es la misma)
         ]);
+
+        // Verificamos que el valor de la UFV en el JSON sea el correcto
+        $ufvEsperada = Ufv::whereDate('fecha', '<=', $fechaFija->toDateString())
+                          ->orderBy('fecha', 'desc')->first()->valor;
+        $response->assertJsonFragment(['ufv' => $ufvEsperada]);
 
         // Verificamos que el monto final en el JSON sea el correcto según el TasaSeeder
         // Como la fecha de transmisión es la fecha fija, no hay recargo por mora.

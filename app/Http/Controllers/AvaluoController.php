@@ -25,9 +25,6 @@ class AvaluoController extends Controller
 
     public function list()
     {
-        \Log::info('===== ENTRÓ A list() =====');
-        \Log::info('Request completo:', request()->all());
-
         try {
             $this->authorize('viewAny', Avaluo::class);
 
@@ -35,20 +32,15 @@ class AvaluoController extends Controller
             $paginate    = request('paginate', 10);
             $inmuebleId  = request('inmueble_id');
 
-            \Log::info('Filtros:', ['search' => $search, 'paginate' => $paginate, 'inmueble_id' => $inmuebleId]);
-
             $data = Avaluo::with(['inmueble', 'perito'])
                 ->when($search, fn($q) => $q->whereHas('inmueble', fn($b) => $b->where('catastro', 'like', "%{$search}%")))
                 ->when($inmuebleId, fn($q) => $q->where('inmueble_id', $inmuebleId))
-                ->orderByDesc('fecha_avaluo')
+                ->orderByDesc('id')
                 ->paginate($paginate);
-
-            \Log::info('Registros recuperados:', ['total' => $data->total()]);
 
             return view('admin.avaluos.list', compact('data'));
 
         } catch (\Throwable $e) {
-            \Log::error('ERROR en list(): ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }

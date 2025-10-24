@@ -34,7 +34,7 @@ class InmuebleController extends Controller
         $data = Inmueble::with(['tipoInmueble', 'municipio.provincia.departamento'])
             ->when($search, fn($q) => $q->where('catastro', 'like', "%{$search}%")
                 ->orWhere('direccion', 'like', "%{$search}%"))
-            ->orderBy('catastro')
+            ->orderByDesc('id')
             ->paginate($paginate);
 
         return view('admin.inmuebles.list', compact('data'));

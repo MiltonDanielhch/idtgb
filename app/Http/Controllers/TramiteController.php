@@ -34,7 +34,7 @@ class TramiteController extends Controller
 
         $data = Tramite::with(['tipoTransmision', 'user'])
             ->when($search, fn($q) => $q->where('nro_tramite', 'like', "%{$search}%"))
-            ->orderByDesc('fecha_presentacion')
+            ->orderByDesc('id')
             ->paginate($paginate);
 
         return view('admin.tramites.list', compact('data'));

@@ -474,3 +474,4 @@ class TramiteWizardController extends Controller
         return response()->json(['results' => $formatted]);
     }
 }
+

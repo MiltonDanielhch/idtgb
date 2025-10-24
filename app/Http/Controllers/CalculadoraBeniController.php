@@ -49,6 +49,7 @@ class CalculadoraBeniController extends Controller
             $beniId,
             (int)$request->parentesco_id,
             $tipoTransmisionId,
+            $fecha_transmision->toDateString(), // ✅ Pasar fecha_transmision
             $fecha_transmision->toDateString(),
             $fecha_vencimiento->toDateString()
         );
@@ -100,6 +101,7 @@ class CalculadoraBeniController extends Controller
             $beniId,
             (int)$request->parentesco_id,
             $tipoTransmisionId,
+            $fecha_transmision->toDateString(), // ✅ Pasar fecha_transmision
             $fecha_transmision->toDateString(),
             $fecha_vencimiento->toDateString()
         );

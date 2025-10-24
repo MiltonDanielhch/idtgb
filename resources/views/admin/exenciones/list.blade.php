@@ -90,6 +90,7 @@
         });
     });
 </script>
+@endif
 
 {{-- @if(request()->ajax())
 <script>
@@ -100,5 +101,4 @@
         if (typeof list === 'function') list(page);
     });
 </script> --}}
-@endif
 

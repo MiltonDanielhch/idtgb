@@ -35,7 +35,7 @@ class TasaController extends Controller
             ->when($search, fn($q) => $q->whereHas('departamento', fn($b) => $b->where('nombre', 'like', "%{$search}%"))
                 ->orWhereHas('parentesco', fn($b) => $b->where('nombre', 'like', "%{$search}%"))
                 ->orWhere('tasa', 'like', "%{$search}%"))
-            ->orderByDesc('vigente_desde')
+            ->orderByDesc('id')
             ->paginate($paginate);
 
         return view('admin.tasas.list', compact('data'));
