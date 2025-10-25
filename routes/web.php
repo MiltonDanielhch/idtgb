@@ -25,6 +25,8 @@ use App\Http\Controllers\UfvController;
 use App\Http\Controllers\ValidacionController;
 use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\Admin\TramiteWizardController;
+use App\Http\Controllers\TipoInmuebleController;
+use App\Http\Controllers\TipoTransmisionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -77,8 +79,14 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
     Route::resource('parentescos', ParentescoController::class)->names('admin.parentescos');
     Route::get('parentescos/ajax/list', [ParentescoController::class, 'list'])->name('admin.parentescos.ajax.list');
 
+    Route::resource('tipos-transmision', TipoTransmisionController::class)->names('admin.tipos-transmision')->parameters(['tipos-transmision' => 'tipoTransmision']);
+    Route::get('tipos-transmision/ajax/list', [TipoTransmisionController::class, 'list'])->name('admin.tipos-transmision.ajax.list');
+
     Route::resource('exenciones', ExencionController::class)->names('admin.exenciones')->parameters(['exenciones' => 'exencion']);
     Route::get('exenciones/ajax/list', [ExencionController::class, 'list'])->name('admin.exenciones.ajax.list');
+
+    Route::resource('tipos-inmueble', TipoInmuebleController::class)->names('admin.tipos-inmueble')->parameters(['tipos-inmueble' => 'tipoInmueble']);
+    Route::get('tipos-inmueble/ajax/list', [TipoInmuebleController::class, 'list'])->name('admin.tipos-inmueble.ajax.list');
 
     Route::resource('tasas', TasaController::class)->names('admin.tasas');
     Route::get('tasas/ajax/list', [TasaController::class, 'list'])->name('admin.tasas.ajax.list');

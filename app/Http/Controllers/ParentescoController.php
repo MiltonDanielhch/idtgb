@@ -95,7 +95,7 @@ class ParentescoController extends Controller
                 ->with(['message' => 'Parentesco eliminado.', 'alert-type' => 'success']);
         } catch (\Exception $e) {
              // Esto captura errores si la BBDD impone alguna otra restricción
-            Log::error("Error al eliminar Parentesco #{$parentesco->id}: " . $e->getMessage());
+            // Log::error("Error al eliminar Parentesco #{$parentesco->id}: " . $e->getMessage());
              return redirect()->route('admin.parentescos.index')
                 ->with(['message' => 'Error al eliminar el parentesco.', 'alert-type' => 'error']);
         }

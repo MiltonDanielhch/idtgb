@@ -172,7 +172,7 @@ class UfvController extends Controller
 
         } catch (\Throwable $e) {
             DB::rollBack();
-            Log::error('Error importando UFVs: ' . $e->getMessage());
+            // Log::error('Error importando UFVs: ' . $e->getMessage());
             return back()->withInput()->with(['message' => 'Error al importar el archivo: ' . $e->getMessage(), 'alert-type' => 'error']);
         }
     }

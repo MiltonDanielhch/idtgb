@@ -97,7 +97,7 @@ class ExencionController extends Controller
             return redirect()->route('admin.exenciones.index')
                 ->with(['message' => 'Exención eliminada.', 'alert-type' => 'success']);
         } catch (\Exception $e) {
-            Log::error("Error al eliminar Exención #{$exencion->id}: " . $e->getMessage());
+            // Log::error("Error al eliminar Exención #{$exencion->id}: " . $e->getMessage());
             return redirect()->route('admin.exenciones.index')
                 ->with(['message' => 'Error al eliminar la exención.', 'alert-type' => 'error']);
         }
