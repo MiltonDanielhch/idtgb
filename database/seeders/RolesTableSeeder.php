@@ -26,6 +26,13 @@ class RolesTableSeeder extends Seeder
             ])->save();
         }
 
+        $role = Role::firstOrNew(['name' => 'tecnico']);
+        if (!$role->exists) {
+            $role->fill([
+                'display_name' => __('Técnico'),
+            ])->save();
+        }
+
 
 
         // $role = Role::firstOrNew(['name' => 'almacen_admin']);
@@ -34,7 +41,7 @@ class RolesTableSeeder extends Seeder
         //         'display_name' => __('Almacen - Administrador de todos los Almacenes'),
         //     ])->save();
         // }
-        
+
         // $role = Role::firstOrNew(['name' => 'almacen_subadmin']);
         // if (!$role->exists) {
         //     $role->fill([

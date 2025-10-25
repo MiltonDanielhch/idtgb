@@ -20,7 +20,7 @@ class PagoSeeder extends Seeder
                 [
                     'fecha_pago' => now()->subDays(3),
                     'monto' => $tramite1->monto_final, // 7500.00
-                    'codigo_barras' => '2222202500010000075000001', // Formato realista: entidad+gestión+nro+monto
+                    'qr_path' => "tramites/{$tramite1->id}/pagos/qr_seed_1.svg",
                     'nro_operacion' => 'UNION-20250401-0001',
                     'banco' => 'Banco Unión',
                     'estado' => 'Aplicado',
@@ -39,7 +39,7 @@ class PagoSeeder extends Seeder
                 [
                     'fecha_pago' => now()->subDays(1),
                     'monto' => $tramite2->monto_final, // 21000.00
-                    'codigo_barras' => '2222202500020000210000002',
+                    'qr_path' => "tramites/{$tramite2->id}/pagos/qr_seed_2.svg",
                     'nro_operacion' => 'BISA-20250403-0002',
                     'banco' => 'Banco BISA',
                     'estado' => 'Aplicado',

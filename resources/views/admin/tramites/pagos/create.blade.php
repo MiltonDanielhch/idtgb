@@ -55,19 +55,7 @@
                         @error('nro_operacion') <small class="text-danger">{{ $message }}</small> @enderror
                     </div>
                 </div>
-
-                <div class="row" style="margin-top: 15px;">
-                    {{-- Código de barras (solo lectura) --}}
-                    <div class="col-md-12">
-                        <label>Código de barras (autogenerado)</label>
-                        <p class="form-control-static">
-                            <span class="badge badge-primary">IDTGB-{{ strtoupper(Str::random(10)) }}</span>
-                            <small class="text-muted ml-2">Se generará al guardar</small>
-                        </p>
-                    </div>
-                </div>
             </div>
-
             <div class="panel-footer text-right">
                 <a href="{{ route('admin.tramites.pagos.index', $tramite) }}" class="btn btn-default">
                     <i class="voyager-angle-left"></i> Cancelar

@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('tramite_id')->constrained()->cascadeOnDelete();
             $table->dateTime('fecha_pago');
             $table->decimal('monto', 14, 2);
-            $table->string('codigo_barras', 50)->nullable();
+            $table->string('qr_path')->nullable();
             $table->string('nro_operacion', 25)->nullable();
             $table->timestamp('conciliado_el')->nullable();
             $table->string('banco', 30)->nullable();

@@ -68,12 +68,12 @@
                     <p class="form-control-static"><code>{{ $pago->nro_operacion ?? '—' }}</code></p>
                 </div>
 
-                {{-- Código de barras --}}
+                {{-- Código QR --}}
                 <div class="col-md-3">
-                    <label>Código de barras</label>
-                    <p class="form-control-static">
-                        <small class="text-muted">{{ $pago->codigo_barras }}</small>
-                    </p>
+                    <label>Código QR</label>
+                    @if ($pago->qr_path)
+                        <img src="{{ asset('storage/' . $pago->qr_path) }}" alt="Código QR del Pago" width="150">
+                    @endif
                 </div>
 
                 {{-- Conciliado el --}}
@@ -92,18 +92,6 @@
                 <div class="col-md-3">
                     <label>Registrado por</label>
                     <p class="form-control-static">{{ optional($pago->user)->name ?? '—' }}</p>
-                </div>
-            </div>
-
-            <div class="row" style="margin-top: 15px;">
-                {{-- Comprobante PDF --}}
-                <div class="col-md-12">
-                    <label>Comprobante PDF</label>
-                    <p class="form-control-static">
-                        <a href="{{ route('admin.pago.comprobante', $pago) }}" target="_blank" class="btn btn-sm btn-primary">
-                            <i class="voyager-documentation"></i> Descargar comprobante
-                        </a>
-                    </p>
                 </div>
             </div>
         </div>

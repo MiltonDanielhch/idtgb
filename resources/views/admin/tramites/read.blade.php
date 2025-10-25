@@ -51,7 +51,10 @@
                     @if($tramite->estado !== 'Pagado')
                         <a href="{{ route('admin.tramites.pagos.create', $tramite) }}" class="btn btn-block btn-success"><i class="voyager-dollar"></i> Registrar pago</a>
                     @else
-                        <a href="{{ route('admin.pago.comprobante', $tramite->pago) }}" target="_blank" class="btn btn-block btn-primary"><i class="voyager-check"></i> Comprobante</a>
+                        @php $pago = $tramite->pagos->where('estado', 'Aplicado')->first(); @endphp
+                        @if($pago)
+                            <a href="{{ route('admin.tramites.pagos.show', ['tramite' => $tramite, 'pago' => $pago]) }}" target="_blank" class="btn btn-block btn-primary"><i class="voyager-check"></i> Comprobante</a>
+                        @endif
                     @endif
                 </div>
                 <div class="col-md-3"><a href="{{ route('admin.tramites.a01', $tramite) }}" target="_blank" class="btn btn-block btn-warning"><i class="voyager-documentation"></i> Form. A-01 PDF</a></div>

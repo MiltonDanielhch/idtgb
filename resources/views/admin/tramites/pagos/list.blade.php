@@ -7,7 +7,7 @@
                 <th class="text-center">Estado</th>
                 <th>Banco</th>
                 <th>Nro Operación</th>
-                <th>Código Barras</th>
+                <th class="text-center">QR</th>
                 <th class="text-center">Acciones</th>
             </tr>
         </thead>
@@ -28,7 +28,11 @@
                     </td>
                     <td>{{ $item->banco ?? '—' }}</td>
                     <td><code>{{ $item->nro_operacion ?? '—' }}</code></td>
-                    <td><small class="text-muted">{{ $item->codigo_barras }}</small></td>
+                    <td class="text-center">
+                        @if ($item->qr_path)
+                            <img src="{{ asset('storage/' . $item->qr_path) }}" alt="QR" width="50">
+                        @endif
+                    </td>
                     <td class="text-center" style="width: 12%">
                         @can('view', $item)
                             <a href="{{ route('admin.tramites.pagos.show', [$tramite, $item]) }}" class="btn btn-xs btn-warning" title="Ver">

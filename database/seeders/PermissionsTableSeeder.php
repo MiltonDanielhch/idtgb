@@ -109,5 +109,106 @@ class PermissionsTableSeeder extends Seeder
                 'tableDescription'=> 'Exenciones IDTGB'
             ]);
         }
+
+        // Tipos de Transmisión
+        Permission::generateFor('tipos-transmision');
+
+        // Tipos de Inmueble
+        Permission::generateFor('tipos-inmueble');
+
+        // Tasas
+        Permission::generateFor('tasas');
+
+        // Inmuebles
+        Permission::generateFor('inmuebles');
+
+        // Avaluos
+        Permission::generateFor('avaluos');
+
+        // Trámites
+        $permissionsTramite = [
+            'browse_tramites' => 'Ver lista de trámites',
+            'read_tramites'   => 'Ver detalles de un trámite',
+            'edit_tramites'   => 'Editar información de trámites',
+            'add_tramites'    => 'Agregar nuevos trámites (usando el asistente)',
+            'delete_tramites' => 'Eliminar trámites',
+        ];
+        foreach ($permissionsTramite as $key => $description) {
+            Permission::firstOrCreate([
+                'key'            => $key,
+                'keyDescription' => $description,
+                'table_name'     => 'tramites',
+                'tableDescription'=> 'Trámites IDTGB'
+            ]);
+        }
+
+        // Pagos (dentro de trámites)
+        $permissionsPagos = [
+            'browse_pagos' => 'Ver lista de pagos de un trámite',
+            'read_pagos'   => 'Ver detalles de un pago',
+            'edit_pagos'   => 'Editar información de pagos',
+            'add_pagos'    => 'Agregar nuevos pagos',
+            'delete_pagos' => 'Eliminar pagos',
+        ];
+        foreach ($permissionsPagos as $key => $description) {
+            Permission::firstOrCreate([
+                'key'            => $key,
+                'keyDescription' => $description,
+                'table_name'     => 'pagos',
+                'tableDescription'=> 'Pagos de Trámites'
+            ]);
+        }
+
+        // Documentos (dentro de trámites)
+        $permissionsDocumentos = [
+            'browse_documentos' => 'Ver lista de documentos de un trámite',
+            'read_documentos'   => 'Ver detalles de un documento',
+            'add_documentos'    => 'Agregar nuevos documentos',
+            'delete_documentos' => 'Eliminar documentos',
+        ];
+        foreach ($permissionsDocumentos as $key => $description) {
+            Permission::firstOrCreate([
+                'key'            => $key,
+                'keyDescription' => $description,
+                'table_name'     => 'documentos',
+                'tableDescription'=> 'Documentos de Trámites'
+            ]);
+        }
+
+        // UFVs
+        $permissionsUfv = [
+            'browse_ufvs' => 'Ver lista de UFVs',
+            'read_ufvs'   => 'Ver detalles de una UFV',
+            'add_ufvs'    => 'Agregar nuevas UFVs',
+            'delete_ufvs' => 'Eliminar UFVs',
+        ];
+        foreach ($permissionsUfv as $key => $description) {
+            Permission::firstOrCreate([
+                'key'            => $key,
+                'keyDescription' => $description,
+                'table_name'     => 'ufvs',
+                'tableDescription'=> 'UFVs'
+            ]);
+        }
+
+        // Reportes
+        $permissionsReportes = [
+            'browse_reportes' => 'Acceder al módulo de reportes',
+        ];
+        foreach ($permissionsReportes as $key => $description) {
+            Permission::firstOrCreate([
+                'key'            => $key,
+                'keyDescription' => $description,
+                'table_name'     => 'reportes',
+                'tableDescription'=> 'Reportes'
+            ]);
+        }
+
+        // Permiso para el Wizard de trámites
+        Permission::firstOrCreate([
+            'key'        => 'browse_tramites_wizard',
+            'keyDescription'=>'Acceder al asistente de creación de trámites',
+            'table_name' => 'tramites',
+        ]);
     }
 }

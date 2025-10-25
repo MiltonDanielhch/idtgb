@@ -47,6 +47,20 @@ class UsersTableSeeder extends Seeder
                 'created_at' => '2024-10-18 14:28:45',
                 'updated_at' => '2024-10-18 14:33:30',
             ),
+            2 =>
+            array (
+                'id' => 3,
+                'role_id' => 3, // Rol 'tecnico'
+                'name' => 'Técnico de Impuestos',
+                'email' => 'tecnico@admin.com',
+                'avatar' => 'users/default.png',
+                'email_verified_at' => NULL,
+                'password' => '$2y$10$ILLZfhsbwinK3235ceVa7O0mj3M5fr33wb3z28aDqiBWLwBfSUzYy', // password
+                'remember_token' => 's50ePpNF7KmjeTDifOaandO0P5mYpF8IAlmuMCGcIk3mjVn0OCITiXtb6xxk',
+                'settings' => '{"locale":"es"}',
+                'created_at' => '2024-10-18 14:28:45',
+                'updated_at' => '2024-10-18 14:33:30',
+            ),
         ));
 
 
