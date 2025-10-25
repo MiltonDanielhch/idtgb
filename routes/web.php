@@ -113,8 +113,20 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
         Route::post('add-inmueble', [TramiteWizardController::class, 'addInmueble'])->name('add.inmueble');
         Route::delete('remove-inmueble', [TramiteWizardController::class, 'removeInmueble'])->name('remove.inmueble');
 
-        // Step 5: Resumen y Guardar
+        // Step 5: Documentos
         Route::get('create-step-5', [TramiteWizardController::class, 'createStep5'])->name('create.step5');
+        Route::post('post-step-5', [TramiteWizardController::class, 'postStep5'])->name('post.step5');
+        Route::post('add-documento', [TramiteWizardController::class, 'addDocumento'])->name('add.documento');
+        Route::get('remove-documento/{doc_id}', [TramiteWizardController::class, 'removeDocumento'])->name('remove.documento');
+
+        // Step 6: Exenciones
+        Route::get('create-step-6', [TramiteWizardController::class, 'createStep6'])->name('create.step6');
+        Route::post('post-step-6', [TramiteWizardController::class, 'postStep6'])->name('post.step6');
+        Route::post('add-exencion', [TramiteWizardController::class, 'addExencion'])->name('add.exencion');
+        Route::get('remove-exencion/{exencion_id}', [TramiteWizardController::class, 'removeExencion'])->name('remove.exencion');
+
+        // Step 7: Resumen y Guardar
+        Route::get('create-step-7', [TramiteWizardController::class, 'createStep7'])->name('create.step7');
         Route::post('store', [TramiteWizardController::class, 'store'])->name('store');
 
         // Cancelar

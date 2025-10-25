@@ -114,8 +114,8 @@
 
     <div class="section-title">6. Exenciones Aplicadas</div>
     <p style="font-size: 10px; margin-top: 0;">
-        @forelse($tramite->exenciones as $e)
-            - {{ optional($e->exencion)->nombre ?? 'Exención no encontrada' }} (Bs {{ number_format($e->monto_aplicado, 2) }})
+        @forelse($tramite->exenciones as $exencion)
+            - {{ $exencion->nombre }} (Monto aplicado: Bs {{ number_format($exencion->pivot->monto_aplicado, 2) }})
         @empty
             Ninguna.
         @endforelse

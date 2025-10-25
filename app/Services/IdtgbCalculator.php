@@ -29,13 +29,13 @@ class IdtgbCalculator
             ];
         })->all();
 
-        // dd($adquirentesData);
-
-        $exencionesData = $tramite->exenciones->map(function ($ex) {
+        // CORREGIDO: Mapear desde la tabla pivote 'tramiteExenciones'
+        $exencionesData = $tramite->tramiteExenciones->map(function ($tramiteExencion) {
+            $exencion = $tramiteExencion->exencion; // Cargar la relación
             return [
-                'tipo' => $ex->tipo,
-                'valor' => $ex->valor,
-                'monto_maximo' => $ex->monto_maximo,
+                'tipo' => $exencion->tipo,
+                'valor' => $exencion->valor,
+                'monto_maximo' => $exencion->monto_maximo,
             ];
         })->all();
 
@@ -59,13 +59,36 @@ class IdtgbCalculator
             'monto_final'  => $resultados['final'],
         ]);
 
-        // Actualizar proporcional de cada adquirente (asumiendo que el orden no cambió)
+        // Actualizar proporcional de cada adquirente y exención
         foreach ($tramite->adquirentes as $index => $adq) {
             $adq->update([
                 'tasa_aplicada'      => $resultados['detalles_tasas'][$index]['tasa_aplicada'],
                 'idtgb_proporcional' => $resultados['detalles_tasas'][$index]['proporcional'],
             ]);
         }
+
+        // CORREGIDO: Actualizar el monto real aplicado para cada exención
+        foreach ($tramite->tramiteExenciones as $index => $tramiteExencion) {
+            // El array 'detalles_exenciones' debe ser creado en performCalculation
+            if (isset($resultados['detalles_exenciones'][$index])) {
+                $tramiteExencion->update([
+                    'monto_aplicado' => $resultados['detalles_exenciones'][$index]['monto_calculado'],
+                ]);
+            }
+        }
+        // Recargar la relación para que los nuevos montos estén disponibles
+        $tramite->load('tramiteExenciones');
+        $resultados['exenciones'] = $tramite->tramiteExenciones->sum('monto_aplicado');
+
+        // Recalcular el IDTGB final con las exenciones actualizadas
+        $resultados['idtgb'] = round(max(0, $resultados['tasas'] - $resultados['exenciones']), 2);
+        $resultados['final'] = round($resultados['idtgb'] + $resultados['recargo'], 2);
+
+        // Volver a guardar el trámite con el IDTGB y monto final correctos
+        $tramite->update([
+            'total_idtgb' => $resultados['idtgb'],
+            'monto_final' => $resultados['final'],
+        ]);
 
         return $resultados;
     }
@@ -131,10 +154,7 @@ class IdtgbCalculator
                 $fechaPresentacion
             );
 
-            // dd($tasa);
-
             $tasaAplicada = $tasa ? $tasa->tasa : 0;
-            // $porcentaje   = max(0, min(100, $adq['porcentaje']));
             $porcentaje   = max(0, min(100, (float) $adq['porcentaje']));
             $proporcional = round($base * ($porcentaje / 100) * ($tasaAplicada / 100), 2);
 
@@ -147,12 +167,17 @@ class IdtgbCalculator
 
         // 2. Exenciones
         $totalExenciones = 0;
+        $detallesExenciones = []; // <-- NUEVO: Para guardar detalles
         foreach ($exenciones as $ex) {
             $monto = match ($ex['tipo']) {
-                'porcentaje' => min($base * ($ex['valor'] / 100), $ex['monto_maximo'] ?? PHP_FLOAT_MAX),
+                'porcentaje' => min($totalTasas * ($ex['valor'] / 100), $ex['monto_maximo'] ?? PHP_FLOAT_MAX),
                 default      => min($ex['valor'],               $ex['monto_maximo'] ?? PHP_FLOAT_MAX),
             };
-            $totalExenciones += round($monto, 2);
+            $montoCalculado = round($monto, 2);
+            $totalExenciones += $montoCalculado;
+            $detallesExenciones[] = [
+                'monto_calculado' => $montoCalculado
+            ];
         }
 
         $idtgb = round(max(0, $totalTasas - $totalExenciones), 2);
@@ -183,22 +208,14 @@ class IdtgbCalculator
             'final'          => $final,
             'dias_mora'      => $diasMora,
             'ufv_aplicada'   => $ufvAplicada, // ✅ Devolver UFV aplicada
-            'detalles_tasas' => $detallesTasas, // Para uso interno en calculateAndSave
+            'detalles_tasas' => $detallesTasas,
+            'detalles_exenciones' => $detallesExenciones, // <-- NUEVO: Devolver detalles
         ];
     }
 
     /**
      * Busca la tasa vigente para una combinación de parámetros en una fecha dada.
      */
-    // private function tasaVigente(int $departamentoId, int $parentescoId, int $tipoTransmisionId, string $fecha): ?Tasa
-    // {
-    //     return Tasa::where('departamento_id', $departamentoId)
-    //                ->where('parentesco_id', $parentescoId)
-    //                ->where('tipo_transmision_id', $tipoTransmisionId)
-    //                ->where('vigente_desde', '<=', $fecha)
-    //                ->where(fn($q) => $q->whereNull('vigente_hasta')->orWhere('vigente_hasta', '>=', $fecha))
-    //                ->first();
-    // }
     private function tasaVigente(int $departamentoId, int $parentescoId, ?int $tipoTransmisionId, string $fecha): ?Tasa
     {
         return Tasa::where('departamento_id', $departamentoId)
@@ -211,6 +228,7 @@ class IdtgbCalculator
                 })
                 ->where('vigente_desde', '<=', $fecha)
                 ->where(fn($q) => $q->whereNull('vigente_hasta')->orWhere('vigente_hasta', '>=', $fecha))
+                ->orderBy('tipo_transmision_id', 'desc') // Priorizar la tasa específica sobre la genérica
                 ->first();
     }
 }

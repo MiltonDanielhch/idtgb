@@ -93,6 +93,11 @@ class Tramite extends Model
         return $this->hasMany(DisponenteTramite::class);
     }
 
+    public function tramiteExenciones()
+    {
+        return $this->hasMany(\App\Models\TramiteExencion::class);
+    }
+
     public function pagos()
     {
         return $this->hasMany(Pago::class);

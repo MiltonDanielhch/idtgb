@@ -85,8 +85,16 @@
                 <div class="step-number">4</div>
                 <div class="step-label">Inmuebles</div>
             </div>
-            <div class="step {{ $current_step >= 5 ? 'active' : '' }}">
+            <div class="step {{ $current_step >= 5 ? 'active' : '' }} {{ $current_step > 5 ? 'completed' : '' }}">
                 <div class="step-number">5</div>
+                <div class="step-label">Documentos</div>
+            </div>
+            <div class="step {{ $current_step >= 6 ? 'active' : '' }} {{ $current_step > 6 ? 'completed' : '' }}">
+                <div class="step-number">6</div>
+                <div class="step-label">Exenciones</div>
+            </div>
+            <div class="step {{ $current_step >= 7 ? 'active' : '' }}">
+                <div class="step-number">7</div>
                 <div class="step-label">Resumen</div>
             </div>
         </div>
