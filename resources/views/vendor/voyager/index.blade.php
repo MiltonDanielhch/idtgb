@@ -1,4 +1,4 @@
-hice este '''@extends('voyager::master')
+@extends('voyager::master')
 
 @section('page_header')
     <div class="page-content container-fluid">
@@ -40,6 +40,26 @@ hice este '''@extends('voyager::master')
         $meses = array('', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre');
     @endphp
 
+    {{-- Componente Blade anónimo para mostrar la tendencia --}}
+    @php
+        $renderTrend = function($percentage) {
+            $class = $percentage >= 0 ? 'trend-up' : 'trend-down';
+            $icon = $percentage >= 0 ? 'voyager-up' : 'voyager-down';
+            $formattedPercentage = number_format(abs($percentage), 1, ',', '.');
+
+            // Asegurarse de que $percentage no sea nulo
+            if (is_null($percentage)) {
+                return '';
+            }
+
+            return <<<HTML
+            <div class="kpi-trend {$class}">
+                <i class="{$icon}"></i> {$formattedPercentage}%
+            </div>
+HTML;
+        };
+    @endphp
+
     <div class="page-content container-fluid">
         @include('voyager::alerts')
         @include('voyager::dimmers')
@@ -52,11 +72,9 @@ hice este '''@extends('voyager::master')
                         <div class="kpi-icon">
                             <i class="voyager-dollar"></i>
                         </div>
-                        <h3 class="kpi-value">1,250,000 Bs.</h3>
-                        <p class="kpi-label">Recaudación del Mes</p>
-                        <div class="kpi-trend trend-up">
-                            <i class="voyager-up"></i> 8.2%
-                        </div>
+                        <h3 class="kpi-value" id="kpi-recaudacion-valor">{{ number_format($recaudadoPeriodo ?? 0, 2, ',', '.') }} Bs.</h3>
+                        <p class="kpi-label" id="kpi-recaudacion-label">Recaudación {{ $kpiLabel ?? 'del Mes' }}</p>
+                        {!! $renderTrend($trends['recaudacion']['percentage'] ?? 0) !!}
                     </div>
                 </div>
             </div>
@@ -66,11 +84,9 @@ hice este '''@extends('voyager::master')
                         <div class="kpi-icon">
                             <i class="voyager-file-text"></i>
                         </div>
-                        <h3 class="kpi-value">152</h3>
-                        <p class="kpi-label">Trámites Registrados (Mes)</p>
-                        <div class="kpi-trend trend-up">
-                            <i class="voyager-up"></i> 5.7%
-                        </div>
+                        <h3 class="kpi-value" id="kpi-tramites-valor">{{ $tramitesPeriodo ?? 0 }}</h3>
+                        <p class="kpi-label" id="kpi-tramites-label">Trámites Registrados ({{ $kpiLabel ?? 'Mes' }})</p>
+                        {!! $renderTrend($trends['tramites']['percentage'] ?? 0) !!}
                     </div>
                 </div>
             </div>
@@ -80,25 +96,19 @@ hice este '''@extends('voyager::master')
                         <div class="kpi-icon">
                             <i class="voyager-check"></i>
                         </div>
-                        <h3 class="kpi-value">138</h3>
-                        <p class="kpi-label">Trámites Finalizados (Mes)</p>
-                        <div class="kpi-trend trend-down">
-                            <i class="voyager-down"></i> 1.1%
-                        </div>
+                        <h3 class="kpi-value" id="kpi-finalizados-valor">{{ $tramitesFinalizadosPeriodo ?? 0 }}</h3>
+                        <p class="kpi-label" id="kpi-finalizados-label">Trámites Finalizados ({{ $kpiLabel ?? 'Mes' }})</p>
+                        {!! $renderTrend($trends['finalizados']['percentage'] ?? 0) !!}
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="panel panel-bordered dashboard-kpi">
                     <div class="panel-body text-center">
-                        <div class="kpi-icon">
-                            <i class="voyager-watch"></i>
-                        </div>
-                        <h3 class="kpi-value">45</h3>
+                        <div class="kpi-icon"><i class="voyager-watch"></i></div>
+                        <h3 class="kpi-value" id="kpi-pendientes-valor">{{ $tramitesPendientes ?? 0 }}</h3>
                         <p class="kpi-label">Trámites Pendientes</p>
-                        <div class="kpi-trend trend-up">
-                            <i class="voyager-up"></i> 2.0%
-                        </div>
+                        {!! $renderTrend($trends['pendientes']['percentage'] ?? 0) !!}
                     </div>
                 </div>
             </div>
@@ -109,10 +119,10 @@ hice este '''@extends('voyager::master')
             <div class="col-md-6">
                 <div class="panel panel-bordered">
                     <div class="panel-heading">
-                        <h3 class="panel-title">Recaudación Mensual (Bs.)</h3>
+                        <h3 class="panel-title" id="recaudacion-chart-title">Recaudación por Período (Bs.)</h3>
                     </div>
                     <div class="panel-body">
-                        <canvas id="recaudacionMensualChart" height="250"></canvas>
+                        <canvas id="recaudacionPeriodoChart" height="250"></canvas>
                     </div>
                 </div>
             </div>
@@ -164,72 +174,7 @@ hice este '''@extends('voyager::master')
                         <h3 class="panel-title">Últimos Trámites Registrados</h3>
                     </div>
                     <div class="panel-body">
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th># Trámite</th>
-                                        <th>Contribuyente</th>
-                                        <th>Fecha Presentación</th>
-                                        <th>Monto Final (Bs.)</th>
-                                        <th>Estado</th>
-                                        <th>Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>TR-2023-11-00123</td>
-                                        <td>Juan Pérez</td>
-                                        <td>20 Oct 2025</td>
-                                        <td>12,580.00</td>
-                                        <td><span class="label label-success">Finalizado</span></td>
-                                        <td>
-                                            <a href="#" class="btn btn-sm btn-primary">Ver</a>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>TR-2023-11-00122</td>
-                                        <td>María García</td>
-                                        <td>20 Oct 2025</td>
-                                        <td>8,950.50</td>
-                                        <td><span class="label label-warning">En Proceso</span></td>
-                                        <td>
-                                            <a href="#" class="btn btn-sm btn-primary">Ver</a>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>TR-2023-11-00121</td>
-                                        <td>Carlos López</td>
-                                        <td>19 Oct 2025</td>
-                                        <td>21,000.00</td>
-                                        <td><span class="label label-info">Iniciado</span></td>
-                                        <td>
-                                            <a href="#" class="btn btn-sm btn-primary">Ver</a>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>TR-2023-11-00120</td>
-                                        <td>Ana Martínez</td>
-                                        <td>19 Oct 2025</td>
-                                        <td>5,690.00</td>
-                                        <td><span class="label label-danger">Observado</span></td>
-                                        <td>
-                                            <a href="#" class="btn btn-sm btn-primary">Ver</a>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>TR-2023-11-00119</td>
-                                        <td>Pedro Sánchez</td>
-                                        <td>18 Oct 2025</td>
-                                        <td>17,830.00</td>
-                                        <td><span class="label label-success">Finalizado</span></td>
-                                        <td>
-                                            <a href="#" class="btn btn-sm btn-primary">Ver</a>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                        @include('vendor.voyager.partials.dashboard-tramites-table', ['ultimosTramites' => $ultimosTramites ?? []])
                     </div>
                 </div>
             </div>
@@ -283,63 +228,129 @@ hice este '''@extends('voyager::master')
 
 @section('javascript')
     <!-- Incluir Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js  "></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script>
-        $(document).ready(function(){
-            // Configuración de rangos de fecha
-            $('.dropdown-menu a').click(function(e) {
-                e.preventDefault();
-                let range = $(this).data('range');
-                $('#refresh-dashboard').html('<i class="voyager-refresh"></i> Actualizando...');
+        // Función para renderizar la tendencia, ahora en JS para uso con AJAX
+        function renderTrend(percentage) {
+            const trendClass = percentage >= 0 ? 'trend-up' : 'trend-down';
+            const iconClass = percentage >= 0 ? 'voyager-up' : 'voyager-down';
+            const formattedPercentage = Math.abs(percentage).toLocaleString('es-BO', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
-                // Simular carga de datos
-                setTimeout(function() {
-                    $('#refresh-dashboard').html('<i class="voyager-refresh"></i> Actualizar');
-                    toastr.success('Datos actualizados para el período: ' + range);
-                }, 1500);
+            return `
+                <div class="kpi-trend ${trendClass}">
+                    <i class="${iconClass}"></i> ${formattedPercentage}%
+                </div>
+            `;
+        }
+
+        // Función para actualizar la UI con los nuevos datos
+        function updateDashboardUI(data) {
+            // Actualizar KPIs
+            $('#kpi-recaudacion-valor').text(data.recaudadoPeriodoFormatted);
+            $('#kpi-recaudacion-label').text('Recaudación ' + data.kpiLabel);
+            $('#kpi-recaudacion-valor').parent().find('.kpi-trend').replaceWith(renderTrend(data.trends.recaudacion.percentage));
+
+            $('#kpi-tramites-valor').text(data.tramitesPeriodoFormatted);
+            $('#kpi-tramites-label').text('Trámites Registrados (' + data.kpiLabel + ')');
+            $('#kpi-tramites-valor').parent().find('.kpi-trend').replaceWith(renderTrend(data.trends.tramites.percentage));
+
+            $('#kpi-finalizados-valor').text(data.tramitesFinalizadosPeriodoFormatted);
+            $('#kpi-finalizados-label').text('Trámites Finalizados (' + data.kpiLabel + ')');
+            $('#kpi-finalizados-valor').parent().find('.kpi-trend').replaceWith(renderTrend(data.trends.finalizados.percentage));
+
+            // El KPI de pendientes no cambia con el rango, pero sí su tendencia
+            $('#kpi-pendientes-valor').text(data.tramitesPendientesFormatted);
+            $('#kpi-pendientes-valor').parent().find('.kpi-trend').replaceWith(renderTrend(data.trends.pendientes.percentage));
+
+            // Actualizar tabla de últimos trámites
+            $('#ultimos-tramites-body').parent().parent().replaceWith(data.ultimosTramitesHtml);
+
+            // NOTA: Los gráficos no se actualizan con el filtro de fecha en esta implementación,
+            // pero se podrían actualizar de forma similar si se ajusta el controlador.
+
+            // Actualizar Gráficos
+            $('#recaudacion-chart-title').text('Recaudación por Período (' + data.kpiLabel + ')');
+            recaudacionPeriodoChart.data.labels = data.recaudacionPeriodoData.labels;
+            recaudacionPeriodoChart.data.datasets[0].data = data.recaudacionPeriodoData.values;
+            recaudacionPeriodoChart.update();
+
+            tramitesTipoChart.data.labels = data.tramitesPorTipo.labels;
+            tramitesTipoChart.data.datasets[0].data = data.tramitesPorTipo.values;
+            tramitesTipoChart.update();
+
+            tramitesEstadoChart.data.labels = data.tramitesPorEstado.labels;
+            tramitesEstadoChart.data.datasets[0].data = data.tramitesPorEstado.values;
+            tramitesEstadoChart.update();
+        }
+
+        $(document).ready(function(){
+            let currentRange = 'month'; // Mantener el rango actual
+
+            function fetchData(range) {
+                currentRange = range;
+                const refreshButton = $('#refresh-dashboard');
+                refreshButton.html('<i class="voyager-refresh"></i> Actualizando...').prop('disabled', true);
+
+                $.ajax({
+                    url: '{{ route("admin.dashboard.data") }}',
+                    type: 'GET',
+                    data: { range: range },
+                    success: function(response) {
+                        updateDashboardUI(response);
+                        toastr.success('Datos actualizados para el período seleccionado.');
+                    },
+                    error: function() {
+                        toastr.error('No se pudieron actualizar los datos. Intente de nuevo.');
+                    },
+                    complete: function() {
+                        refreshButton.html('<i class="voyager-refresh"></i> Actualizar').prop('disabled', false);
+                    }
+                });
+            }
+
+            // Eventos de click para los filtros
+            $('.dropdown-menu a[data-range]').click(function(e) {
+                e.preventDefault();
+                fetchData($(this).data('range'));
             });
 
-            // Datos de ejemplo para IDTGB
-            const recaudacionMensualData = {
-                labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
+            $('#refresh-dashboard').click(() => fetchData(currentRange));
+
+            // --- INICIALIZACIÓN DE GRÁFICOS (sin cambios) ---
+            const recaudacionPeriodoData = {
+                labels: @json(collect($recaudacionPeriodoData ?? [])->keys()->map(fn($item) => \Carbon\Carbon::parse($item)->format('d M'))),
                 datasets: [{
-                    label: 'Recaudación {{ date("Y") }}',
-                    data: [850000, 950000, 1100000, 1050000, 1200000, 1300000, 1250000, 1400000, 1350000, 1500000, 1600000, 1800000],
+                    label: 'Recaudación',
+                    data: @json(collect($recaudacionPeriodoData ?? [])->values()->all()),
                     backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderColor: 'rgb(54, 162, 235)',
                     borderWidth: 2
                 }]
             };
 
             const tramitesTipoData = {
-                labels: ['Sucesión (Herencia)', 'Donación', 'Legado', 'Otros'],
+                labels: @json(collect($tramitesPorTipo ?? [])->keys()),
                 datasets: [{
                     label: 'Nro. de Trámites',
-                    data: [85, 42, 15, 10],
+                    data: @json(collect($tramitesPorTipo ?? [])->values()->all()),
                     backgroundColor: [
                         'rgba(255, 99, 132, 0.7)',
                         'rgba(54, 162, 235, 0.7)',
                         'rgba(255, 206, 86, 0.7)',
                         'rgba(75, 192, 192, 0.7)'
                     ],
-                    borderColor: [
-                        'rgba(255, 99, 132, 1)',
-                        'rgba(54, 162, 235, 1)',
-                        'rgba(255, 206, 86, 1)',
-                        'rgba(75, 192, 192, 1)'
-                    ],
                     borderWidth: 1
                 }]
             };
 
             const tramitesEstadoData = {
-                labels: ['Iniciado', 'En Proceso', 'Observado', 'Finalizado', 'Anulado'],
+                labels: @json(collect($tramitesPorEstado ?? [])->keys()),
                 datasets: [{
                     label: 'Cantidad de Trámites',
-                    data: [45, 82, 15, 250, 5],
+                    data: @json(collect($tramitesPorEstado ?? [])->values()->all()),
                     backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderColor: 'rgb(75, 192, 192)',
                     borderWidth: 2
                 }]
             };
@@ -348,18 +359,18 @@ hice este '''@extends('voyager::master')
                 labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
                 datasets: [
                     {
-                        label: '{{ date("Y") - 1 }}',
-                        data: [750000, 850000, 1000000, 950000, 1100000, 1200000, 1150000, 1300000, 1250000, 1400000, 1500000, 1700000],
-                        borderColor: 'rgba(201, 203, 207, 1)',
+                        label: '{{ now()->year - 1 }}',
+                        data: @json($comparacionAnualData['anterior'] ?? array_fill(0, 12, 0)),
+                        borderColor: 'rgb(201, 203, 207)',
                         backgroundColor: 'rgba(201, 203, 207, 0.2)',
                         borderWidth: 2,
                         tension: 0.3,
                         fill: true
                     },
                     {
-                        label: '{{ date("Y") }}',
-                        data: [850000, 950000, 1100000, 1050000, 1200000, 1300000, 1250000, 1400000, 1350000, 1500000, 1600000, 1800000],
-                        borderColor: 'rgba(54, 162, 235, 1)',
+                        label: '{{ now()->year }}',
+                        data: @json($comparacionAnualData['actual'] ?? array_fill(0, 12, 0)),
+                        borderColor: 'rgb(54, 162, 235)',
                         backgroundColor: 'rgba(54, 162, 235, 0.2)',
                         borderWidth: 2,
                         tension: 0.3,
@@ -431,25 +442,25 @@ hice este '''@extends('voyager::master')
             };
 
             // Crear los gráficos
-            new Chart(document.getElementById('recaudacionMensualChart'), {
+            const recaudacionPeriodoChart = new Chart(document.getElementById('recaudacionPeriodoChart'), {
                 type: 'bar',
-                data: recaudacionMensualData,
+                data: recaudacionPeriodoData,
                 options: chartOptions
             });
 
-            new Chart(document.getElementById('tramitesTipoChart'), {
+            const tramitesTipoChart = new Chart(document.getElementById('tramitesTipoChart'), {
                 type: 'pie',
                 data: tramitesTipoData,
                 options: pieChartOptions
             });
 
-            new Chart(document.getElementById('tramitesEstadoChart'), {
+            const tramitesEstadoChart = new Chart(document.getElementById('tramitesEstadoChart'), {
                 type: 'bar',
                 data: tramitesEstadoData,
                 options: barChartOptions
             });
 
-            new Chart(document.getElementById('comparacionAnualChart'), {
+            const comparacionAnualChart = new Chart(document.getElementById('comparacionAnualChart'), {
                 type: 'line',
                 data: comparacionAnualData,
                 options: chartOptions
@@ -457,4 +468,3 @@ hice este '''@extends('voyager::master')
         });
     </script>
 @stop
-''

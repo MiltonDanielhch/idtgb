@@ -28,7 +28,7 @@
                 {{-- Persona --}}
                 <div class="col-md-3">
                     <label>Persona</label>
-                    <p class="form-control-static"><strong>{{ $item->person->nombre_completo }}</strong></p>
+                    <p class="form-control-static"><strong>{{ optional($item->person)->display_name ?? optional($item->person)->full_name ?? 'Nombre no definido' }}</strong></p>
                 </div>
 
                 {{-- CI --}}

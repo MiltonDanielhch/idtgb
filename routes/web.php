@@ -27,6 +27,7 @@ use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\Admin\TramiteWizardController;
 use App\Http\Controllers\TipoInmuebleController;
 use App\Http\Controllers\TipoTransmisionController;
+use App\Http\Controllers\Admin\DashboardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -61,6 +62,10 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
 
     // Rutas de Voyager (Panel de administración)
     Voyager::routes();
+
+    // Sobrescribir la ruta del dashboard de Voyager
+    Route::get('/', [DashboardController::class, 'index'])->name('voyager.dashboard');
+    Route::get('/dashboard/data', [DashboardController::class, 'fetchData'])->name('admin.dashboard.data');
 
     // ──────────────── REPORTES ────────────────
     Route::prefix('reportes')->name('admin.reportes.')->group(function () {

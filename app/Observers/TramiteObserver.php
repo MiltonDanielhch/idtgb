@@ -5,6 +5,7 @@ namespace App\Observers;
 use App\Jobs\ExportarAlSINJob;
 use App\Models\Tramite;
 use App\Services\IdtgbCalculator;
+use App\Services\DashboardCacheInvalidator;
 
 class TramiteObserver
 {
@@ -19,6 +20,26 @@ class TramiteObserver
 
         if ($tramite->isDirty('estado') && $tramite->estado === 'Finalizado') {
             dispatch(new ExportarAlSINJob($tramite));
+        }
+
+        // Invalidar cache del dashboard cuando un trámite cambia
+        if (app()->bound(DashboardCacheInvalidator::class)) {
+            app(DashboardCacheInvalidator::class)->clearAll();
+        }
+    }
+
+    public function created(Tramite $tramite): void
+    {
+        // Al crear un trámite también invalidamos cache (p. ej. ultimosTramites)
+        if (app()->bound(DashboardCacheInvalidator::class)) {
+            app(DashboardCacheInvalidator::class)->clearAll();
+        }
+    }
+
+    public function deleted(Tramite $tramite): void
+    {
+        if (app()->bound(DashboardCacheInvalidator::class)) {
+            app(DashboardCacheInvalidator::class)->clearAll();
         }
     }
 

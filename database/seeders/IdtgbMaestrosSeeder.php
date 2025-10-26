@@ -9,8 +9,10 @@ class IdtgbMaestrosSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            UsersTableSeeder::class,
-            // Geografía
+            // 1. Base de Voyager (incluye usuarios, roles, permisos básicos)
+            VoyagerDatabaseSeeder::class,
+
+            // 2. Geografía
             DepartamentoSeeder::class,
             ProvinciaSeeder::class,
             MunicipioSeeder::class,
@@ -20,14 +22,14 @@ class IdtgbMaestrosSeeder extends Seeder
             TipoTransmisionSeeder::class,
             TipoInmuebleSeeder::class,
             TasaSeeder::class,
-            PeopleBeniSeeder::class,    // ⚠️ ¡FALTABA ESTE!
             ExencionSeeder::class,
 
-            // Datos operativos
+            // 4. Datos operativos y de prueba
+            PeopleBeniSeeder::class,
             InmuebleSeeder::class,
             AvaluoSeeder::class,
 
-            // Trámites y sus relaciones
+            // 5. Trámites y sus relaciones
             TramiteSeeder::class,
             AdquirenteTramiteSeeder::class,
             DisponenteTramiteSeeder::class,
@@ -35,8 +37,9 @@ class IdtgbMaestrosSeeder extends Seeder
             DocumentoSeeder::class,
             PagoSeeder::class,
 
-            // 🔑 Crítico para cálculos
-            UfvSeeder::class,           // ⚠️ ¡FALTABA ESTE!
+            // 6. Componentes finales (Menús y UFV)
+            IdtgbMenuAppendSeeder::class, // <-- AÑADIR ESTE SEEDER
+            UfvSeeder::class,
         ]);
     }
 }

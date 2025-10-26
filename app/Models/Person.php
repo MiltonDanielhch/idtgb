@@ -82,6 +82,16 @@ class Person extends Model
             ])->filter()->join(' ')
         );
     }
+
+    /**
+     * Compatibilidad: alias en español para nombres completos usados en algunas vistas antiguas.
+     * @return string
+     */
+    public function getNombreCompletoAttribute(): string
+    {
+        // Preferir display_name (para personas jurídicas), si no usar full_name
+        return $this->display_name ?? $this->full_name ?? 'Nombre no definido';
+    }
     // En el modelo Person
     public function getDisplayImageAttribute()
     {

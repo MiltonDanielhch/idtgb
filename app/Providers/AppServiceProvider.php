@@ -6,6 +6,10 @@ use Illuminate\Support\ServiceProvider;
 
 use Illuminate\Pagination\Paginator;   
 use Illuminate\Support\Facades\URL;
+use App\Models\Tramite;
+use App\Models\Pago;
+use App\Observers\TramiteObserver;
+use App\Observers\PagoObserver;
 
 
 class AppServiceProvider extends ServiceProvider
@@ -35,6 +39,10 @@ class AppServiceProvider extends ServiceProvider
         }
 
         Paginator::useBootstrap();
+
+    // Registrar observers para invalidar cache del dashboard cuando haya cambios
+    Tramite::observe(TramiteObserver::class);
+    Pago::observe(PagoObserver::class);
 
     }
 }

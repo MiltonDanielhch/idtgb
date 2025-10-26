@@ -32,7 +32,7 @@ class TramiteController extends Controller
         $search   = request('search');
         $paginate = request('paginate', 10);
 
-        $data = Tramite::with(['tipoTransmision', 'user'])
+        $data = Tramite::with(['tipoTransmision', 'user', 'inmuebles'])
             ->when($search, fn($q) => $q->where('nro_tramite', 'like', "%{$search}%"))
             ->orderByDesc('id')
             ->paginate($paginate);
