@@ -8,7 +8,7 @@
                     <div class="panel-body">
                         <div class="row">
                             <div class="col-md-8">
-                                <h2>Hola, {{ Auth::user()->name }}</h2>
+                                <h2>Hola, {{ Auth::user()?->name }}</h2>
                                 <p class="text-muted">Resumen del sistema IDTGB - {{ now()->format('d F Y') }}</p>
                             </div>
                             <div class="col-md-4 text-right">

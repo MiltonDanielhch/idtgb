@@ -17,30 +17,29 @@
 
             <div class="panel widget center bgimage"
                  style="background-image:url({{ Voyager::image( Voyager::setting('admin.bg_image'), voyager_asset('images/bg.jpg') ) }}); background-size: cover; background-position: 0px;">
+                @if(Auth::check())
                 <div class="dimmer"></div>
                 <div class="panel-content">
                     @php
-                        $user = App\Models\User::where('id', Auth::user()->id)->first();
-                        if($user->person)
-                        {
-                            if($user->person->image)
-                            {
-                                $user_avatar = asset('storage/'.str_replace('.', '-cropped.', $user->person->image));
-                            }
+                        $user = Auth::user();
+                        $user_avatar = Voyager::image($user->avatar);
+                        if ($user->person && $user->person->image) {
+                            $user_avatar = asset('storage/'.str_replace('.', '-cropped.', $user->person->image));
                         }
                     @endphp
-                    <img src="{{ $user_avatar }}" class="avatar" alt="{{ Auth::user()->name }} avatar">
-                    <h4 style="color:rgb(255, 255, 255) !important">{{ ucwords(Auth::user()->name) }}</h4>
-                    <p>{{ Auth::user()->email }}</p>
+                    <img src="{{ $user_avatar }}" class="avatar" alt="{{ $user->name }} avatar">
+                    <h4 style="color:rgb(255, 255, 255) !important">{{ ucwords($user->name) }}</h4>
+                    <p>{{ $user->email }}</p>
 
                     <a href="{{ route('voyager.profile') }}" class="btn btn-primary">{{ __('voyager::generic.profile') }}</a>
                     <div style="clear:both"></div>
                 </div>
+                @endif
             </div>
 
         </div>
-        <div id="adminmenu">
-            <admin-menu :items="{{ menu('admin', '_json') }}"></admin-menu>
+       <div id="adminmenu">
+            <admin-menu :items="{{ Auth::check() ? menu('admin', '_json') : '[]' }}"></admin-menu>
         </div>
     </nav>
 </div>
