@@ -23,7 +23,7 @@ Calcula el impuesto para un trámite y persiste los resultados en la base de dat
 *   **Flujo**:
     1.  Extrae los datos necesarios del modelo `$tramite` y sus relaciones.
     2.  Delega el cálculo al método privado `performCalculation()`.
-    3.  Actualiza y guarda los campos del modelo `$tramite` (`total_idtgb`, `recargo_mora`, `monto_final`).
+    3.  **Persiste los resultados**: Actualiza y guarda los campos del modelo `$tramite` (`total_idtgb`, `recargo_mora`, `monto_final`, `ufv_aplicada`) y de sus relaciones.
     4.  Actualiza los campos de cada `AdquirenteTramite` (`tasa_aplicada`, `idtgb_proporcional`).
 *   **Retorno**: Un `array` con el desglose completo del cálculo.
 
@@ -80,15 +80,23 @@ IdtgbNeto = round(max(0, IdtgbBrutoTotal - TotalExenciones), 2)
 
 ### **Paso 4: Calcular el Recargo por Mora**
 
-Se calcula si la fecha actual ha superado la fecha de vencimiento.
+Se calcula si la fecha de transmisión del bien ha superado la fecha de vencimiento del impuesto.
 
-1.  **Calcular Días de Mora**: `DiasMora = Carbon::now()->diffInDays(FechaVencimiento, false)`
+1.  **Calcular Días de Mora**: `DiasMora = Carbon::parse(FechaTransmision)->diffInDays(FechaVencimiento, false)`
 2.  **Aplicar Fórmula de Recargo**: La fórmula aplica un 1% diario sobre el `IdtgbNeto`, con un tope de 60 días (60%).
     ```
     RecargoMora = round(IdtgbNeto * 0.01 * min(DiasMora, 60), 2)
     ```
 
-### **Paso 5: Calcular el Monto Final a Pagar**
+### **Paso 5: Obtener la UFV Aplicada**
+
+Se busca el valor de la Unidad de Fomento a la Vivienda (UFV) vigente en la fecha de la transmisión del bien.
+
+```sql
+SELECT valor FROM ufvs WHERE fecha <= ? ORDER BY fecha DESC LIMIT 1;
+```
+
+### **Paso 6: Calcular el Monto Final a Pagar**
 
 Se suma el impuesto neto y el recargo por mora.
 

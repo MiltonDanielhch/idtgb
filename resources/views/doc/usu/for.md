@@ -1,11 +1,10 @@
-¡Perfecto! A continuación te detallo **los formularios clave** y, lo más importante, **las ecuaciones y lógica de cálculo** que implementa el sistema **IDTGB – Beni**, tal como están codificadas en el servicio `IdtgbCalculator.php`.
+A continuación se detallan **las ecuaciones y la lógica de negocio** que implementa el sistema **IDTGB – Beni** para el cálculo del impuesto, tal como están codificadas en el servicio `IdtgbCalculator.php`.
 
 Esto incluye:
 
 - ✅ **Fórmulas matemáticas reales** (con variables y condiciones)
 - ✅ **Reglas de negocio aplicadas**
 - ✅ **Ejemplo numérico paso a paso**
-- ✅ **Formularios asociados** (dónde se ingresan los datos)
 
 ---
 
@@ -13,9 +12,9 @@ Esto incluye:
 
 El monto del impuesto se calcula con la siguiente lógica secuencial:
 
-### Paso 1: **Valor base del inmueble**
+### Paso 1: Determinar la Base Imponible
 ```php
-$valor_base = $avaluo_vigente ?? $inmueble->valor_catastral;
+$base_imponible = max($tramite->valor_declarado, $inmueble->valor_catastral_actualizado, $avaluo_vigente_actualizado);
 ```
 > Si hay un **avalúo vigente**, se usa ese valor.  
 > Si no, se usa el **valor catastral**.

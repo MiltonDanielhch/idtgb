@@ -32,15 +32,22 @@ Registro central para personas naturales o jurídicas. Es una de las tablas más
     *   `STATUS_INACTIVE = 0`
     *   `STATUS_PENDING = 2`
 *   **Propiedades**:
-    *   `$casts`: `['birth_date' => 'date']`
+    *   `$casts`: `['birth_date' => 'date', 'status' => 'integer']`
+    *   `$appends`: `['ubicacion_completa', 'ubicacion_segura']`
 *   **Accesores y Mutadores**:
-    *   `getFullNameAttribute()`: Concatena los campos de nombre y apellido para devolver el nombre completo.
+    *   `getFullNameAttribute()`: Retorna el nombre completo para personas naturales.
+    *   `getDisplayNameAttribute()`: Retorna el nombre a mostrar (razón social para jurídicas, nombre completo para naturales).
+    *   `getDisplayDocumentAttribute()`: Retorna el documento principal (NIT para jurídicas, CI para naturales).
+    *   `getDisplayAgeAttribute()`: Calcula y retorna la edad.
+    *   `getUbicacionCompletaAttribute()`: Retorna la dirección jerárquica completa (Municipio, Provincia, Departamento).
 *   **Scopes**:
     *   `scopeActive($query)`: Filtra las personas cuyo estado es `STATUS_ACTIVE`.
 *   **Relaciones**:
-    *   `user()`: `hasOne(User::class)`. La cuenta de usuario asociada a esta persona.
-    *   `adquirenteEnTramites()`: `hasMany(AdquirenteTramite::class)`.
-    *   `disponenteEnTramites()`: `hasMany(DisponenteTramite::class)`.
+    *   `municipio()`: `belongsTo(Municipio::class)`.
+    *   `adquirentesTramite()`: `hasMany(AdquirenteTramite::class)`.
+    *   `disponentesTramite()`: `hasMany(DisponenteTramite::class)`.
+    *   `registerUser()`: `belongsTo(User::class)`.
+    *   `deleteUser()`: `belongsTo(User::class)`.
 
 ---
 
@@ -90,19 +97,27 @@ El modelo más importante del sistema. Orquesta toda la información de una tran
     *   `user()`: `belongsTo(User::class)`. El funcionario que gestiona el trámite.
     *   `inmuebles()`: `belongsToMany(Inmueble::class, 'tramite_inmuebles')`.
     *   `exenciones()`: `belongsToMany(Exencion::class, 'tramite_exenciones')->withPivot('monto_aplicado')`.
-    *   `adquirentes()`: `hasMany(AdquirenteTramite::class)`.
-    *   `disponentes()`: `hasMany(DisponenteTramite::class)`.
+    *   `adquirentes()`: `hasMany(AdquirenteTramite::class)`. Relación directa con el modelo pivot.
+    *   `disponentes()`: `hasMany(DisponenteTramite::class)`. Relación directa con el modelo pivot.
     *   `pagos()`: `hasMany(Pago::class)`.
     *   `documentos()`: `hasMany(Documento::class)`.
+    *   `personasAdquirentes()`: `hasManyThrough(Person::class, AdquirenteTramite::class)`. Relación indirecta para obtener las personas adquirentes directamente.
+    *   `personasDisponentes()`: `hasManyThrough(Person::class, DisponenteTramite::class)`. Relación indirecta para obtener las personas disponentes.
+*   **Scopes**:
+    *   `scopeConRelacionesCompletas($query)`: Carga previamente todas las relaciones anidadas comunes para optimizar consultas.
+*   **Accesores**:
+    *   `getAdquirentesCompletosAttribute()`: Retorna la colección de adquirentes con sus relaciones cargadas.
+    *   `getEstadoColorAttribute()`: Devuelve un color (ej. 'success', 'warning') según el estado del trámite, útil para la UI.
 *   **Lógica de Negocio**:
     *   `calcularMora()`: Calcula el recargo por mora basado en la `base_imponible` y la fecha de vencimiento.
     *   `generateHashValidacion()`: Genera un hash SHA256 para garantizar la integridad de los datos del trámite una vez finalizado.
 
-### Modelos Pivot (`AdquirenteTramite`, `DisponenteTramite`, etc.)
+### Modelos Pivot (`AdquirenteTramite`, `DisponenteTramite`, `TramiteInmueble`, `TramiteExencion`)
 
 Modelos para las tablas intermedias que permiten definir relaciones y propiedades sobre ellas.
 
 *   **Relaciones**: Cada modelo pivot tiene una relación `belongsTo` con `Tramite` y con el otro modelo implicado (ej: `Person` o `Inmueble`).
+*   **Ejemplo**: `AdquirenteTramite` tiene `belongsTo(Tramite::class)` y `belongsTo(Person::class)`.
 
 ---
 
@@ -117,6 +132,7 @@ Representa una propiedad o bien inmueble.
 *   **Relaciones**:
     *   `tipoInmueble()`, `municipio()`: `belongsTo`.
     *   `avaluos()`: `hasMany(Avaluo::class)`.
+    *   `tramiteInmuebles()`: `hasMany(TramiteInmueble::class)`.
 *   **Lógica de Negocio**:
     *   `avaluoVigente()`: Devuelve el último avalúo vigente registrado para la propiedad.
 
@@ -129,6 +145,7 @@ Registra una transacción financiera asociada a un trámite.
     *   `$casts`: `['fecha_pago' => 'datetime', 'conciliado_el' => 'datetime', 'monto' => 'decimal:2']`
 *   **Relaciones**:
     *   `tramite()`: `belongsTo(Tramite::class)`.
+    *   `creador()`, `editor()`: `belongsTo(User::class)`.
 *   **Métodos de Ayuda**:
     *   `estaAplicado()`: Retorna `true` si el estado del pago es 'Aplicado'.
 
@@ -139,6 +156,8 @@ Gestiona los archivos digitales asociados a un trámite.
 *   **Relaciones**:
     *   `tramite()`: `belongsTo(Tramite::class)`.
     *   `persona()`: `belongsTo(Person::class)`.
+*   **Propiedades**:
+    *   `$casts`: `['vigente' => 'boolean']`
 
 ---
 

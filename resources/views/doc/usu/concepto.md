@@ -1,13 +1,13 @@
 
 ## 📖 Glosario de Términos Clave
 
-Antes de ver los módulos, aquí tienes 3 conceptos fundamentales:
+Antes de ver los módulos, aquí tienes algunos conceptos fundamentales:
 
 *   **Disponente**: La persona que **entrega** el bien (ej. el donante, o el fallecido en una herencia).
 *   **Adquirente**: La persona que **recibe** el bien (ej. el que recibe la donación, el heredero).
 *   **Base Imponible**: Es el **monto sobre el cual se calcula el impuesto**. Por ley, el sistema siempre usará **el valor más alto** que encuentre entre:
     1.  El valor declarado por las partes.
-    2.  El valor del avalúo técnico vigente.
+    2.  El valor del avalúo técnico vigente (actualizado por UFV si es necesario).
     3.  El valor catastral del inmueble.
 
 ---
@@ -123,11 +123,11 @@ Antes de ver los módulos, aquí tienes 3 conceptos fundamentales:
 ---
 
 ### 10. **Trámites (Formulario A-01)**  
-**Concepto**: Proceso completo de transmisión gratuita de un inmueble.  
-**Propósito**: Centralizar todos los datos necesarios para calcular, pagar y emitir el formulario oficial.  
+**Concepto**: Proceso completo de transmisión gratuita de un inmueble, gestionado a través de un asistente de 7 pasos.  
+**Propósito**: Centralizar todos los datos (disponentes, adquirentes, inmuebles, documentos, exenciones) para calcular, pagar y emitir el formulario oficial.  
 **Ejemplo**:  
 > **Trámite IDTGB-2024-0001**  
-> - Disponente: Juan Pérez (CI 7654321)  
+> - Disponente(s): Juan Pérez (CI 7654321)  
 > - Adquirente: Ana Pérez (CI 1234567), hija → parentesco = *Hijo*  
 > - Inmueble: Catastro 10-20-30-40, valor = Bs 250.000  
 > - Exención: ✅ Vivienda única  
@@ -192,11 +192,11 @@ Antes de ver los módulos, aquí tienes 3 conceptos fundamentales:
 ---
 
 ### 16. **Dashboard**  
-**Concepto**: Panel de control con estadísticas y alertas.  
+**Concepto**: Panel de control interactivo con estadísticas y gráficos sobre la operación del sistema.  
 **Propósito**: Monitorear la operación del sistema.  
 **Ejemplo**:  
-> - “Este mes: 42 trámites, Bs 85.200 recaudados”  
-> - “Alerta: 3 avalúos caducarán en 7 días”  
+> - **KPIs**: "Recaudación Este Mes: Bs 85.200" (con tendencia vs. mes anterior).  
+> - **Gráficos**: Distribución de trámites por tipo (Donación, Herencia) y estado (Borrador, Pagado).  
 **Relación con el IDTGB**: No afecta cálculos, pero **mejora la gestión institucional**.
 
 ---

@@ -24,9 +24,9 @@ Antes de este sistema, el cálculo del IDTGB se realizaba de forma **manual**, l
 
 El **Sistema IDTGB – Beni** nace para **modernizar, agilizar y garantizar la transparencia** en este trámite, ofreciendo:
 
-- Un cálculo **automático, preciso y actualizado** (con valores UFV y tasas vigentes)
-- Un **formulario oficial digital (A-01)** con medidas de seguridad
-- Acceso **inmediato y sin trámites presenciales**
+- Un **cálculo automático y preciso** del impuesto, actualizado con valores UFV y tasas vigentes.
+- Un **formulario oficial digital (A-01)** con medidas de seguridad como códigos QR.
+- Una **calculadora pública** para que los ciudadanos obtengan estimaciones rápidas.
 
 ---
 
@@ -35,9 +35,9 @@ El **Sistema IDTGB – Beni** nace para **modernizar, agilizar y garantizar la t
 El sistema tiene dos tipos de usuarios:
 
 ### 👤 Ciudadanos (público en general)
-- Pueden acceder **sin registrarse**.
-- Solo necesitan datos básicos del inmueble y de las personas involucradas.
-- Obtienen de forma inmediata el **cálculo del impuesto** y el **formulario A-01 en PDF** listo para imprimir o presentar.
+- **Acceso público y sin registro** a una calculadora para obtener una **estimación** del impuesto.
+- Pueden informarse sobre los requisitos y montos aproximados antes de iniciar el trámite.
+- Verifican la autenticidad de un formulario oficial escaneando su código QR.
 
 ### 👨‍💼 Funcionarios autorizados (administradores)
 - Gestionan trámites completos desde el **panel de administración**.
@@ -55,17 +55,10 @@ El sistema aplica las tasas correctas según el parentesco, descuentos (15 % si 
 ✅ **Transparencia total**  
 Todos los pasos del trámite quedan registrados. Las exenciones y montos se muestran claramente.
 
-✅ **Formulario A-01 oficial con código QR**  
-Cada PDF generado incluye un **código QR único** que permite verificar su autenticidad en tiempo real (evitando falsificaciones).
-
-✅ **Sin trámites presenciales**  
-Ciudadanos pueden calcular e imprimir su formulario desde cualquier lugar, en minutos.
+✅ **Seguridad y Validez**  
+Cada Formulario A-01 oficial incluye un **código QR único** que permite verificar su autenticidad en tiempo real, evitando falsificaciones.
 
 ✅ **Listo para integración nacional**  
 Al finalizar un trámite, el sistema genera un archivo estandarizado y lo envía automáticamente al **SIN**, cumpliendo con los requisitos legales.
-
----
-
-> 🌐 **El sistema funciona en localhost y está listo para producción**, garantizando disponibilidad incluso en entornos con conectividad limitada.
 
 ---

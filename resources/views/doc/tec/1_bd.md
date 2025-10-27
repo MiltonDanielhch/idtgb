@@ -61,8 +61,8 @@ Registro central de todas las personas (naturales y jurídicas) que participan e
 | `legal_name` | `string` | Nullable | Razón social de persona jurídica. |
 | `birth_date` | `date` | Nullable | Fecha de nacimiento. |
 | `email` / `phone` | `string` | Nullable | Contacto. |
-| `address` | `text` | Nullable | Dirección. |
-| `municipio_id` | `foreignId` | Nullable, FK -> `municipios.id` | Municipio de residencia de la persona. |
+| `address` | `text` | Nullable | Dirección de residencia. |
+| `municipio_id` | `foreignId` | **No implementado en migración.** Nullable, FK -> `municipios.id` | Municipio de residencia de la persona. |
 | `gender` | `enum` | Nullable | Género: 'Masculino', 'Femenino'. |
 | `image` | `string` | Nullable | Path a la imagen de perfil. |
 | `status` | `tinyint` | Default: `1` | Estado lógico (1: Activo, 0: Inactivo, 2: Pendiente). |
@@ -74,7 +74,8 @@ Registro central de todas las personas (naturales y jurídicas) que participan e
 | `created_at` / `updated_at` | `timestamp` | | Timestamps. |
 
 **Índices y Claves Únicas:**
-*   `unique(['tipo_doc', 'ci', 'ci_complemento'])`: Evita duplicados de identidad para CIs.
+*   `unique(['tipo_doc', 'ci', 'ci_complemento'])`: **(Recomendado)** Evita duplicados de identidad.
+*   **En migración actual**: `unique(['ci', 'ci_complemento'])` y `unique(['nit'])`. Se recomienda alinear con la documentación.
 
 **Relaciones Eloquent:**
 *   `hasMany(User::class, 'person_id')`
@@ -90,8 +91,8 @@ Registro central de todas las personas (naturales y jurídicas) que participan e
 ### Catálogos Geográficos
 
 Estructura jerárquica para la ubicación de inmuebles y personas.
-*   **`departamentos`**: Nivel más alto de la división territorial (Ej: Beni, La Paz).
-    *   `id`, `nombre`, `codigo_ine`
+*   **`departamentos`**: Nivel más alto de la división territorial.
+    *   `id`, `nombre`, `codigo` (documentado como `codigo_ine`).
 *   **`provincias`**: Nivel intermedio, pertenece a un `departamento`.
     *   `id`, `departamento_id`, `nombre`
 *   **`municipios`**: Nivel más bajo, pertenece a una `provincia`.
@@ -159,7 +160,7 @@ Tabla central que representa cada trámite de transferencia.
 | `total_idtgb` | `decimal(12,2)` | Default: 0 | Total del impuesto calculado. |
 | `recargo_mora` | `decimal(12,2)` | Default: 0 | Recargos por mora. |
 | `monto_final` | `decimal(14,2)` | Default: 0 | Monto total a pagar. |
-| `ufv_aplicada` | `decimal(8,5)` | Default: 1 | Valor de UFV usado para el cálculo. |
+| `ufv_aplicada` | `decimal(8,5)` | | Valor de UFV usado para el cálculo. |
 | `estado` | `enum` | Default: 'Borrador' | Flujo del trámite. Ver nota abajo. |
 | `fecha_transmision` | `date` | | Fecha real de la transferencia. |
 | `fecha_vencimiento` | `date` | | Fecha límite para pagar sin recargo. |
@@ -179,16 +180,17 @@ Tabla central que representa cada trámite de transferencia.
 *   **Lógica de Negocio**: El cálculo de `base_imponible`, `total_idtgb` y `recargo_mora` es gestionado por la clase `App\Services\IdtgbCalculator`. El `hash_validacion` se genera en el observador `App\Observers\TramiteObserver`.
 *   **Valores de `estado`**:
     *   `Borrador`: El trámite ha sido creado pero no finalizado.
-    *   `Presentado`: El trámite ha sido presentado y está pendiente de revisión.
-    *   `Observado`: El trámite tiene errores que deben ser subsanados.
-    *   `Validado`: El trámite ha sido revisado y está listo para el pago.
+    *   `Presentado`: (No en migración) El trámite ha sido presentado y está pendiente de revisión.
+    *   `Observado`: El trámite tiene errores que deben ser subsanados por el usuario.
+    *   `Validado`: (No en migración) El trámite ha sido revisado y está listo para el pago.
     *   `Pagado`: El impuesto ha sido pagado.
+    *   `Anulado`: (No en doc) El trámite ha sido anulado.
     *   `Finalizado`: El trámite ha concluido exitosamente.
 
 ### Tablas Pivot del Trámite
 
 *   **`tramite_inmuebles`**: Relaciona `tramites` con `inmuebles` (N-M).
-*   **`adquirentes_tramite`**: Relaciona `tramites` con `people` (adquirentes). **Contiene datos de la relación**: `tasa_aplicada`, `porcentaje`, `idtgb_proporcional`, `es_beneficiario_exencion`.
+*   **`adquirentes_tramite`**: Relaciona `tramites` con `people` (adquirentes). **Contiene datos de la relación**: `parentesco_id` (con el disponente), `tasa_aplicada`, `porcentaje`, `idtgb_proporcional`, `es_beneficiario_exencion`.
 *   **`disponentes_tramite`**: Relaciona `tramites` con `people` (disponentes). **Contiene datos de la relación**: `tipo` ('Causante', 'Donante'), `fecha_fallecimiento`.
 *   **`tramite_exenciones`**: Relaciona `tramites` con `exenciones` (N-M). **Contiene datos**: `monto_aplicado`.
 
@@ -209,7 +211,10 @@ Registro catastral de las propiedades.
 | `catastro` | `string(15)` | Unique | Código catastral único. |
 | `tipo_inmueble_id` | `foreignId` | FK -> `tipos_inmueble.id` | Tipo de inmueble. |
 | `municipio_id` | `foreignId` | Nullable, FK -> `municipios.id` | Ubicación geográfica. |
+| `direccion` | `string(200)` | Nullable | Dirección detallada del inmueble. |
+| `superficie_m2` | `decimal(12,2)` | Nullable | Superficie en metros cuadrados. |
 | `valor_catastral` | `decimal(14,2)` | | Valor fiscal del inmueble. |
+| `matricula_rr` | `string(20)` | Nullable | Matrícula en Derechos Reales. |
 | `es_vivienda_unica_familiar` | `boolean` | Default: false | Indica si aplica esta exención. |
 | `estado_inmueble` | `enum` | Default: 'Activo' | Estado del inmueble en el sistema. |
 
@@ -222,6 +227,7 @@ Registra valores de avalúo de los inmuebles a lo largo del tiempo.
 | `id` | `bigint` | Primary Key | Identificador único. |
 | `inmueble_id` | `foreignId` | FK -> `inmuebles.id`, Cascade Delete | Inmueble avalúado. |
 | `tipo_avaluo` | `enum` | | 'Fiscal', 'Comercial', 'Pericial'. |
+| `fecha_avaluo` | `date` | | Fecha en que se realizó el avalúo. |
 | `valor` | `decimal(14,2)` | | Valor del avalúo. |
 | `perito_id` | `foreignId` | Nullable, FK -> `people.id` | Perito que realizó el avalúo. |
 | `documento_path` | `string(250)` | Nullable | Path al PDF del avalúo. |
@@ -236,9 +242,10 @@ Registro de los pagos realizados para cada trámite.
 | `tramite_id` | `foreignId` | FK -> `tramites.id`, Cascade Delete | Trámite asociado. |
 | `fecha_pago` | `datetime` | | Fecha y hora del pago. |
 | `monto` | `decimal(14,2)` | | Monto pagado. |
-| `codigo_barras` | `string(50)` | Nullable | Código para pago en ventanilla/banco. |
+| `qr_path` | `string` | Nullable | Path a la imagen del QR para pago. |
 | `nro_operacion` | `string(25)` | Nullable | Número de operación bancaria. |
 | `conciliado_el` | `timestamp` | Nullable | Fecha de conciliación bancaria. |
+| `banco` | `string(30)` | Nullable | Banco donde se realizó el pago. |
 | `estado` | `enum` | Default: 'Pendiente' | 'Pendiente', 'Aplicado', 'Reversado'. |
 
 ### `documentos`
