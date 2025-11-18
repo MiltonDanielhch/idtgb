@@ -40,8 +40,8 @@
             <form id="form-calculadora" class="row g-3">
                 @csrf
                 <div class="col-md-6">
-                    <label class="form-label">Tipo de contribuyente</label>
-                    <select name="tipo_contribuyente" class="form-select" required>
+                    <label for="tipo_contribuyente" class="form-label">Tipo de contribuyente</label>
+                    <select id="tipo_contribuyente" name="tipo_contribuyente" class="form-select" required>
                         <option value="">--Seleccione--</option>
                         <option value="Natural">Natural</option>
                         <option value="Jurídica">Jurídica</option>
@@ -49,14 +49,14 @@
                 </div>
 
                 <div class="col-md-6">
-                    <label class="form-label">Valor del inmueble (Bs.)</label>
-                    <input type="number" name="base_imponible" class="form-control" value="100000" min="0.01" step="0.01" required>
+                    <label for="base_imponible" class="form-label">Valor del inmueble (Bs.)</label>
+                    <input type="number" id="base_imponible" name="base_imponible" class="form-control" value="100000" min="0.01" step="0.01" required>
                     <div class="form-text">Ingrese el valor catastral o comercial del inmueble.</div>
                 </div>
 
                 <div class="col-md-6">
-                    <label class="form-label">Tipo de transmisión</label>
-                    <select name="tipo_transmision" class="form-select" required>
+                    <label for="tipo_transmision" class="form-label">Tipo de transmisión</label>
+                    <select id="tipo_transmision" name="tipo_transmision" class="form-select" required>
                         <option value="">-- Seleccione --</option>
                         @foreach($tipos_transmision as $tipo)
                             <option value="{{ $tipo->nombre }}">{{ $tipo->nombre }}</option>
@@ -65,13 +65,13 @@
                 </div>
 
                 <div class="col-md-6">
-                    <label class="form-label">Fecha de transmisión</label>
-                    <input type="date" name="fecha_transmision" class="form-control" required>
+                    <label for="fecha_transmision" class="form-label">Fecha de transmisión</label>
+                    <input type="date" id="fecha_transmision" name="fecha_transmision" class="form-control" required>
                 </div>
 
                 <div class="col-md-6">
-                    <label class="form-label">Parentesco</label>
-                    <select name="parentesco_id" class="form-select" required>
+                    <label for="parentesco_id" class="form-label">Parentesco</label>
+                    <select id="parentesco_id" name="parentesco_id" class="form-select" required>
                         <option value="">--Seleccione--</option>
                         @foreach($parentescos as $p)
                             <option value="{{ $p->id }}">{{ $p->nombre }}</option>

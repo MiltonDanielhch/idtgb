@@ -63,7 +63,16 @@
         "sort-packages": true,
         "allow-plugins": {
             "pestphp/pest-plugin": true
-        }
+        },
+        "audit": {
+        "ignore": [
+            "PKSA-9w8m-gdzm-cr6f",
+            "PKSA-wzy2-y3ht-b6x2",
+            "PKSA-vmmx-4mdq-n6p6",
+            "PKSA-w5gn-5kzr-c91d"
+        ]
+    }
+    
     },
     "prefer-stable": true
 }

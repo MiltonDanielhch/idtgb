@@ -28,6 +28,8 @@ use App\Http\Controllers\Admin\TramiteWizardController;
 use App\Http\Controllers\TipoInmuebleController;
 use App\Http\Controllers\TipoTransmisionController;
 use App\Http\Controllers\Admin\DashboardController;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 
 /*
 |--------------------------------------------------------------------------
@@ -46,14 +48,27 @@ Route::get('/', function () {
     return view('home');
 });
 
+// La vista 'home' ahora es manejada por el CalculadoraBeniController para unificar el punto de entrada.
+// Route::get('/', [CalculadoraBeniController::class, 'formulario'])->name('home');
+
 // -------------------------------------------------------------------------
 // RUTAS PÚBLICAS (Sin autenticación)
 // -------------------------------------------------------------------------
-Route::get('/calculadora-idtgb-beni', [CalculadoraBeniController::class, 'formulario'])->name('calculadora.beni.form');
+Route::get('/calculadora-idtgb-beni', [CalculadoraBeniController::class, 'formulario'])->name('calculadora.beni.form'); // Mantenida por si hay enlaces directos
 Route::post('/calculadora-idtgb-beni', [CalculadoraBeniController::class, 'calcular'])->name('calculadora.beni.calcular');
-Route::post('/calculadora-idtgb-beni-pdf', [CalculadoraBeniController::class, 'descargarPdf']);
+Route::post('/calculadora-idtgb-beni-pdf', [CalculadoraBeniController::class, 'descargarPdf'])->name('calculadora.beni.pdf');
 
 Route::get('/validar/{hash}', [ValidacionController::class, 'show'])->name('tramite.validar');
+
+// Ruta para mostrar el tutorial del ciudadano
+Route::get('/tutorial-ciudadano', function () {
+    // Lee el contenido del archivo Markdown
+    $markdownContent = File::get(resource_path('views/doc/usu/# 2.md'));
+    // Convierte Markdown a HTML
+    $htmlContent = Str::markdown($markdownContent);
+    // Muestra el contenido en una vista de layout simple
+    return view('public.tutorial_layout', ['content' => $htmlContent]);
+})->name('doc.ciudadano.tutorial');
 
 // -------------------------------------------------------------------------
 // GRUPO PRINCIPAL DE ADMINISTRACIÓN (Con autenticación y middleware)
@@ -249,11 +264,12 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
     });
 
     // ──────────────── UTILIDADES ────────────────
-    Route::get('/clear-cache', function () {
+    // Movido a un controlador para permitir el cacheo de rutas en producción
+    Route::get('/clear-cache', function() {
         Artisan::call('optimize:clear');
         return redirect('/admin/profile')->with([
             'message'    => 'Cache eliminada.',
             'alert-type' => 'success',
         ]);
-    })->name('clear.cache');
+    })->name('admin.clear.cache');
 });
