@@ -130,18 +130,77 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(json.message || 'Error en el cálculo');
             }
 
+            // Formateador de moneda
+            const fmt = (num) => parseFloat(num || 0).toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            // Variables seguras (evita NaN)
+            const tributoOmitido = json.idtgb_base || json.idtgb || 0;
+            const mantValor = json.mantenimiento_valor || 0;
+            const intereses = json.interes || 0;
+            const multa = json.multa_idf || 0;
+            const sancion = json.sancion_omision_pago || 0;
+            const totalDeuda = json.final || 0;
+            const diasMora = json.dias_mora || 0;
+
+            // Determinar encabezado y estilo según mora
+            let headerHtml = '';
+            let alertClass = 'alert-secondary';
+
+            if (diasMora > 0) {
+                headerHtml = `<h6 class="alert-heading fw-bold text-danger"><i class="fas fa-clock"></i> FECHA DE PAGO FUERA DE PLAZO (${diasMora} días de mora)</h6>`;
+                alertClass = 'alert-danger';
+            } else {
+                headerHtml = `<h6 class="alert-heading fw-bold text-success"><i class="fas fa-check-circle"></i> CÁLCULO DENTRO DE PLAZO</h6>`;
+                alertClass = 'alert-success';
+            }
+
+            // Construcción de la Boleta (Diseño solicitado)
+            const boletaHtml = `
+                <div class="alert ${alertClass} mt-3">
+                    ${headerHtml}
+                    <hr>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Tributo Omitido (S900)....................................................</span>
+                        <span class="fw-bold">Bs. ${fmt(tributoOmitido)}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Mantenimiento de Valor (S920).......................................</span>
+                        <span class="fw-bold">Bs. ${fmt(mantValor)}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Intereses Moratorios (S930).............................................</span>
+                        <span class="fw-bold">Bs. ${fmt(intereses)}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Multa por Incumplimiento Deberes Formales (S900)......</span>
+                        <span class="fw-bold">Bs. ${fmt(multa)}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Sanción por Omisión al Pago (S940)................................</span>
+                        <span class="fw-bold">Bs. ${fmt(sancion)}</span>
+                    </div>
+                    <hr>
+                    <div class="text-end mb-2">
+                        <small class="text-muted">LEY DEPTAL. Nº 1097 vigente desde el 10/04/2023</small>
+                    </div>
+                    <div class="d-flex justify-content-between fs-5 fw-bold text-primary">
+                        <span>Total Deuda......................................................................</span>
+                        <span>Bs. ${fmt(totalDeuda)}</span>
+                    </div>
+                </div>
+            `;
+
             resultado.innerHTML = `
                 <div class="row">
                     <div class="col-md-6">
                         <p><strong>Fecha de transmisión:</strong> ${json.fecha_transmision}</p>
                         <p><strong>Fecha de vencimiento:</strong> ${json.fecha_vencimiento}</p>
-                        <p><strong>Valor del inmueble:</strong> Bs. ${parseFloat(json.base_imponible).toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                        <p><strong>Tasa aplicada:</strong> ${json.tasa}%</p>
-                        <p><strong>UFV:</strong> ${json.ufv}</p>
+                        <p><strong>Valor del inmueble:</strong> Bs. ${fmt(json.base_imponible || json.base)}</p>
+                        <p><strong>Tasa aplicada:</strong> ${json.tasa || 0}%</p>
+                        <p><strong>UFV de Pago:</strong> ${json.ufv_aplicada || 'No disponible'}</p>
                     </div>
                     <div class="col-md-6">
-                        <p><strong>IDTGB estimado:</strong> Bs. ${parseFloat(json.tributo_omitido).toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                        <p class="final-amount">Monto estimado: Bs. ${parseFloat(json.monto_final).toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        ${boletaHtml}
                     </div>
                 </div>
                 <div class="disclaimer mt-3">

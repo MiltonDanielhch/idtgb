@@ -4,24 +4,21 @@ namespace App\Services;
 
 use App\Models\Tramite;
 use App\Models\Tasa;
-use App\Models\AdquirenteTramite;
-use App\Models\TramiteExencion;
+use App\Models\Ufv;
 use Carbon\Carbon;
 
 class IdtgbCalculator
 {
     /**
-     * Calcula el IDTGB para un trámite existente, actualiza la BD y devuelve el resumen.
-     * Usado internamente por el sistema.
+     * Calcula el IDTGB para un trámite existente y actualiza la BD.
      */
     public function calculateAndSave(Tramite $tramite): array
     {
         $inmueble = $tramite->inmuebles->first();
         if (!$inmueble || !$inmueble->municipio) {
-            throw new \Exception("El trámite no tiene un inmueble con municipio asociado para el cálculo.");
+            throw new \Exception("El trámite no tiene un inmueble con municipio asociado.");
         }
 
-        // 1. Preparar datos para el cálculo desde el modelo Tramite
         $adquirentesData = $tramite->adquirentes->map(function ($adq) {
             return [
                 'parentesco_id' => $adq->parentesco_id,
@@ -29,206 +26,137 @@ class IdtgbCalculator
             ];
         })->all();
 
-        // CORREGIDO: Mapear desde la tabla pivote 'tramiteExenciones'
-        $exencionesData = $tramite->tramiteExenciones->map(function ($tramiteExencion) {
-            $exencion = $tramiteExencion->exencion; // Cargar la relación
+        $exencionesData = $tramite->tramiteExenciones->map(function ($te) {
             return [
-                'tipo' => $exencion->tipo,
-                'valor' => $exencion->valor,
-                'monto_maximo' => $exencion->monto_maximo,
+                'tipo' => $te->exencion->tipo,
+                'valor' => $te->exencion->valor,
+                'monto_maximo' => $te->exencion->monto_maximo,
             ];
         })->all();
 
-        // 2. Realizar el cálculo puro
         $resultados = $this->performCalculation(
             $tramite->base_imponible,
             $inmueble->municipio->provincia->departamento_id,
             $tramite->tipo_transmision_id,
-            $tramite->fecha_presentacion,
-            $tramite->fecha_transmision->toDateString(), // Pasar fecha_transmision
-            $tramite->fecha_vencimiento,
+            $tramite->fecha_presentacion ?? now()->toDateString(),
+            $tramite->fecha_transmision->toDateString(),
+            $tramite->fecha_vencimiento->toDateString(),
             $adquirentesData,
-            $exencionesData
+            $exencionesData,
+            $tramite->tipo_contribuyente ?? 'Natural'
         );
 
-        // 3. Persistir los resultados en la base de datos
+        // Actualización masiva de resultados en el trámite
         $tramite->update([
-            'total_idtgb'  => $resultados['idtgb'],
-            'recargo_mora' => $resultados['recargo'],
-            'ufv_aplicada' => $resultados['ufv_aplicada'], // ✅ Actualizar UFV aplicada
+            'total_idtgb'  => $resultados['idtgb_base'], // Tributo Omitido original
+            'recargo_mora' => $resultados['recargo'],    // Mant. Valor + Intereses + Multa
+            'ufv_aplicada' => $resultados['ufv_pago'],
             'monto_final'  => $resultados['final'],
-        ]);
-
-        // Actualizar proporcional de cada adquirente y exención
-        foreach ($tramite->adquirentes as $index => $adq) {
-            $adq->update([
-                'tasa_aplicada'      => $resultados['detalles_tasas'][$index]['tasa_aplicada'],
-                'idtgb_proporcional' => $resultados['detalles_tasas'][$index]['proporcional'],
-            ]);
-        }
-
-        // CORREGIDO: Actualizar el monto real aplicado para cada exención
-        foreach ($tramite->tramiteExenciones as $index => $tramiteExencion) {
-            // El array 'detalles_exenciones' debe ser creado en performCalculation
-            if (isset($resultados['detalles_exenciones'][$index])) {
-                $tramiteExencion->update([
-                    'monto_aplicado' => $resultados['detalles_exenciones'][$index]['monto_calculado'],
-                ]);
-            }
-        }
-        // Recargar la relación para que los nuevos montos estén disponibles
-        $tramite->load('tramiteExenciones');
-        $resultados['exenciones'] = $tramite->tramiteExenciones->sum('monto_aplicado');
-
-        // Recalcular el IDTGB final con las exenciones actualizadas
-        $resultados['idtgb'] = round(max(0, $resultados['tasas'] - $resultados['exenciones']), 2);
-        $resultados['final'] = round($resultados['idtgb'] + $resultados['recargo'], 2);
-
-        // Volver a guardar el trámite con el IDTGB y monto final correctos
-        $tramite->update([
-            'total_idtgb' => $resultados['idtgb'],
-            'monto_final' => $resultados['final'],
         ]);
 
         return $resultados;
     }
 
     /**
-     * Estima el IDTGB a partir de datos crudos, sin persistir nada en la BD.
-     * Usado por la calculadora pública.
+     * Estimación para la calculadora pública.
      */
-    public function calculateEstimate(
-        float $baseImponible,
-        int $departamentoId,
-        int $parentescoId,
-        int $tipoTransmisionId,
-        string $fechaTransmision, // ✅ Añadir fechaTransmision
-        string $fechaPresentacion,
-        string $fechaVencimiento
-    ): array {
-        // Para la estimación pública, asumimos un único adquirente con el 100%
-        $adquirentesData = [
-            [
-                'parentesco_id' => $parentescoId,
-                'porcentaje' => 100,
-            ]
-        ];
-
-        // La calculadora pública no maneja exenciones
-        $exencionesData = [];
-
+    public function calculateEstimate($base, $depId, $parId, $tipoId, $fTrans, $fPres, $fVenc, $contribuyente = 'Natural'): array
+    {
         return $this->performCalculation(
-            $baseImponible,
-            $departamentoId,
-            $tipoTransmisionId,
-            $fechaPresentacion,
-            $fechaTransmision, // ✅ Pasar fechaTransmision
-            $fechaVencimiento,
-            $adquirentesData,
-            $exencionesData
+            $base, $depId, $tipoId, $fPres, $fTrans, $fVenc,
+            [['parentesco_id' => $parId, 'porcentaje' => 100]],
+            [], $contribuyente
         );
     }
 
     /**
-     * Lógica de cálculo pura, sin efectos secundarios (sin queries de update).
+     * LÓGICA CORE: Aplicación de la Ley 812 (Bolivia)
      */
-    private function performCalculation(
-        float $base,
-        int $departamentoId,
-        int $tipoTransmisionId,
-        string $fechaPresentacion,
-        string $fechaTransmision, // ✅ Añadir fechaTransmision
-        string $fechaVencimiento,
-        array $adquirentes,
-        array $exenciones
-    ): array {
+    private function performCalculation($base, $depId, $tipoId, $fPres, $fTrans, $fVenc, $adquirentes, $exenciones, $tipoContribuyente): array
+    {
+        // 1. Cálculo del Tributo Omitido (TO) base
         $totalTasas = 0;
         $detallesTasas = [];
-
-        // 1. Tasas por adquirente
         foreach ($adquirentes as $adq) {
-            $tasa = $this->tasaVigente(
-                $departamentoId,
-                $adq['parentesco_id'],
-                $tipoTransmisionId,
-                $fechaPresentacion
-            );
-
-            $tasaAplicada = $tasa ? $tasa->tasa : 0;
-            $porcentaje   = max(0, min(100, (float) $adq['porcentaje']));
-            $proporcional = round($base * ($porcentaje / 100) * ($tasaAplicada / 100), 2);
-
+            $tasaModel = $this->tasaVigente($depId, $adq['parentesco_id'], $fPres);
+            $tasaVal = $tasaModel ? $tasaModel->tasa : 0;
+            $proporcional = round($base * ($adq['porcentaje'] / 100) * ($tasaVal / 100), 2);
             $totalTasas += $proporcional;
-            $detallesTasas[] = [
-                'tasa_aplicada' => $tasaAplicada,
-                'proporcional' => $proporcional,
-            ];
+            $detallesTasas[] = ['tasa_aplicada' => $tasaVal, 'proporcional' => $proporcional];
         }
 
-        // 2. Exenciones
+        // 2. Aplicar Exenciones
         $totalExenciones = 0;
-        $detallesExenciones = []; // <-- NUEVO: Para guardar detalles
         foreach ($exenciones as $ex) {
-            $monto = match ($ex['tipo']) {
-                'porcentaje' => min($totalTasas * ($ex['valor'] / 100), $ex['monto_maximo'] ?? PHP_FLOAT_MAX),
-                default      => min($ex['valor'],               $ex['monto_maximo'] ?? PHP_FLOAT_MAX),
-            };
-            $montoCalculado = round($monto, 2);
-            $totalExenciones += $montoCalculado;
-            $detallesExenciones[] = [
-                'monto_calculado' => $montoCalculado
-            ];
+            $monto = ($ex['tipo'] === 'porcentaje')
+                ? ($totalTasas * ($ex['valor'] / 100))
+                : $ex['valor'];
+            $totalExenciones += round(min($monto, $ex['monto_maximo'] ?? $monto), 2);
         }
 
-        $idtgb = round(max(0, $totalTasas - $totalExenciones), 2);
+        $idtgbBase = max(0, $totalTasas - $totalExenciones);
 
-        // 3. Recargo por mora
-        $recargo = 0;
-        $ahora = \Carbon\Carbon::parse($fechaPresentacion)->startOfDay();
-        $vencimiento = \Carbon\Carbon::parse($fechaVencimiento)->startOfDay();
-
+        // 3. Componentes de la Deuda Tributaria (Art. 47 Ley 812)
+        $mantenimientoValor = 0;
+        $interes = 0;
+        $multaIdf = 0;
         $diasMora = 0;
-        if ($ahora->isAfter($vencimiento)) {
-            $diasMora = $ahora->diffInDays($vencimiento);
-            $recargo = round($idtgb * 0.01 * min($diasMora, 60), 2);
+
+        $fechaPago = Carbon::parse($fPres)->startOfDay();
+        $fechaVenc = Carbon::parse($fVenc)->startOfDay();
+
+        // Recuperar UFVs (Importante: deben existir en tu BD)
+        $ufvVencimiento = Ufv::getValorEnFecha($fechaVenc);
+        $ufvPago = Ufv::getValorEnFecha($fechaPago);
+
+        if ($fechaPago->isAfter($fechaVenc)) {
+            $diasMora = $fechaPago->diffInDays($fechaVenc);
+
+            // A. Mantenimiento de Valor (TO en UFVs)
+            $tributoActualizado = $idtgbBase * ($ufvPago / $ufvVencimiento);
+            $mantenimientoValor = max(0, $tributoActualizado - $idtgbBase);
+
+            // B. Intereses Moratorios (Tasa Escalonada Ley 812)
+            $aniosMora = $diasMora / 360; // Año comercial boliviano
+            $r = 0.04; // 4% primeros 4 años
+            if ($aniosMora > 4) $r = 0.06; // 6% del año 5 al 7
+            if ($aniosMora > 7) $r = 0.10; // 10% desde el año 8
+
+            // Fórmula: I = TO_actualizado * ((1 + r/360)^n - 1)
+            $interes = $tributoActualizado * (pow(1 + ($r / 360), $diasMora) - 1);
+
+            // C. Multa IDF (Incumplimiento de Deberes Formales)
+            // Natural: 50 UFV | Jurídica: 100 UFV
+            $cantUfvMulta = ($tipoContribuyente === 'Jurídica') ? 100 : 50;
+            $multaIdf = $cantUfvMulta * $ufvPago;
         }
 
-        $final = round($idtgb + $recargo, 2);
-
-        // 4. Obtener UFV aplicada (la más reciente en o antes de la fecha de transmisión)
-        $ufvAplicada = \App\Models\Ufv::whereDate('fecha', '<=', $fechaTransmision)
-                                       ->orderBy('fecha', 'desc')->first()?->valor ?? 1.00000;
+        $recargoTotal = $mantenimientoValor + $interes + $multaIdf;
+        $final = $idtgbBase + $recargoTotal;
 
         return [
-            'base'           => $base,
-            'tasas'          => $totalTasas,
-            'exenciones'     => $totalExenciones,
-            'idtgb'          => $idtgb,
-            'recargo'        => $recargo,
-            'final'          => $final,
-            'dias_mora'      => $diasMora,
-            'ufv_aplicada'   => $ufvAplicada, // ✅ Devolver UFV aplicada
+            'base' => $base,
+            'idtgb_base' => round($idtgbBase, 2), // S900
+            'mantenimiento_valor' => round($mantenimientoValor, 2), // S920
+            'interes' => round($interes, 2), // S930
+            'multa_idf' => round($multaIdf, 2), // S900 (Multa)
+            'recargo' => round($recargoTotal, 2),
+            'final' => round($final, 2),
+            'dias_mora' => $diasMora,
+            'ufv_vencimiento' => $ufvVencimiento,
+            'ufv_pago' => $ufvPago,
             'detalles_tasas' => $detallesTasas,
-            'detalles_exenciones' => $detallesExenciones, // <-- NUEVO: Devolver detalles
+            'fecha_transmision' => Carbon::parse($fTrans)->format('d/m/Y'),
+            'fecha_vencimiento' => $fechaVenc->format('d/m/Y'),
         ];
     }
 
-    /**
-     * Busca la tasa vigente para una combinación de parámetros en una fecha dada.
-     */
-    private function tasaVigente(int $departamentoId, int $parentescoId, ?int $tipoTransmisionId, string $fecha): ?Tasa
+    private function tasaVigente($depId, $parId, $fecha)
     {
-        return Tasa::where('departamento_id', $departamentoId)
-                ->where('parentesco_id', $parentescoId)
-                ->where(function($query) use ($tipoTransmisionId) {
-                    // Buscar tasas que coincidan con el tipo de transmisión ESPECÍFICO
-                    // O tasas que sean NULL (aplican a todos los tipos)
-                    $query->where('tipo_transmision_id', $tipoTransmisionId)
-                            ->orWhereNull('tipo_transmision_id');
-                })
-                ->where('vigente_desde', '<=', $fecha)
-                ->where(fn($q) => $q->whereNull('vigente_hasta')->orWhere('vigente_hasta', '>=', $fecha))
-                ->orderBy('tipo_transmision_id', 'desc') // Priorizar la tasa específica sobre la genérica
-                ->first();
+        return Tasa::where('departamento_id', $depId)
+            ->where('parentesco_id', $parId)
+            ->where('vigente_desde', '<=', $fecha)
+            ->where(fn($q) => $q->whereNull('vigente_hasta')->orWhere('vigente_hasta', '>=', $fecha))
+            ->first();
     }
 }
