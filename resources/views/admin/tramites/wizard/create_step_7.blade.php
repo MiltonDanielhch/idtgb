@@ -18,7 +18,6 @@
             </div>
         @endif
 
-        <!-- Resumen de Datos Generales -->
         <div class="row">
             <div class="col-md-12">
                 <h5><i class="voyager-document"></i> Datos del Trámite</h5>
@@ -51,52 +50,31 @@
             </div>
         </div>
 
-        <!-- Resumen de Disponentes -->
         <div class="row">
             <div class="col-md-12">
                 <h5><i class="voyager-people"></i> Disponentes ({{ $disponentes->count() }})</h5>
                 <div class="row">
                     @foreach($disponentes as $disponente)
                         <div class="col-md-6">
-                            <div class="card mb-3">
+                            <div class="card mb-3" style="border: 1px solid #f1f1f1; padding: 10px; margin-bottom: 10px; border-radius: 5px;">
                                 <div class="card-body">
-                                    <h6 class="card-title">{{ $disponente->display_name ?? 'N/A' }}</h6>
-                                    <p class="card-text small text-muted mb-1">
-                                        <strong>Documento:</strong> {{ $disponente->display_document ?? 'N/A' }}
-                                    </p>
-                                    <p class="card-text small text-muted mb-1">
-                                        <strong>Tipo:</strong> {{ $disponente->person_type ?? 'N/A' }}
-                                    </p>
-                                    <p class="card-text small text-muted mb-1">
-                                        <strong>Ubicación:</strong>
+                                    <h6 class="card-title"><strong>{{ $disponente->display_name ?? 'N/A' }}</strong></h6>
+                                    <p class="card-text small text-muted mb-1"><strong>Documento:</strong> {{ $disponente->display_document ?? 'N/A' }}</p>
+                                    <p class="card-text small text-muted mb-1"><strong>Tipo:</strong> {{ $disponente->person_type ?? 'N/A' }}</p>
+                                    <p class="card-text small text-muted mb-1"><strong>Ubicación:</strong>
                                         @php
-                                            $ubicacion = 'Ubicación no especificada';
+                                            $ubicacion = 'No especificada';
                                             try {
                                                 if ($disponente->municipio) {
-                                                    $ubicacion = $disponente->municipio->nombre ?? 'Municipio no especificado';
+                                                    $ubicacion = $disponente->municipio->nombre;
                                                     if ($disponente->municipio->provincia) {
-                                                        $ubicacion .= ', ' . ($disponente->municipio->provincia->nombre ?? 'Provincia no especificada');
-                                                        if ($disponente->municipio->provincia->departamento) {
-                                                            $ubicacion .= ', ' . ($disponente->municipio->provincia->departamento->nombre ?? 'Departamento no especificado');
-                                                        }
+                                                        $ubicacion .= ', ' . $disponente->municipio->provincia->nombre;
                                                     }
                                                 }
-                                            } catch (\Exception $e) {
-                                                $ubicacion = 'Ubicación no disponible';
-                                            }
+                                            } catch (\Exception $e) { $ubicacion = 'Error al cargar'; }
                                         @endphp
                                         {{ $ubicacion }}
                                     </p>
-                                    @if($disponente->email)
-                                        <p class="card-text small text-muted mb-1">
-                                            <strong>Email:</strong> {{ $disponente->email }}
-                                        </p>
-                                    @endif
-                                    @if($disponente->phone)
-                                        <p class="card-text small text-muted mb-1">
-                                            <strong>Teléfono:</strong> {{ $disponente->phone }}
-                                        </p>
-                                    @endif
                                 </div>
                             </div>
                         </div>
@@ -106,45 +84,17 @@
             </div>
         </div>
 
-        <!-- Resumen de Adquirentes -->
         <div class="row">
             <div class="col-md-12">
                 <h5><i class="voyager-people"></i> Adquirentes ({{ $adquirentes->count() }})</h5>
                 <div class="row">
                     @foreach($adquirentes as $adquirente)
                         <div class="col-md-6">
-                            <div class="card mb-3">
+                            <div class="card mb-3" style="border: 1px solid #f1f1f1; padding: 10px; margin-bottom: 10px; border-radius: 5px;">
                                 <div class="card-body">
-                                    <h6 class="card-title">{{ $adquirente->display_name ?? 'N/A' }}</h6>
-                                    <p class="card-text small text-muted mb-1">
-                                        <strong>Documento:</strong> {{ $adquirente->display_document ?? 'N/A' }}
-                                    </p>
-                                    <p class="card-text small text-muted mb-1">
-                                        <strong>Tipo:</strong> {{ $adquirente->person_type ?? 'N/A' }}
-                                    </p>
-                                    <p class="card-text small text-muted mb-1">
-                                        <strong>Parentesco:</strong> {{ $adquirente->parentesco_nombre ?? 'No especificado' }}
-                                    </p>
-                                    <p class="card-text small text-muted mb-1">
-                                        <strong>Ubicación:</strong>
-                                        @php
-                                            $ubicacion = 'Ubicación no especificada';
-                                            try {
-                                                if ($adquirente->municipio) {
-                                                    $ubicacion = $adquirente->municipio->nombre ?? 'Municipio no especificado';
-                                                    if ($adquirente->municipio->provincia) {
-                                                        $ubicacion .= ', ' . ($adquirente->municipio->provincia->nombre ?? 'Provincia no especificada');
-                                                        if ($adquirente->municipio->provincia->departamento) {
-                                                            $ubicacion .= ', ' . ($adquirente->municipio->provincia->departamento->nombre ?? 'Departamento no especificado');
-                                                        }
-                                                    }
-                                                }
-                                            } catch (\Exception $e) {
-                                                $ubicacion = 'Ubicación no disponible';
-                                            }
-                                        @endphp
-                                        {{ $ubicacion }}
-                                    </p>
+                                    <h6 class="card-title"><strong>{{ $adquirente->display_name ?? 'N/A' }}</strong></h6>
+                                    <p class="card-text small text-muted mb-1"><strong>Documento:</strong> {{ $adquirente->display_document ?? 'N/A' }}</p>
+                                    <p class="card-text small text-muted mb-1"><strong>Parentesco:</strong> {{ $adquirente->parentesco_nombre ?? 'No especificado' }}</p>
                                 </div>
                             </div>
                         </div>
@@ -154,66 +104,74 @@
             </div>
         </div>
 
-        <!-- Resumen de Inmuebles -->
         <div class="row">
             <div class="col-md-12">
-                <h5><i class="voyager-home"></i> Inmuebles ({{ $inmuebles->count() }})</h5>
-                <div class="row">
-                    @foreach($inmuebles as $inmueble)
-                        <div class="col-md-6">
-                            <div class="card mb-3">
-                                <div class="card-body">
-                                    <h6 class="card-title">Catastro: {{ $inmueble->catastro ?? 'N/A' }}</h6>
-                                    <p class="card-text small text-muted mb-1">
-                                        <strong>Dirección:</strong> {{ $inmueble->direccion ?? 'N/A' }}
-                                    </p>
-                                    <p class="card-text small text-muted mb-1">
-                                        <strong>Tipo Inmueble:</strong> {{ $inmueble->tipoInmueble->nombre ?? 'N/A' }}
-                                    </p>
-                                    <p class="card-text small text-muted mb-1">
-                                        <strong>Ubicación:</strong>
-                                        @php
-                                            $ubicacion = 'Ubicación no especificada';
-                                            try {
-                                                if ($inmueble->municipio) {
-                                                    $ubicacion = $inmueble->municipio->nombre ?? 'Municipio no especificado';
-                                                    if ($inmueble->municipio->provincia) {
-                                                        $ubicacion .= ', ' . ($inmueble->municipio->provincia->nombre ?? 'Provincia no especificada');
-                                                        if ($inmueble->municipio->provincia->departamento) {
-                                                            $ubicacion .= ', ' . ($inmueble->municipio->provincia->departamento->nombre ?? 'Departamento no especificado');
-                                                        }
-                                                    }
-                                                }
-                                            } catch (\Exception $e) {
-                                                $ubicacion = 'Ubicación no disponible';
-                                            }
-                                        @endphp
-                                        {{ $ubicacion }}
-                                    </p>
-                                    <p class="card-text small text-muted mb-1">
-                                        <strong>Valor Catastral:</strong>
-                                        {{ isset($inmueble->valor_catastral) ? 'Bs. ' . number_format($inmueble->valor_catastral, 2) : 'N/A' }}
-                                    </p>
-                                    @if($inmueble->matricula_rr)
-                                        <p class="card-text small text-muted mb-1">
-                                            <strong>Matrícula RR:</strong> {{ $inmueble->matricula_rr }}
-                                        </p>
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
-                    @endforeach
+                <h5><i class="voyager-calculator"></i> Liquidación de Impuesto Determinada</h5>
+                <div class="panel panel-bordered" style="border: 1px solid #eee;">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-bordered" style="margin-bottom: 0;">
+                            <thead>
+                                <tr style="background-color: #f5f5f5;">
+                                    <th class="text-center" width="50%">Concepto</th>
+                                    <th class="text-center">Detalle / Factor</th>
+                                    <th class="text-center">Monto (Bs.)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Impuesto Determinado (IDTGB)</strong></td>
+                                    <td class="text-center">Tasa: {{ $liquidacion['tasa_aplicada'] }}%</td>
+                                    <td class="text-right">{{ number_format($liquidacion['idtgb_base'], 2) }}</td>
+                                </tr>
+
+                                @if($liquidacion['dias_mora'] > 0)
+                                    <tr>
+                                        <td>Mantenimiento de Valor</td>
+                                        <td class="text-center">UFV Final: {{ $liquidacion['ufv_pago'] }}</td>
+                                        <td class="text-right">{{ number_format($liquidacion['mantenimiento_valor'], 2) }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Intereses por Mora</td>
+                                        <td class="text-center">Tasa: {{ $liquidacion['tasa_mora'] }}% ({{ $liquidacion['dias_mora'] }} días)</td>
+                                        <td class="text-right">{{ number_format($liquidacion['interes'], 2) }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Multa por Incumplimiento (IDF)</td>
+                                        <td class="text-center">Sanción por mora</td>
+                                        <td class="text-right">{{ number_format($liquidacion['multa_idf'], 2) }}</td>
+                                    </tr>
+                                @else
+                                    <tr>
+                                        <td colspan="2" class="text-muted text-center"><em>Dentro de plazo legal (Sin recargos)</em></td>
+                                        <td class="text-right">0.00</td>
+                                    </tr>
+                                @endif
+                            </tbody>
+                            <tfoot>
+                                <tr style="font-size: 1.3em; background-color: #22a7f0; color: white;">
+                                    <th colspan="2" class="text-right">TOTAL A PAGAR:</th>
+                                    <th class="text-right">Bs. {{ number_format($liquidacion['final'], 2) }}</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
                 </div>
+
+                @if($liquidacion['dias_mora'] > 0)
+                    <div class="alert alert-warning" style="margin-top: -10px; border-radius: 0 0 5px 5px;">
+                        <i class="voyager-info-circle"></i>
+                        Atención: Se han calculado cargos adicionales debido a <strong>{{ $liquidacion['dias_mora'] }} días</strong> de mora desde la fecha de vencimiento ({{ $liquidacion['fecha_vencimiento'] }}).
+                    </div>
+                @endif
                 <hr>
             </div>
         </div>
 
-        <!-- Resumen de Documentos -->
         <div class="row">
             <div class="col-md-12">
-                <h5><i class="voyager-folder"></i> Documentos a Guardar ({{ $documentos->count() }})</h5>
+                <h5><i class="voyager-folder"></i> Documentos Adjuntos ({{ $documentos->count() }})</h5>
                 @if($documentos->count() > 0)
-                <table class="table table-striped table-condensed">
+                <table class="table table-striped">
                     <thead>
                         <tr>
                             <th>Tipo</th>
@@ -234,36 +192,6 @@
                 @else
                 <p class="text-muted">No se adjuntaron documentos.</p>
                 @endif
-                <hr>
-            </div>
-        </div>
-
-        <!-- Resumen de Exenciones -->
-        <div class="row">
-            <div class="col-md-12">
-                <h5><i class="voyager-gift"></i> Exenciones Aplicadas ({{ $exenciones->count() }})</h5>
-                @if($exenciones->count() > 0)
-                <table class="table table-striped table-condensed">
-                    <thead>
-                        <tr>
-                            <th>Nombre</th>
-                            <th>Tipo</th>
-                            <th>Valor</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($exenciones as $exencion)
-                            <tr>
-                                <td>{{ $exencion->nombre }}</td>
-                                <td>{{ ucfirst(str_replace('_', ' ', $exencion->tipo)) }}</td>
-                                <td>{{ $exencion->tipo == 'porcentaje' ? number_format($exencion->valor, 2) . '%' : 'Bs. ' . number_format($exencion->valor, 2) }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-                @else
-                <p class="text-muted">No se aplicaron exenciones.</p>
-                @endif
             </div>
         </div>
     </div>
@@ -281,7 +209,7 @@
             <div class="col-md-6 text-right">
                 <form action="{{ route('admin.tramites.wizard.store') }}" method="POST" style="display: inline;">
                     @csrf
-                    <button type="submit" class="btn btn-success btn-lg">
+                    <button type="submit" class="btn btn-success btn-lg" onclick="return confirm('¿Está seguro de que desea finalizar y registrar este trámite?')">
                         <i class="voyager-check"></i> Confirmar y Guardar Trámite
                     </button>
                 </form>

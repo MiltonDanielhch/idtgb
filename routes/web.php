@@ -55,9 +55,10 @@ Route::get('/', function () {
 // RUTAS PÚBLICAS (Sin autenticación)
 // -------------------------------------------------------------------------
 Route::get('/calculadora-idtgb-beni', [CalculadoraBeniController::class, 'formulario'])->name('calculadora.beni.form'); // Mantenida por si hay enlaces directos
-Route::post('/calculadora-idtgb-beni', [CalculadoraBeniController::class, 'calcular'])->name('calculadora.beni.calcular');
-Route::post('/calculadora-idtgb-beni-pdf', [CalculadoraBeniController::class, 'descargarPdf'])->name('calculadora.beni.pdf');
-
+// Cambia esto:
+Route::post('/calculadora-idtgb-beni', [CalculadoraBeniController::class, 'calcular'])->name('calculadora.beni.post'); // Cambiado de .calcular a .post
+Route::get('/calculadora-idtgb-beni-pdf', [CalculadoraBeniController::class, 'descargarPdf'])->name('calculadora.beni.pdf'); // Cambiado de POST a GET (para descarga directa)
+    
 Route::get('/validar/{hash}', [ValidacionController::class, 'show'])->name('tramite.validar');
 
 // Ruta para mostrar el tutorial del ciudadano

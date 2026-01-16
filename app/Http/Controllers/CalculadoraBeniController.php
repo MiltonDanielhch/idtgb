@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Departamento;
 use App\Models\Parentesco;
 use App\Models\TipoTransmision;
-use App\Models\Ufv;
 use App\Services\IdtgbCalculator;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
@@ -17,95 +16,85 @@ class CalculadoraBeniController extends Controller
         $parentescos = Parentesco::all();
         $tipos_transmision = TipoTransmision::all();
 
-        return view('calculadora_beni_interactivo', compact('parentescos', 'tipos_transmision'));
+        return view('calculadora_beni_interactivo', [
+                'parentescos' => $parentescos,
+                'tipos_transmision' => $tipos_transmision,
+                'nro_tramite' => null
+            ]);
     }
 
     public function calcular(Request $request, IdtgbCalculator $calculator)
     {
         $request->validate([
+            'nombre_sujeto'      => 'nullable|string|max:150',
+            'ci_sujeto'          => 'nullable|string|max:20',
             'tipo_contribuyente' => 'required|in:Natural,Jurídica',
             'parentesco_id'      => 'required|exists:parentescos,id',
             'fecha_transmision'  => 'required|date',
             'base_imponible'     => 'required|numeric|min:0.01',
             'tipo_transmision'   => 'required|string',
+            'participacion'      => 'required|numeric|min:1|max:100',
         ]);
 
-        // 1. Configuración de parámetros para el Beni
         $beniId = Departamento::where('codigo', 'BE')->firstOrFail()->id;
-        $tipoTransmisionId = TipoTransmision::where('nombre', $request->tipo_transmision)->first()
-            ?->id ?? TipoTransmision::first()->id;
+        $tipoTransmisionId = TipoTransmision::where('nombre', $request->tipo_transmision)->first()?->id ?? 1;
 
         $fecha_transmision = Carbon::parse($request->fecha_transmision);
-
-        // CORRECCIÓN LEGAL: El plazo para IDTGB (sucesiones/donaciones) es de 90 días
         $fecha_vencimiento = $fecha_transmision->copy()->addDays(90);
 
-        // 2. Ejecutar el cálculo mediante el Servicio
+        // Ejecutar el cálculo con el nuevo factor de participación
         $calculo = $calculator->calculateEstimate(
             (float)$request->base_imponible,
             $beniId,
             (int)$request->parentesco_id,
             $tipoTransmisionId,
             $fecha_transmision->toDateString(),
-            Carbon::now()->toDateString(), // Fecha de hoy (Presentación/Pago)
+            Carbon::now()->toDateString(),
             $fecha_vencimiento->toDateString(),
-            $request->tipo_contribuyente
+            $request->tipo_contribuyente,
+            (float)$request->participacion
         );
 
-        // 3. Preparar respuesta para la vista (Boleta Ley 812)
-        return response()->json([
-            'tipo_contribuyente' => $request->tipo_contribuyente,
-            'fecha_transmision'  => $calculo['fecha_transmision'],
-            'fecha_vencimiento'  => $calculo['fecha_vencimiento'],
-            'base_imponible'     => $calculo['base'],
-            'tasa'               => $calculo['detalles_tasas'][0]['tasa_aplicada'] ?? 0,
-            'idtgb_base'         => $calculo['idtgb_base'],      // S900 (Tributo Omitido)
-            'mantenimiento_valor'=> $calculo['mantenimiento_valor'], // S920
-            'interes'            => $calculo['interes'],            // S930
-            'multa_idf'          => $calculo['multa_idf'],          // S900 (Multa)
-            'dias_mora'          => $calculo['dias_mora'],
-            'ufv_aplicada'       => $calculo['ufv_pago'],
-            'final'              => $calculo['final']               // Total Deuda
-        ]);
+        // Añadimos los datos del sujeto al array de respuesta
+        return response()->json(array_merge($calculo, [
+            'nombre_sujeto' => strtoupper($request->nombre_sujeto ?? 'CONSULTA REFERENCIAL'),
+            'ci_sujeto'     => $request->ci_sujeto ?? 'S/N',
+        ]));
     }
 
     public function descargarPdf(Request $request, IdtgbCalculator $calculator)
     {
-        $request->validate([
-            'tipo_contribuyente' => 'required|in:Natural,Jurídica',
-            'parentesco_id'      => 'required|exists:parentescos,id',
-            'fecha_transmision'  => 'required|date',
-            'base_imponible'     => 'required|numeric|min:0.01',
-            'tipo_transmision'   => 'required|string',
-        ]);
+        // El PDF requiere los mismos datos que el cálculo
+        $beniId = Departamento::where('codigo', 'BE')->firstOrFail()->id;
+        $tipoTransmisionId = TipoTransmision::where('nombre', $request->tipo_transmision)->first()?->id ?? 1;
 
-        // 1. DEFINICIÓN DE VARIABLES (Esto elimina el error P1008)
-        $beniId = \App\Models\Departamento::where('codigo', 'BE')->firstOrFail()->id;
-
-        $tipoTransmisionId = \App\Models\TipoTransmision::where('nombre', $request->tipo_transmision)->first()
-            ?->id ?? \App\Models\TipoTransmision::first()->id;
-
-        $fecha_transmision = \Carbon\Carbon::parse($request->fecha_transmision);
-
-        // CORRECCIÓN LEGAL: 90 días de plazo (Ley 812)
+        $fecha_transmision = Carbon::parse($request->fecha_transmision);
         $fecha_vencimiento = $fecha_transmision->copy()->addDays(90);
 
-        // 2. Ejecutar el cálculo
         $calculo = $calculator->calculateEstimate(
             (float)$request->base_imponible,
             $beniId,
             (int)$request->parentesco_id,
             $tipoTransmisionId,
-            $fecha_transmision->toDateString(),
-            \Carbon\Carbon::now()->toDateString(), // Fecha de Pago (hoy)
+            $request->fecha_transmision,
+            Carbon::now()->toDateString(),
             $fecha_vencimiento->toDateString(),
-            $request->tipo_contribuyente
+            $request->tipo_contribuyente,
+            (float)$request->participacion
         );
 
-        // 3. Generar el PDF
-        // Pasamos el array $calculo que contiene idtgb_base, interes, multa_idf, etc.
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.calculo_estimado_beni', $calculo);
+        // Datos adicionales para el reporte formal
+        $dataReporte = array_merge($calculo, [
+            'nombre_sujeto' => strtoupper($request->nombre_sujeto ?? 'CONSULTA REFERENCIAL'),
+            'ci_sujeto'     => $request->ci_sujeto ?? 'S/N',
+            'tipo_contribuyente' => $request->tipo_contribuyente,
+            'telefono'      => $request->telefono ?? '',
+            'parentesco'    => Parentesco::find($request->parentesco_id)->nombre,
+            'tipo_transmision_nombre' => $request->tipo_transmision
+        ]);
 
-        return $pdf->download('IDTGB_Beni_Calculo_Estimado.pdf');
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.calculo_estimado_beni', $dataReporte);
+
+        return $pdf->download('Preliquidacion_IDTGB_Beni_' . $calculo['nro_tramite'] . '.pdf');
     }
 }

@@ -1,138 +1,194 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
     <meta charset="utf-8">
+    <title>Preliquidación IDTGB Beni - {{ $nro_tramite }}</title>
     <style>
+        @page { margin: 1.5cm; }
         body {
-            font-family: DejaVu Sans, sans-serif;
+            font-family: 'Helvetica', 'Arial', sans-serif;
             font-size: 11px;
-            line-height: 1.4;
             color: #333;
+            line-height: 1.4;
         }
         .header {
             text-align: center;
-            border-bottom: 2px solid #007A33;
-            padding-bottom: 5px;
+            border-bottom: 3px solid #007A33;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
         }
-        .header h2 { color: #007A33; margin: 0; font-size: 16px; }
-        .disclaimer {
-            background-color: #fff3cd;
-            padding: 10px;
-            border: 1px solid #ffeaa7;
-            color: #856404;
-            font-size: 9px;
+        .header h1 { color: #007A33; margin: 0; font-size: 18px; text-transform: uppercase; }
+        .header p { margin: 2px 0; font-size: 10px; font-weight: bold; }
+
+        .tramite-box {
+            float: right;
+            border: 1px solid #000;
+            padding: 8px;
             text-align: center;
-            margin: 10px 0;
-            border-radius: 4px;
+            background-color: #f2f2f2;
         }
+
         .section-title {
-            background-color: #f0f8f0;
-            padding: 5px;
+            background-color: #007A33;
+            color: white;
+            padding: 5px 10px;
             font-weight: bold;
-            border-left: 4px solid #007A33;
-            margin-top: 15px;
+            margin: 15px 0 10px;
+            border-radius: 3px;
         }
+
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 5px;
+            margin-bottom: 10px;
         }
-        th, td {
-            border: 1px solid #eee;
-            padding: 6px;
-            text-align: left;
-        }
-        th { width: 40%; background-color: #fafafa; }
-        .boleta-table { border: 1px solid #007A33; }
-        .boleta-table td { border: none; padding: 4px 10px; }
-        .text-right { text-align: right; }
-        .bold { font-weight: bold; }
-        .total-box {
+        table, th, td { border: 1px solid #ccc; }
+        th { background-color: #f9f9f9; padding: 6px; text-align: left; width: 30%; }
+        td { padding: 6px; }
+
+        .boleta-oficial {
             margin-top: 20px;
-            text-align: right;
-            font-size: 14px;
+            border: 2px solid #333;
+            padding: 15px;
+            background-color: #fff;
+        }
+        .linea-detalle {
+            border-bottom: 1px dotted #999;
+            margin-bottom: 8px;
+            overflow: hidden;
+        }
+        .linea-detalle span:first-child { float: left; background: white; padding-right: 5px; }
+        .linea-detalle span:last-child { float: right; background: white; padding-left: 5px; font-weight: bold; }
+
+        .total-final {
+            font-size: 16px;
             color: #007A33;
+            text-align: right;
+            margin-top: 15px;
             border-top: 2px solid #007A33;
             padding-top: 10px;
         }
+
         .footer {
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-            font-size: 8px;
+            margin-top: 40px;
+            font-size: 9px;
             text-align: center;
-            color: #999;
+            color: #666;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+        .nota-importante {
+            margin-top: 15px;
+            font-size: 9px;
+            background-color: #fff3cd;
+            padding: 10px;
+            border: 1px solid #ffeaa7;
         }
     </style>
 </head>
 <body>
+
+    <div class="tramite-box">
+        <strong>NRO. TRÁMITE</strong><br>
+        <span style="font-size: 14px;">{{ $nro_tramite }}</span>
+    </div>
+
     <div class="header">
-        <h2>GOBIERNO AUTÓNOMO DEPARTAMENTAL DEL BENI</h2>
-        <p style="margin:2px">Dirección de Recaudaciones y Políticas Tributarias</p>
-        <p><strong>REPORTE DE SIMULACIÓN IDTGB - LEY 1097 / LEY 812</strong></p>
+        <h1>Gobierno Autónomo Departamental del Beni</h1>
+        <p>DIRECCIÓN DE RECAUDACIONES Y POLÍTICA TRIBUTARIA</p>
+        <p>SISTEMA DE PRELIQUIDACIÓN DE IMPUESTOS DEPARTAMENTALES</p>
     </div>
 
-    <div class="disclaimer">
-        ⚠️ ESTE DOCUMENTO ES UNA SIMULACIÓN ESTIMADA Y NO CONSTITUYE UN TÍTULO VALOR NI COMPROBANTE DE PAGO OFICIAL.<br>
-        EL CÁLCULO ESTÁ SUJETO A REVISIÓN POR PARTE DE LOS TÉCNICOS DE LA GOBERNACIÓN DEL BENI.
-    </div>
-
-    <div class="section-title">DATOS DE LA TRANSMISIÓN</div>
+    <div class="section-title">1. Identificación del Sujeto Pasivo</div>
     <table>
         <tr>
-            <th>Tipo de Contribuyente</th>
-            <td>{{ $tipo_contribuyente ?? 'Natural' }}</td>
+            <th>Nombre / Razón Social:</th>
+            <td>{{ strtoupper($nombre_sujeto) }}</td>
         </tr>
         <tr>
-            <th>Base Imponible Declarada</th>
-            <td>Bs. {{ number_format($base_imponible ?? $base, 2, ',', '.') }}</td>
+            <th>C.I. / NIT:</th>
+            <td>{{ $ci_sujeto }}</td>
         </tr>
         <tr>
-            <th>Fecha de Transmisión</th>
+            <th>Parentesco / Alícuota:</th>
+            <td>{{ $parentesco }} ({{ $tasa_aplicada }}%)</td>
+        </tr>
+    </table>
+
+    <div class="section-title">2. Información del Bien y Transmisión</div>
+    <table>
+        <tr>
+            <th>Tipo de Transmisión:</th>
+            <td>{{ $tipo_transmision_nombre }}</td>
+        </tr>
+        <tr>
+            <th>Fecha Hecho Generador:</th>
             <td>{{ $fecha_transmision }}</td>
         </tr>
         <tr>
-            <th>Fecha de Vencimiento</th>
-            <td>{{ $fecha_vencimiento }} (90 días calendario)</td>
+            <th>Base Imponible (100%):</th>
+            <td>Bs. {{ number_format($base_original, 2, ',', '.') }}</td>
         </tr>
         <tr>
-            <th>UFV de Pago Aplicada</th>
-            <td>{{ number_format($ufv_pago ?? 0, 5) }}</td>
+            <th>% Participación:</th>
+            <td>{{ $participacion }}%</td>
+        </tr>
+        <tr>
+            <th>Base Imponible Sujeto:</th>
+            <td>Bs. {{ number_format($base_imponible_calculada, 2, ',', '.') }}</td>
         </tr>
     </table>
 
-    <div class="section-title">DETALLE DE LA DEUDA TRIBUTARIA (CÁLCULO LEY 812)</div>
-    <table class="boleta-table">
-        <tr>
-            <td>Tributo Omitido (S900)</td>
-            <td class="text-right bold">Bs. {{ number_format($idtgb_base, 2, ',', '.') }}</td>
-        </tr>
-        <tr>
-            <td>Mantenimiento de Valor (S920)</td>
-            <td class="text-right">Bs. {{ number_format($mantenimiento_valor, 2, ',', '.') }}</td>
-        </tr>
-        <tr>
-            <td>Intereses Moratorios (S930)</td>
-            <td class="text-right">Bs. {{ number_format($interes, 2, ',', '.') }}</td>
-        </tr>
-        <tr>
-            <td>Multa por Incumplimiento (S900)</td>
-            <td class="text-right">Bs. {{ number_format($multa_idf, 2, ',', '.') }}</td>
-        </tr>
-        @if($dias_mora > 0)
-        <tr>
-            <td colspan="2" style="color:red; font-size: 9px;">* Cálculo realizado con {{ $dias_mora }} días de mora.</td>
-        </tr>
-        @endif
-    </table>
+    <div class="section-title">3. Liquidación de la Deuda Tributaria</div>
+    <div class="boleta-oficial">
+        <div style="margin-bottom: 10px; font-weight: bold;">
+            ESTADO AL {{ now()->format('d/m/Y') }}:
+            <span style="color: {{ $dias_mora > 0 ? '#d9534f' : '#5cb85c' }}">
+                {{ $dias_mora > 0 ? 'CON MORA ('.$dias_mora.' DÍAS)' : 'DENTRO DE PLAZO' }}
+            </span>
+        </div>
 
-    <div class="total-box">
-        <strong>TOTAL DEUDA ESTIMADA: Bs. {{ number_format($final, 2, ',', '.') }}</strong>
+        <div class="linea-detalle">
+            <span>TRIBUTO OMITIDO (S900)</span>
+            <span>Bs. {{ number_format($idtgb_base, 2, ',', '.') }}</span>
+        </div>
+        <div class="linea-detalle">
+            <span>MANTENIMIENTO DE VALOR (S920)</span>
+            <span>Bs. {{ number_format($mantenimiento_valor, 2, ',', '.') }}</span>
+        </div>
+        <div class="linea-detalle">
+            <span>INTERESES MORATORIOS (S930) - TASA {{ $tasa_mora }}%</span>
+            <span>Bs. {{ number_format($interes, 2, ',', '.') }}</span>
+        </div>
+       <div class="linea-detalle">
+            <span>
+                MULTA INCUMP. DEBERES FORMALES (S900)
+                <br><small style="font-size: 8px; color: #666;">
+                    Sanción de {{ $tipo_contribuyente == 'Natural' ? '50' : '100' }} UFV según Resol. Normativa de Directorio
+                </small>
+            </span>
+            <span>Bs. {{ number_format($multa_idf, 2, ',', '.') }}</span>
+        </div>
+
+        <div class="total-final">
+            <strong>TOTAL DEUDA TRIBUTARIA: Bs. {{ number_format($final, 2, ',', '.') }}</strong>
+        </div>
+    </div>
+
+    <div style="font-size: 9px; margin-top: 5px;">
+        <strong>Datos Técnicos:</strong> UFV Vencimiento: {{ $ufv_vencimiento }} | UFV Pago: {{ $ufv_pago }}
+    </div>
+
+    <div class="nota-importante">
+        <strong>NOTA:</strong> Este documento es una <strong>Preliquidación Referencial</strong> obtenida a través del portal web institucional.
+        Los montos están sujetos a revisión por parte de la autoridad tributaria departamental al momento de la presentación de los requisitos físicos.
+        Este documento no constituye un comprobante de pago definitivo.
     </div>
 
     <div class="footer">
-        Generado el {{ now()->format('d/m/Y H:i:s') }} | Código de Verificación: {{ substr(md5(time()), 0, 8) }}<br>
-        © 2026 Gobierno Autónomo Departamental del Beni
+        "Beni, hacia la consolidación de la autonomía departamental"<br>
+        Generado el {{ now()->format('d/m/Y H:i:s') }} - Usuario: Público Web
     </div>
+
 </body>
 </html>

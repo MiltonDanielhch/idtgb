@@ -1,14 +1,15 @@
 {{-- resources/views/admin/tramites/wizard/create_step_1.blade.php --}}
 @extends('admin.tramites.wizard.layout')
 
-@section('page_title', 'Agregar Trámite - Paso 1')
+@section('page_title', 'Agregar Trámite - Paso 1: Datos Generales')
 
 @section('wizard-content')
-<form action="{{ route('admin.tramites.wizard.post.step1') }}" method="POST">
-    @csrf
-    <div class="panel panel-bordered">
+<div class="panel panel-bordered">
+    <form action="{{ route('admin.tramites.wizard.post.step1') }}" method="POST">
+        @csrf
         <div class="panel-body">
-            <h4 class="text-muted">{{ $step_title }}</h4>
+            <h4 class="text-muted"><i class="voyager-documentation"></i> {{ $step_title }}</h4>
+            <p class="text-hint">Inicie el registro capturando la información básica del documento de transmisión.</p>
             <hr>
 
             @if($errors->any())
@@ -22,124 +23,96 @@
             @endif
 
             <div class="row">
-                {{-- Número de trámite --}}
-                <div class="col-md-4">
-                    <label>Nro Trámite <span class="required">*</span></label>
-                    <input type="text" name="nro_tramite" class="form-control @error('nro_tramite') is-invalid @enderror"
-                           value="{{ old('nro_tramite', $data['nro_tramite'] ?? '') }}"
-                           required maxlength="15" placeholder="Ej: T-2025-0001">
-                    @error('nro_tramite')
-                        <span class="text-danger">{{ $message }}</span>
-                    @enderror
-                    <small class="text-muted">Número único de trámite.</small>
+                {{-- Columna Izquierda: Identificación --}}
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="nro_tramite">Número de Trámite / Hoja de Ruta <span class="required">*</span></label>
+                        <input type="text" name="nro_tramite" class="form-control"
+                               value="{{ old('nro_tramite', $wizardData['step1']['nro_tramite'] ?? '') }}"
+                               placeholder="Ej: 2026-X123" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="tipo_transmision_id">Tipo de Transmisión <span class="required">*</span></label>
+                        <select name="tipo_transmision_id" class="form-control select2" required>
+                            <option value="">-- Seleccione el tipo --</option>
+                            @foreach($tiposTransmision as $tipo)
+                                <option value="{{ $tipo->id }}"
+                                    {{ (old('tipo_transmision_id', $wizardData['step1']['tipo_transmision_id'] ?? '') == $tipo->id) ? 'selected' : '' }}>
+                                    {{ $tipo->nombre }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
                 </div>
 
-                {{-- Fecha de presentación --}}
-                <div class="col-md-4">
-                    <label>Fecha Presentación <span class="required">*</span></label>
-                    <input type="date" name="fecha_presentacion" class="form-control @error('fecha_presentacion') is-invalid @enderror"
-                           value="{{ old('fecha_presentacion', $data['fecha_presentacion'] ?? today()->format('Y-m-d')) }}"
-                           required>
-                    @error('fecha_presentacion')
-                        <span class="text-danger">{{ $message }}</span>
-                    @enderror
+                {{-- Columna Derecha: Fechas y Valores --}}
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="fecha_presentacion">Fecha de Presentación <span class="required">*</span></label>
+                        <input type="date" name="fecha_presentacion" class="form-control"
+                               value="{{ old('fecha_presentacion', $wizardData['step1']['fecha_presentacion'] ?? date('Y-m-d')) }}" required>
+                        <small class="text-muted">Fecha de ingreso al GAD Beni.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="valor_declarado">Valor Declarado (Bs.) <span class="required">*</span></label>
+                        <input type="number" step="0.01" name="valor_declarado" class="form-control"
+                               value="{{ old('valor_declarado', $wizardData['step1']['valor_declarado'] ?? '') }}"
+                               placeholder="0.00" required>
+                        <small class="text-muted">Monto según Minuta o Testimonio.</small>
+                    </div>
                 </div>
 
-                {{-- Fecha de transmisión --}}
-                <div class="col-md-4">
-                    <label>Fecha Transmisión <span class="required">*</span></label>
-                    <input type="date" name="fecha_transmision" class="form-control @error('fecha_transmision') is-invalid @enderror"
-                           value="{{ old('fecha_transmision', $data['fecha_transmision'] ?? '') }}"
-                           required>
-                    @error('fecha_transmision')
-                        <span class="text-danger">{{ $message }}</span>
-                    @enderror
-                </div>
-            </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="fecha_transmision">Fecha de Transmisión <span class="required">*</span></label>
+                        <input type="date" name="fecha_transmision" class="form-control"
+                               value="{{ old('fecha_transmision', $wizardData['step1']['fecha_transmision'] ?? '') }}" required>
+                        <small class="text-muted">Fecha del fallecimiento o minuta.</small>
+                    </div>
 
-            <div class="row" style="margin-top: 15px;">
-                {{-- Tipo de transmisión --}}
-                <div class="col-md-4">
-                    <label>Tipo Transmisión <span class="required">*</span></label>
-                    <select name="tipo_transmision_id" class="form-control select2 @error('tipo_transmision_id') is-invalid @enderror" required>
-                        <option value="">Seleccione...</option>
-                        @foreach($tipos as $tipo)
-                            <option value="{{ $tipo->id }}"
-                                {{ old('tipo_transmision_id', $data['tipo_transmision_id'] ?? '') == $tipo->id ? 'selected' : '' }}>
-                                {{ $tipo->nombre }}
-                            </option>
-                        @endforeach
-                    </select>
-                    @error('tipo_transmision_id')
-                        <span class="text-danger">{{ $message }}</span>
-                    @enderror
-                </div>
-
-                {{-- Valor declarado --}}
-                <div class="col-md-4">
-                    <label>Valor Declarado (Bs) <span class="required">*</span></label>
-                    <input type="number" step="0.01" min="0" name="valor_declarado"
-                           class="form-control @error('valor_declarado') is-invalid @enderror"
-                           value="{{ old('valor_declarado', $data['valor_declarado'] ?? '') }}"
-                           required placeholder="0.00">
-                    @error('valor_declarado')
-                        <span class="text-danger">{{ $message }}</span>
-                    @enderror
-                    <small class="text-muted">Monto según documento de transferencia.</small>
-                </div>
-
-                {{-- Base imponible --}}
-                <div class="col-md-4">
-                    <label>Base Imponible (Bs) <span class="required">*</span></label>
-                    <input type="number" step="0.01" min="0" name="base_imponible"
-                           class="form-control @error('base_imponible') is-invalid @enderror"
-                           value="{{ old('base_imponible', $data['base_imponible'] ?? '') }}"
-                           required placeholder="0.00">
-                    @error('base_imponible')
-                        <span class="text-danger">{{ $message }}</span>
-                    @enderror
-                    <small class="text-muted">Valor para cálculo del impuesto.</small>
+                    <div class="form-group">
+                        <label for="base_imponible">Base Imponible Sugerida (Bs.)</label>
+                        <input type="number" step="0.01" name="base_imponible" class="form-control"
+                               value="{{ old('base_imponible', $wizardData['step1']['base_imponible'] ?? '') }}"
+                               placeholder="Se recalculará en el paso 7">
+                    </div>
                 </div>
             </div>
 
-            <div class="row" style="margin-top: 15px;">
-                {{-- Observaciones --}}
+            <div class="row">
                 <div class="col-md-12">
-                    <label>Observaciones</label>
-                    <textarea name="observaciones" class="form-control @error('observaciones') is-invalid @enderror"
-                              rows="3" placeholder="Anotaciones internas sobre el trámite...">{{ old('observaciones', $data['observaciones'] ?? '') }}</textarea>
-                    @error('observaciones')
-                        <span class="text-danger">{{ $message }}</span>
-                    @enderror
+                    <div class="form-group">
+                        <label for="observaciones">Observaciones Iniciales</label>
+                        <textarea name="observaciones" class="form-control" rows="3">{{ old('observaciones', $wizardData['step1']['observaciones'] ?? '') }}</textarea>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="panel-footer text-right">
-            <a href="{{ route('admin.tramites.wizard.cancel') }}" class="btn btn-danger">
-                <i class="voyager-x"></i> Cancelar Proceso
-            </a>
-            <button type="submit" class="btn btn-primary">
-                Siguiente <i class="voyager-angle-right"></i>
+        <div class="panel-footer">
+            <a href="{{ route('admin.tramites.index') }}" class="btn btn-default">Cancelar</a>
+            <button type="submit" class="btn btn-primary pull-right">
+                Siguiente: Personas <i class="voyager-angle-right"></i>
             </button>
+            <div style="clear:both;"></div>
         </div>
-    </div>
-</form>
+    </form>
+</div>
 @endsection
 
 @push('javascript')
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const nroTramiteInput = document.querySelector('input[name="nro_tramite"]');
+    $(document).ready(function() {
+        $('.select2').select2();
 
-        nroTramiteInput.addEventListener('input', function (e) {
-            let value = e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '');
-            e.target.value = value;
-        });
-
-        // Inicializar Select2
-        $('.select2').select2({
-            theme: 'bootstrap'
+        // Lógica de Sintonía: Autocompletar Base Imponible si está vacía
+        $('input[name="valor_declarado"]').on('input', function() {
+            let valor = $(this).val();
+            if($('input[name="base_imponible"]').val() == '') {
+                $('input[name="base_imponible"]').val(valor);
+            }
         });
     });
 </script>

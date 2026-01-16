@@ -143,6 +143,26 @@ document.addEventListener('DOMContentLoaded', function () {
             tasaInput.value = '';
         }
     });
+
+    // Calcular sumatoria total de porcentajes en la tabla
+    const calcularTotal = () => {
+        let total = 0;
+        document.querySelectorAll('tbody tr td:nth-child(3)').forEach(td => {
+            let valor = parseFloat(td.innerText.replace('%', '').trim());
+            if(!isNaN(valor)) total += valor;
+        });
+        return total.toFixed(2);
+    };
+
+    // Puedes usar esto para mostrar una alerta si el total != 100 al intentar avanzar
+    $('#add-adquirente-form').on('submit', function() {
+        let actual = parseFloat(calcularTotal());
+        let nuevo = parseFloat($('input[name="porcentaje"]').val());
+        if((actual + nuevo) > 100) {
+            alert('La suma total no puede exceder el 100%. Actualmente tiene ' + actual + '%');
+            return false;
+        }
+    });
 });
 </script>
 @endpush

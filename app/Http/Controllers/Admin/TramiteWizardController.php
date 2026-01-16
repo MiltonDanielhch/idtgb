@@ -50,13 +50,15 @@ class TramiteWizardController extends Controller
     {
         $this->initializeWizard($request);
         $wizardData = $this->getWizardData($request);
-        $tipos = TipoTransmision::all();
+        $tiposTransmision = TipoTransmision::all();
 
         return view('admin.tramites.wizard.create_step_1', [
-            'tipos' => $tipos,
-            'data' => $wizardData['step1'],
+            'tiposTransmision' => $tiposTransmision, // Corregido
+            'wizardData' => $wizardData,            // Corregido: pasar el array completo para usar $wizardData['step1']
             'step_title' => 'Paso 1: Datos Generales',
-            'current_step' => 1, 'total_steps' => 7, 'progress' => 14, // Ajustar progreso
+            'current_step' => 1,
+            'total_steps' => 7,
+            'progress' => 14,
         ]);
     }
 
@@ -65,7 +67,7 @@ class TramiteWizardController extends Controller
         $validated = $request->validate([
             'nro_tramite' => 'required|string|max:15|unique:tramites,nro_tramite',
             'fecha_presentacion' => 'required|date',
-            'fecha_transmision' => 'required|date',
+            'fecha_transmision' => 'required|date|before_or_equal:fecha_presentacion', // Validación lógica
             'tipo_transmision_id' => 'required|exists:tipos_transmision,id',
             'valor_declarado' => 'required|numeric|min:0',
             'base_imponible' => 'required|numeric|min:0',
@@ -114,6 +116,10 @@ class TramiteWizardController extends Controller
         if (!in_array($personId, $wizardData['step2']['disponentes'])) {
             $wizardData['step2']['disponentes'][] = $personId;
             $this->updateWizardData($request, $wizardData);
+        }
+        // SINTONÍA: Si es AJAX, responde JSON. Si no, redirige.
+        if ($request->ajax()) {
+            return response()->json(['success' => true, 'message' => 'Disponente agregado']);
         }
 
         return redirect()->route('admin.tramites.wizard.create.step2');
@@ -431,24 +437,47 @@ class TramiteWizardController extends Controller
         return redirect()->route('admin.tramites.wizard.create.step7');
     }
 
-
-    // ==================== PASO 7: RESUMEN Y GUARDAR (ANTES PASO 6) ====================
+    // ==================== PASO 7: RESUMEN Y GUARDAR ====================
     public function createStep7(Request $request)
     {
         $wizardData = $this->getWizardData($request);
 
-        // Validar datos completos
-        if (empty($wizardData['step1']) ||
-            empty($wizardData['step2']['disponentes']) ||
-            empty($wizardData['step3']['adquirentes']) ||
-            empty($wizardData['step4']['inmuebles'])) {
+        // 1. Validaciones de seguridad
+        if (empty($wizardData['step1']) || empty($wizardData['step3']['adquirentes']) || empty($wizardData['step4']['inmuebles'])) {
             return redirect()->route('admin.tramites.wizard.create.step1');
         }
 
-        return $this->showSummary($request, $wizardData);
+        // 2. Ejecutar Cálculo Preventivo para la Vista
+        $calculator = app(IdtgbCalculator::class);
+
+        // Obtenemos el primer inmueble para sacar el departamento (necesario para la tasa)
+        $inmuebleRef = Inmueble::with('municipio.provincia')->find($wizardData['step4']['inmuebles'][0]);
+        $depId = $inmuebleRef->municipio->provincia->departamento_id;
+
+        // Preparamos los adquirentes para el calculador
+        $adquirentesData = collect($wizardData['step3']['adquirentes'])->map(function($adq) {
+            return [
+                'parentesco_id' => $adq['parentesco_id'],
+                'porcentaje' => $adq['porcentaje'],
+            ];
+        })->all();
+
+        // Invocamos el cálculo (Simulación para el resumen)
+        $liquidacion = $calculator->calculateEstimate(
+            $wizardData['step1']['base_imponible'],
+            $depId,
+            $adquirentesData[0]['parentesco_id'], // El calculador estimate toma uno, o puedes ajustar el core
+            $wizardData['step1']['tipo_transmision_id'],
+            $wizardData['step1']['fecha_transmision'],
+            now()->toDateString(), // Fecha de hoy (Presentación/Pago)
+            Carbon::parse($wizardData['step1']['fecha_presentacion'])->addDays(30)->toDateString() // Vencimiento estimado
+        );
+
+        // 3. Llamar al showSummary pasando la $liquidacion
+        return $this->showSummary($request, $wizardData, $liquidacion);
     }
 
-    private function showSummary(Request $request, array $wizardData)
+    private function showSummary(Request $request, array $wizardData, $liquidacion = null)
     {
         // Validar datos completos
         // Esta validación ya se hace en createStep6, no es necesaria aquí.
@@ -500,20 +529,20 @@ class TramiteWizardController extends Controller
             // Cargar datos adicionales para el resumen
             $tipoTransmision = \App\Models\TipoTransmision::find($wizardData['step1']['tipo_transmision_id']);
 
-            return view('admin.tramites.wizard.create_step_7', [ // Vista renombrada
+            return view('admin.tramites.wizard.create_step_7', [
                 'wizardData' => $wizardData,
                 'disponentes' => $disponentes,
                 'adquirentes' => $adquirentes,
                 'inmuebles' => $inmuebles,
-                'documentos' => $documentos, // Pasar documentos a la vista
-                'exenciones' => $exenciones, // Pasar exenciones a la vista
+                'documentos' => $documentos,
+                'exenciones' => $exenciones,
                 'tipoTransmision' => $tipoTransmision,
+                'liquidacion' => $liquidacion, // <--- PASAR ESTO A LA VISTA
                 'step_title' => 'Paso 7: Resumen y Confirmación',
                 'current_step' => 7,
                 'total_steps' => 7,
                 'progress' => 100,
             ]);
-
         } catch (\Exception $e) {
             \Log::error('Error en createStep5: ' . $e->getMessage());
             return redirect()->route('admin.tramites.wizard.create.step1')
@@ -577,31 +606,53 @@ class TramiteWizardController extends Controller
             // 5. Guardar y asociar documentos
             if (!empty($wizardData['step5']['documentos'])) {
                 foreach ($wizardData['step5']['documentos'] as $docData) {
-                    // CORRECCIÓN: Mover archivo entre discos (de 'local' a 'public')
-                    $finalPath = str_replace('wizard_temp_docs', "tramites/{$tramite->id}/documentos", $docData['temp_path']);
 
-                    // 1. Leer el contenido del disco 'local'
-                    $fileContents = \Storage::disk('local')->get($docData['temp_path']);
-                    // 2. Escribir el contenido en el disco 'public'
-                    \Storage::disk('public')->put($finalPath, $fileContents);
-                    // 3. Borrar el archivo temporal del disco 'local'
-                    \Storage::disk('local')->delete($docData['temp_path']);
+                    $tempPath = $docData['temp_path'];
+                    $finalPath = str_replace('wizard_temp_docs', "tramites/{$tramite->id}/documentos", $tempPath);
 
-                    // Calcular hash y versión
-                    $hash = hash_file('sha256', \Storage::disk('public')->path($finalPath));
-                    $version = \App\Models\Documento::where('tramite_id', $tramite->id)->where('tipo_doc', $docData['tipo_doc'])->max('version') + 1;
+                    // VERIFICACIÓN: ¿Existe el archivo en el disco local?
+                    if (\Storage::disk('local')->exists($tempPath)) {
 
-                    // Marcar versiones anteriores como no vigentes
-                    \App\Models\Documento::where('tramite_id', $tramite->id)->where('tipo_doc', $docData['tipo_doc'])->update(['vigente' => false]);
+                        // 1. Leer el contenido
+                        $fileContents = \Storage::disk('local')->get($tempPath);
 
-                    $tramite->documentos()->create([
-                        'tipo_doc' => $docData['tipo_doc'],
-                        'person_id' => $docData['person_id'],
-                        'file_path' => $finalPath,
-                        'hash_sha256' => $hash,
-                        'version' => $version,
-                        'vigente' => true,
-                    ]);
+                        if ($fileContents !== null) {
+                            // 2. Escribir en el disco público
+                            \Storage::disk('public')->put($finalPath, $fileContents);
+
+                            // 3. Borrar el temporal
+                            \Storage::disk('local')->delete($tempPath);
+
+                            // Calcular hash usando la ruta absoluta del nuevo destino
+                            $fullPath = \Storage::disk('public')->path($finalPath);
+                            $hash = hash_file('sha256', $fullPath);
+
+                            $version = \App\Models\Documento::where('tramite_id', $tramite->id)
+                                        ->where('tipo_doc', $docData['tipo_doc'])
+                                        ->max('version') + 1;
+
+                            // Marcar versiones anteriores como no vigentes
+                            \App\Models\Documento::where('tramite_id', $tramite->id)
+                                ->where('tipo_doc', $docData['tipo_doc'])
+                                ->update(['vigente' => false]);
+
+                            $tramite->documentos()->create([
+                                'tipo_doc' => $docData['tipo_doc'],
+                                'person_id' => $docData['person_id'],
+                                'file_path' => $finalPath,
+                                'hash_file' => $hash,
+                                'version' => $version,
+                                'vigente' => true,
+                                'original_name' => $docData['original_name'] ?? 'documento.pdf'
+                            ]);
+                        }
+                    } else {
+                        // OPCIONAL: Registrar en el log si el archivo no se encontró
+                        \Log::warning("El archivo temporal no se encontró en: " . $tempPath);
+
+                        // Si el archivo ya existe en el destino (por un reintento), podrías decidir
+                        // si crear el registro en BD o saltarlo.
+                    }
                 }
             }
 
