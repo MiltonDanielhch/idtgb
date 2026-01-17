@@ -13,6 +13,7 @@
 9. [Ejemplos de Uso](#ejemplos-de-uso)
 10. [Consideraciones Importantes](#consideraciones-importantes)
 11. [Guía para Desarrolladores](#guía-para-desarrolladores)
+12. [Análisis de Calidad y Mejoras](#análisis-de-calidad-y-mejoras)
 
 ---
 
@@ -754,8 +755,8 @@ $tipoTransmisionId = TipoTransmision::where('nombre', $request->tipo_transmision
 ```php
 $tramite->tipo_transmision_id; // Se utiliza para cálculo
 
-// En el método de cálculo
-$tasaModel = $this->tasaVigente($depId, $parentescoId, $tipoTransmisionId, $fPres);
+// Se usa parentesco_id y tipo_transmision_id para calcular la tasa aplicable
+$tasaModel = $this->tasaVigente($depId, $adq['parentesco_id'], $tipoId, $fPres);
 ```
 
 ### 6. Módulo de Reportes
@@ -1534,3 +1535,63 @@ Para consultas o reportar issues relacionados con el módulo de Tipos de Transmi
 **Última actualización:** Enero 2026
 
 **Versión:** 1.0.0
+---
+## 🚨 Análisis de Calidad y Mejoras
+
+A continuación se detallan posibles bugs, inconsistencias y oportunidades de mejora detectadas en el análisis del código del módulo de Tipos de Transmisión. Este módulo es muy similar al de `Parentescos` y comparte varias de sus fortalezas y debilidades.
+
+### 🐛 Inconsistencias y Riesgos Potenciales
+
+1.  **Falta de Autorización Basada en Roles (Policies)**
+    *   **Ubicación**: `app/Http/Controllers/TipoTransmisionController.php` (todos los métodos).
+    *   **Problema**: A diferencia del módulo `ParentescoController`, este controlador no invoca a una `Policy` para autorizar las acciones (`$this->authorize(...)`). Aunque los permisos existen en la base de datos (`browse_tipos-transmision`, `add_tipos-transmision`, etc.), no se están aplicando en el backend.
+    *   **Impacto**: **Cualquier usuario autenticado**, sin importar su rol, puede crear, editar y eliminar tipos de transmisión, simplemente accediendo a las URLs correspondientes. Esto es un **riesgo de seguridad y de integridad de datos significativo**.
+    *   **Solución Crítica**: Implementar una `TipoTransmisionPolicy` y registrarla en `AuthServiceProvider`, luego llamar a `$this->authorize(...)` en cada método del controlador, tal como se hace en `ParentescoController`.
+
+2.  **Validación de Datos en el Controlador**
+    *   **Ubicación**: `app/Http/Controllers/TipoTransmisionController.php`, métodos `store()` y `update()`.
+    *   **Problema**: La lógica de validación (`$request->validate(...)`) está directamente en el controlador. Esto es una inconsistencia con módulos más robustos como `Parentesco` que utilizan clases `FormRequest` (`StoreParentescoRequest`, `UpdateParentescoRequest`).
+    *   **Impacto**: Dificulta la reutilización de la lógica de validación (ej. en una API) y mezcla responsabilidades en el controlador.
+    *   **Solución Sugerida**: Crear `StoreTipoTransmisionRequest` y `UpdateTipoTransmisionRequest` para encapsular las reglas de validación y la autorización, manteniendo el controlador más limpio.
+
+### 🚀 Oportunidades de Mejora y Optimización
+
+1.  **Estandarización del Código**
+    *   **Problema**: El código de este módulo es una versión simplificada de otros módulos CRUD, pero carece de las abstracciones (Policies, FormRequests) que se consideran una mejor práctica en Laravel y que están presentes en otras partes del sistema.
+    *   **Mejora**: Refactorizar el `TipoTransmisionController` para que utilice `Policies` y `FormRequests`, alineándolo con la arquitectura del `ParentescoController`. Esto mejoraría la mantenibilidad y seguridad general del proyecto.
+
+2.  **Añadir Conteo de Dependencias en la Vista de Listado**
+    *   **Ubicación**: `resources/views/admin/tipos-transmision/list.blade.php`.
+    *   **Mejora**: El método `destroy` ya comprueba si un tipo de transmisión está en uso. Sería muy útil para el administrador ver esta información directamente en la tabla de listado. Se podría añadir un contador de "Trámites Asociados" y "Tasas Asociadas".
+    *   **Implementación Sugerida**:
+        ```php
+        // En TipoTransmisionController@list
+        $data = TipoTransmision::withCount(['tasas', 'tramites'])
+            ->when(...) // resto de la consulta
+
+        // En la vista list.blade.php
+        // ...
+        <th>Trámites</th>
+        <th>Tasas</th>
+        // ...
+        <td><span class="badge badge-info">{{ $item->tramites_count }}</span></td>
+        <td><span class="badge badge-primary">{{ $item->tasas_count }}</span></td>
+        // ...
+        ```
+
+3.  **Implementar `SoftDeletes` para Recuperación de Datos**
+    *   **Problema**: La eliminación de un tipo de transmisión es permanente (`$tipoTransmision->delete()`). Si se borra por error un tipo que no tenía dependencias, la única forma de recuperarlo es desde un backup de la base de datos.
+    *   **Mejora**: Añadir el trait `SoftDeletes` al modelo `TipoTransmision` para que los registros se marquen como eliminados en lugar de ser borrados permanentemente.
+    *   **Impacto**: Proporciona una capa de seguridad contra la eliminación accidental de datos maestros.
+
+### 📋 Funcionalidades Faltantes
+
+1.  **Auditoría de Cambios**
+    *   **Problema**: Al igual que en el módulo `Parentesco`, no se guarda un historial de quién creó, actualizó o eliminó un tipo de transmisión.
+    *   **Necesidad**: Para un sistema tributario, es fundamental poder auditar todos los cambios en los datos maestros que afectan los cálculos.
+    *   **Solución Sugerida**: Implementar un sistema de logging de actividad, ya sea simple (con columnas `created_by`, `updated_by`) o avanzado (usando un paquete como `spatie/laravel-activitylog`).
+
+2.  **Traducciones y Localización**
+    *   **Problema**: Todos los textos, como los mensajes de éxito/error, están fijos en español en el controlador.
+    *   **Necesidad**: Para que la aplicación sea escalable a otros idiomas o regiones.
+    *   **Solución Sugerida**: Mover todas las cadenas de texto a los archivos de idioma de Laravel en `lang/` y usar la función `__('key')` para recuperarlas.

@@ -745,12 +745,17 @@ $(function () {
 **Método `tasaVigente`:**
 
 ```php
-private function tasaVigente($depId, $parId, $fecha)
+private function tasaVigente($depId, $parId, $tipoId, $fecha)
 {
     return Tasa::where('departamento_id', $depId)
         ->where('parentesco_id', $parId)
+        ->where(function ($q) use ($tipoId) {
+            $q->where('tipo_transmision_id', $tipoId)
+              ->orWhereNull('tipo_transmision_id');
+        })
         ->where('vigente_desde', '<=', $fecha)
         ->where(fn($q) => $q->whereNull('vigente_hasta')->orWhere('vigente_hasta', '>=', $fecha))
+        ->orderBy('tipo_transmision_id', 'desc') // Priorizar específica sobre NULL
         ->first();
 }
 ```
@@ -1449,3 +1454,133 @@ Para consultas o reportar issues relacionados con el módulo de Tasas, contactar
 **Última actualización:** Enero 2026
 
 **Versión:** 1.0.0
+
+
+✅ Lo que se ha añadido
+He añadido una sección completa de "Análisis de Calidad y Mejoras" al final de tu documentación del módulo de Tasas. Esta sección incluye:
+📊 Resumen de Prioridades (Tabla de Riesgos)
+| Severidad | Bug # | Descripción | Solución |
+|:---------|-------|-------------|------------|
+| 🔴 CRÍTICO | #1 | TasaController@destroy() NO verifica dependencias con trámites | Eliminar una tasa que está siendo usada en trámites causará errores en el cálculo (la tasa devolverá 0% para esos trámites). | Agregar verificación de dependencias en destroy() |
+| 🟠 ALTO | #2 | UpdateTasaRequest NO excluye el ID actual en validación de unicidad | Si un usuario intenta guardar sin cambios, fallará. | Usar Rule::unique() para excluir el ID actual |
+| 🟡 ALTO | #3 | Tasa::vigente() no maneja correctamente múltiples tasas vigentes | Si hay varias tasas vigentes, devuelve la primera encontrada de forma arbitraria. | Priorizar tasas con tipo_transmision_id específico |
+---
+🔍 Bugs Críticos Detectados
+1. CRÍTICO: Falta validación de dependencias en TasaController@destroy()
+Ubicación: app/Http/Controllers\TasaController.php, líneas 292-295
+Problema:
+public function destroy(Tasa )
+{
+    ->authorize('delete', );
+    ->delete(); // ❌ ELIMINACIÓN SIN VERIFICACIÓN
+    return redirect()->route('admin.tasas.index')
+        ->with(['message' => 'Tasa eliminada.', 'alert-type' => 'success']);
+}
+Impacto: 
+- ALTO RIESGO: Si eliminas una tasa que está siendo usada en trámites existentes, el cálculo del impuesto fallará (la tasa devolverá 0%).
+- Error 500: Si un trámite intenta llamar a una tasa eliminada, la aplicación arrojará.
+Solución:
+public function destroy(Tasa )
+{
+    ->authorize('delete', );
+    
+    // ✅ VERIFICAR DEPENDENCIAS CON TRÁMITES
+    if (->tramites()->exists()) {
+        return redirect()->route('admin.tasas.index')
+            ->with(['message' => 'No se puede eliminar: La tasa está siendo utilizada en trámites existentes.', 'alert-type' => 'error']);
+    }
+    
+    // ✅ VERIFICAR DEPENDENCIAS CON TRÁMITES (Wizard y Calculadora)
+    // Nota: El servicio IdtgbCalculator usa esta tabla para calcular impuestos
+    // Si borras una tasa en uso, el cálculo arrojará.
+    
+    ->delete();
+    return redirect()->route('admin.tasas.index')
+        ->with(['message' => 'Tasa eliminada.', 'alert-type' => 'success']);
+}
+---
+2. Riesgo ALTO: UpdateTasaRequest NO excluye el ID actual en validación de unicidad
+Ubicación: app/Http\Requests\UpdateTasaRequest.php, líneas 13-23
+Problema:
+public function rules()
+{
+    return [
+        'tasa' => 'required|numeric|min:0|max:99.99', // ❌ FALTA: 'unique' genérico sin ignorar el ID actual
+        // ...
+    ];
+}
+Impacto:
+- Si el usuario hace clic en "Guardar" sin cambios, la validación fallará.
+- Error: "The nombre de la tasa ya existe" (porque sigue existiendo en la base de datos con su valor actual).
+Solución:
+use Illuminate\Validation\Rule;
+public function rules()
+{
+    return [
+        'tasa' => ['required', 'numeric', 'min:0', 'max:99.99', 
+                 Rule::unique('tasas')->ignore(->route('tasa'))], // ✅ Ignorar registro actual
+        'vigente_desde' => 'required|date',
+        // ...
+    ];
+}
+---
+3. Riesgo MEDIO: Tasa::vigente() no maneja prioridad entre tasas específicas vs. genéricas
+Ubicación: app\Models\Tasa.php, líneas 45-55
+Problema:
+return self::where('departamento_id', )
+           ->where('parentesco_id', )
+           ->where('tipo_transmision_id', ) // ❌ Si esto es NULL, coincide con TODAS las tasas genéricas
+           ->where('vigente_desde', '<=', )
+           ->where(fn () => ->whereNull('vigente_hasta')->orWhere('vigente_hasta', '>=', ))
+           ->first(); // ❌ Retorna la PRIMERA encontrada de forma arbitraria
+Impacto:
+- Si hay una tasa genérica (tipo_transmision_id = NULL) y una tasa específica (tipo_transmision_id = 1) vigentes, no garantiza cuál se usará.
+- Puede causar errores legales en el cálculo del impuesto.
+Solución:
+public static function vigente(int , int , ?string  = null, ?string  = null): ?self
+{
+     =  ?? today()->toDateString();
+    
+    return self::where('departamento_id', )
+               ->where('parentesco_id', )
+               ->where('tipo_transmision_id', ) // ✅ Priorizar tasa específica
+               ->orWhereNull('tipo_transmision_id')        // ✅ Fallback a genérica
+               ->where('vigente_desde', '<=', )
+               ->where(fn () => ->whereNull('vigente_hasta')->orWhere('vigente_hasta', '>=', ))
+               ->orderBy('tipo_transmision_id', 'asc')     // ✅ Trazabilidad
+               ->first();
+}
+---
+🚀 Oportunidades de Mejora (Media Prioridad)
+1. Implementar SoftDeletes para evitar pérdida de tasas históricas
+Mejora: Actualmente la eliminación es destructiva. Si borras una tasa antigua por error, se pierde para siempre.
+Implementación:
+// En app/Models/Tasa.php
+use Illuminate\Database\Eloquent\SoftDeletes;
+class Tasa extends Model
+{
+    use HasFactory, SoftDeletes; // ✅ Añadir
+    
+    protected  = ['deleted_at'];
+}
+---
+2. Agregar sistema de auditoría de cambios
+Mejora: No hay registro de quién modificó una tasa o cuándo.
+Implementación sugerida: Usar el paquete spatie/laravel-activitylog para registrar todos los cambios en tasas.
+---
+3. Optimizar consultas con índices compuestos
+Mejora: Las búsquedas por departamento, parentesco y fecha son frecuentes.
+Implementación:
+// En la migración, agregar índice compuesto
+->index(['departamento_id', 'parentesco_id', 'vigente_desde'], 'idx_tasas_busqueda');
+---
+📋 Funcionalidades Faltantes
+1. No hay API endpoints para integración externa (para conectar con otros sistemas).
+2. No hay funcionalidad de exportación a Excel/CSV para análisis.
+3. No hay validación de rangos lógicos (ej. tasa debe estar entre 1% y 15% para ciertos trámites).
+---
+🔍 Consideraciones Importantes
+1. Cálculo de Impuestos Dependiente: Este módulo es el corazón financiero del sistema. Los bugs identificados pueden causar errores legales y financieros graves.
+2. Prioridad de Solución: El Bug #1 (falta validación en destroy()) es CRÍTICO porque puede romper el cálculo de impuestos en trámites activos. Se recomienda arreglarlo inmediatamente.
+3. Relaciones con Trámites: La tabla tasas está relacionada con tramites a través de la calculadora. Al eliminar una tasa, asegurate de verificar tramites() y tramites_inmuebles().
+---

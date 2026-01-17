@@ -266,3 +266,424 @@ A continuación se detallan posibles bugs, inconsistencias y oportunidades de me
 
 3.  **Auditoría:**
     -   **Mejora:** El modelo ya tiene `created_by` y `updated_by`. Asegurarse de que las vistas muestren quién cargó el avalúo para fines de trazabilidad administrativa.
+
+---
+
+## 🔍 ANÁLISIS COMPLETO DEL MÓDULO
+
+### 🐛 BUGS Y RIESGOS CRÍTICOS
+
+#### 1. **No se automatiza el estado según la fecha de vigencia**
+- **Ubicación:** `app/Http/Controllers/AvaluoController.php:66-83` (método `store`)
+- **Problema:** El controlador guarda el estado 'Vigente'/'Caducado' tal cual viene del formulario, sin validar si la fecha del avalúo corresponde al estado. Un usuario puede marcar como 'Vigente' un avalúo de hace 5 años.
+- **Impacto:** Alto - Puede causar errores en el cálculo de impuestos al usar valores desactualizados.
+- **Código actual:**
+  ```php
+  Avaluo::create(array_merge($request->validated(), [
+      'documento_path' => $path,
+      'created_by'     => auth()->id(),
+      'updated_by'     => auth()->id(),
+  ]));
+  ```
+- **Solución sugerida:** Implementar lógica automática:
+  ```php
+  $estado = $request->fecha_avaluo->diffInYears(now()) < 1 ? 'Vigente' : 'Caducado';
+  ```
+
+#### 2. **Validación de perito no verifica tipo de persona**
+- **Ubicación:** `app/Http/Requests/StoreAvaluoRequest.php:21` y `UpdateAvaluoRequest.php:19`
+- **Problema:** Solo valida `exists:people,id`, permitiendo enviar ID de personas jurídicas o menores de edad.
+- **Impacto:** Medio - Puede asignar como perito a una persona no apta.
+- **Código actual:**
+  ```php
+  'perito_id' => 'nullable|exists:people,id',
+  ```
+- **Solución sugerida:**
+  ```php
+  'perito_id' => 'nullable|exists:people,id|exists:people,id,0,person_type,Natural',
+  ```
+
+#### 3. **Posible N+1 Query Problem en listado**
+- **Ubicación:** `app/Http/Controllers/AvaluoController.php:35` y `resources/views/admin/avaluos/list.blade.php:18-26`
+- **Problema:** Aunque el controlador hace `with(['inmueble', 'perito'])`, en la vista se accede a `$a->perito->first_name` y `$a->perito->paternal_surname` lo cual está correcto, pero si se agregan más relaciones sin eager loading habrá problemas.
+- **Impacto:** Bajo/Medio - Rendimiento en listados grandes.
+- **Observación:** Actualmente está bien implementado, pero documentar para futuras mejoras.
+
+#### 4. **Borrado en cascada de inmuebles puede romper referencias**
+- **Ubicación:** `database/migrations/2025_09_22_122822_create_avaluos_table.php:16`
+- **Problema:** La FK tiene `cascadeOnDelete()`, lo cual es correcto para mantener integridad referencial, pero NO hay validación en el controlador de Inmuebles que prevenga borrar un inmueble que tiene avalúos usados en trámites.
+- **Impacto:** Alto - Puede perderse información histórica de valoraciones.
+- **Código actual:**
+  ```php
+  $table->foreignId('inmueble_id')->constrained()->cascadeOnDelete();
+  ```
+- **Ubicación validación:** `app/Http/Controllers/InmuebleController.php:92-95`
+- **Solución sugerida:** Implementar Soft Deletes o bloquear borrado si hay trámites asociados.
+
+#### 5. **Falta validación de unicidad de avalúo vigente**
+- **Ubicación:** `app/Http/Requests/StoreAvaluoRequest.php` (falta regla)
+- **Problema:** El sistema permite tener múltiples avalúos 'Vigente' para el mismo inmueble simultáneamente.
+- **Impacto:** Medio - Puede causar confusión en cuál valor usar.
+- **Solución sugerida:** Al crear un nuevo avalúo 'Vigente', marcar como 'Caducado' los anteriores del mismo inmueble, o validar que solo haya uno vigente.
+
+#### 6. **Archivo puede sobrescribirse sin confirmación**
+- **Ubicación:** `app/Http/Controllers/AvaluoController.php:101-104` (método `update`)
+- **Problema:** Al subir un nuevo documento, el anterior se elimina automáticamente sin pedir confirmación.
+- **Impacto:** Bajo - Puede perderse información si fue un error.
+- **Código actual:**
+  ```php
+  if ($path) Storage::disk('public')->delete($path);
+  $path = $request->file('documento')->store('avaluos', 'public');
+  ```
+- **Solución sugerida:** Preguntar confirmación o mantener versiones.
+
+---
+
+### 🚀 MEJORAS SUGERIDAS
+
+#### 1. **Implementar Observer para automatizar estado**
+- **Ubicación:** Crear `app/Observers/AvaluoObserver.php`
+- **Mejora:** Automatizar el cálculo de estado cuando se crea o actualiza un avalúo.
+- **Código sugerido:**
+  ```php
+  public function creating(Avaluo $avaluo)
+  {
+      $avaluo->estado = $avaluo->fecha_avaluo->diffInYears(now()) < 1 ? 'Vigente' : 'Caducado';
+  }
+  
+  public function creating(Avaluo $avaluo)
+  {
+      if ($avaluo->estado === 'Vigente') {
+          Avaluo::where('inmueble_id', $avaluo->inmueble_id)
+                 ->where('estado', 'Vigente')
+                 ->where('id', '!=', $avaluo->id)
+                 ->update(['estado' => 'Caducado']);
+      }
+  }
+  ```
+
+#### 2. **Crear comando programado para caducidad automática**
+- **Ubicación:** Crear `app/Console/Commands/CaducarAvaluosCommand.php`
+- **Mejora:** Ejecutar diariamente para cambiar estado de avalúos que cumplen 1 año.
+- **Código sugerido:**
+  ```php
+  public function handle()
+  {
+      Avaluo::where('estado', 'Vigente')
+            ->where('fecha_avaluo', '<', now()->subYear())
+            ->update(['estado' => 'Camucado']);
+  }
+  ```
+- **Registrar en:** `app/Console/Kernel.php:17`
+- **Código sugerido:**
+  ```php
+  $schedule->command('avaluos:caducar')->daily();
+  ```
+
+#### 3. **Convertir helper estático a Scope**
+- **Ubicación:** `app/Models/Avaluo.php:54-60`
+- **Mejora:** Facilitar el uso de eager loading y encadenamiento de queries.
+- **Código sugerido:**
+  ```php
+  public function scopeVigente($query, $inmuebleId)
+  {
+      return $query->where('inmueble_id', $inmuebleId)
+                   ->where('estado', 'Vigente')
+                   ->latest('fecha_avaluo');
+  }
+  ```
+- **Uso:** `Avaluo::vigente($id)->first()` o `Avaluo::where(...)->vigente($id)`
+
+#### 4. **Agregar Soft Deletes**
+- **Ubicación:** Modificar migración y modelo
+- **Mejora:** Mantener historial de avalúos eliminados para auditoría.
+- **Código en modelo:**
+  ```php
+  use Illuminate\Database\Eloquent\SoftDeletes;
+  use SoftDeletes;
+  ```
+- **Código en migración:**
+  ```php
+  $table->softDeletes();
+  ```
+
+#### 5. **Implementar Job para procesamiento de archivos**
+- **Ubicación:** Crear `app/Jobs/ProcesarDocumentoAvaluoJob.php`
+- **Mejora:** Procesar archivos pesados en background para no bloquear la UI.
+- **Uso en controlador:**
+  ```php
+  ProcesarDocumentoAvaluoJob::dispatch($request->file('documento'), $avaluoId);
+  ```
+
+#### 6. **Agregar campos adicionales al modelo**
+- **Ubicación:** Migración y modelo
+- **Mejora:** Capturar más información del avalúo.
+- **Campos sugeridos:**
+  - `numero_resolucion`: VARCHAR(100) - Número de resolución del avalúo
+  - `entidad_certificadora`: VARCHAR(255) - Entidad que emitió el avalúo
+  - `observaciones`: TEXT - Comentarios adicionales
+  - `fecha_caducidad`: DATE - Fecha explícita de caducidad (puede diferir de fecha_avaluo + 1 año)
+
+#### 7. **Agregar índices en base de datos**
+- **Ubicación:** `database/migrations/2025_09_22_122822_create_avaluos_table.php`
+- **Mejora:** Optimizar búsquedas frecuentes.
+- **Índices sugeridos:**
+  ```php
+  $table->index(['inmueble_id', 'estado', 'fecha_avaluo']); // Para buscar avalúos vigentes
+  $table->index(['perito_id']); // Para buscar por perito
+  $table->index(['estado']); // Para filtrar por estado
+  $table->index(['fecha_avaluo']); // Para ordenar por fecha
+  ```
+
+#### 8. **Implementar API endpoints**
+- **Ubicación:** `routes/api.php`
+- **Mejora:** Permitir integración con sistemas externos.
+- **Endpoints sugeridos:**
+  - `GET /api/avaluos/{inmueble_id}/vigente` - Obtener avalúo vigente
+  - `GET /api/avaluos/{inmueble_id}/historial` - Historial completo
+  - `POST /api/avaluos` - Crear nuevo avalúo (con autenticación)
+
+#### 9. **Agregar sistema de versiones de documentos**
+- **Ubicación:** Nueva tabla `avaluo_documentos` o cambiar lógica de storage
+- **Mejora:** Mantener historial de documentos cuando se reemplazan.
+- **Implementación:** En lugar de sobrescribir, guardar como `avaluos/{avaluo_id}/v{version}_filename.pdf`
+
+#### 10. **Validación más estricta de fechas**
+- **Ubicación:** `app/Http/Requests/StoreAvaluoRequest.php`
+- **Mejora:** No permitir fechas futuras.
+- **Código sugerido:**
+  ```php
+  'fecha_avaluo' => 'required|date|before_or_equal:today',
+  ```
+
+---
+
+### ❌ FALTANTES
+
+#### 1. **No hay tests automatizados**
+- **Ubicación:** No existe `tests/Feature/AvaluoTest.php`
+- **Faltante:** Tests unitarios y de integración para todos los métodos del controlador.
+- **Tests sugeridos:**
+  - `test_user_can_create_avaluo`
+  - `test_user_cannot_create_avaluo_with_future_date`
+  - `test_user_cannot_assign_juridica_person_as_perito`
+  - `test_estado_caduca_automatically`
+  - `test_user_can_download_document`
+  - `test_file_is_deleted_when_avaluo_is_deleted`
+
+#### 2. **No hay API documentation**
+- **Ubicación:** No existe documentación de API (Swagger/OpenAPI)
+- **Faltante:** Documentación de endpoints para integración externa.
+
+#### 3. **No hay validación de límites de archivos**
+- **Ubicación:** `app/Http/Requests/StoreAvaluoRequest.php:22`
+- **Faltante:** Validación de que el archivo no esté corrupto o dañado.
+- **Mejora:** Validar integridad del archivo PDF.
+
+#### 4. **No hay logging de acciones críticas**
+- **Ubicación:** Controlador `AvaluoController.php`
+- **Faltante:** Log de eliminaciones, creaciones y actualizaciones para auditoría.
+- **Código sugerido:**
+  ```php
+  \Log::info('Avaluo creado', ['avaluo_id' => $avaluo->id, 'user_id' => auth()->id()]);
+  ```
+
+#### 5. **No hay configuración de límite de vigencia**
+- **Ubicación:** Código hardcodeado
+- **Faltante:** El límite de 1 año para vigencia está hardcodeado.
+- **Mejora:** Mover a config `config/avaluos.php`
+  ```php
+  return [
+      'vigencia_meses' => env('AVALUO_VIGENCIA_MESES', 12),
+  ];
+  ```
+
+#### 6. **No hay notificaciones**
+- **Ubicación:** No implementado
+- **Faltante:** Notificar cuando un avalúo está próximo a caducar.
+- **Implementación:** Job que revisa y envía emails 15 días antes.
+
+#### 7. **No hay validación de valor mínimo**
+- **Ubicación:** `app/Http/Requests/StoreAvaluoRequest.php:20`
+- **Faltante:** Validar que el valor no sea irracionalmente bajo (ej: menor a 100 Bs).
+- **Código sugerido:**
+  ```php
+  'valor' => 'required|numeric|min:100|max:999999999999.99',
+  ```
+
+#### 8. **No hay migración para optimizar documento_path**
+- **Ubicación:** Migración actual
+- **Faltante:** El campo `documento_path` es VARCHAR(250), debería ser TEXT para paths largos o usar UUID para nombres de archivos.
+
+#### 9. **No hay seed para producciones**
+- **Ubicación:** Solo existe `AvaluoSeeder.php` para desarrollo
+- **Faltante:** Seeder con datos realistas para producción/testing.
+
+#### 10. **No hay internacionalización**
+- **Ubicación:** Hardcoded en español
+- **Faltante:** Uso de Laravel localization para soportar múltiples idiomas en el futuro.
+
+---
+
+### ⚡ OPTIMIZACIONES
+
+#### 1. **Optimizar consulta en método list()**
+- **Ubicación:** `app/Http/Controllers/AvaluoController.php:35-39`
+- **Problema:** No hay límite de resultados por página por defecto.
+- **Optimización actual:** Ya tiene paginación configurable ✓
+- **Sugerencia:** Agregar cache para búsquedas frecuentes:
+  ```php
+  $data = Avaluo::with(['inmueble', 'perito'])
+      ->remember(now()->addMinutes(30)) // Si usas cache
+      ->when($search, fn($q) => $q->whereHas(...))
+      ->paginate($paginate);
+  ```
+
+#### 2. **Caching de avalúos vigentes**
+- **Ubicación:** `app/Models/Avaluo.php:54-60`
+- **Problema:** Consulta repetitiva en trámites.
+- **Optimización sugerida:**
+  ```php
+  public static function vigente(int $inmuebleId): ?self
+  {
+      return Cache::remember("avaluo:vigente:{$inmuebleId}", now()->addHours(6), function() use ($inmuebleId) {
+          return self::where('inmueble_id', $inmuebleId)
+                     ->where('estado', 'Vigente')
+                     ->latest('fecha_avaluo')
+                     ->first();
+      });
+  }
+  ```
+
+#### 3. **Optimizar carga de listas de peritos**
+- **Ubicación:** `app/Http/Controllers/AvaluoController.php:62` y `:92`
+- **Problema:** Carga TODOS los peritos cada vez.
+- **Optimización sugerida:** Usar lazy loading o search API para select2 con muchos registros:
+  ```php
+  'peritos' => collect(), // Vacío, cargar via AJAX
+  ```
+
+#### 4. **Optimizar búsqueda en list()**
+- **Ubicación:** `app/Http/Controllers/AvaluoController.php:36`
+- **Problema:** Búsqueda solo por catastro del inmueble.
+- **Optimización sugerida:** Agregar búsqueda por perito:
+  ```php
+  ->when($search, fn($q) => $q->whereHas('inmueble', fn($b) => 
+      $b->where('catastro', 'like', "%{$search}%")
+  )->orWhereHas('perito', fn($p) => 
+      $p->where('first_name', 'like', "%{$search}%")
+         ->orWhere('paternal_surname', 'like', "%{$search}%")
+  ))
+  ```
+
+#### 5. **Usar Chunk para operaciones masivas**
+- **Ubicación:** Cualquier operación que procese muchos registros
+- **Optimización:** Si se implementa el comando de caducidad:
+  ```php
+  Avaluo::where('estado', 'Vigente')
+        ->where('fecha_avaluo', '<', now()->subYear())
+        ->chunk(100, function ($avaluos) {
+            foreach ($avaluos as $avaluo) {
+                $avaluo->update(['estado' => 'Caducado']);
+            }
+        });
+  ```
+
+#### 6. **Comprimir documentos antes de guardar**
+- **Ubicación:** `app/Http/Controllers/AvaluoController.php:72`
+- **Optimización:** Reducir tamaño de archivos.
+- **Implementación:** Usar librería como `spatie/pdf-to-image` o similar.
+
+#### 7. **Usar Queue para procesamiento de archivos**
+- **Ubicación:** `app/Http/Controllers/AvaluoController.php:72`
+- **Optimización:** No bloquear la request mientras se sube.
+- **Implementación:** Usar Laravel Queues:
+  ```php
+  $path = $request->file('documento')->store('avaluos', 'public');
+  dispatch(new ProcesarAvaluoJob($path));
+  ```
+
+---
+
+### 🔒 SEGURIDAD
+
+#### 1. **Validar tipos MIME más estrictamente**
+- **Ubicación:** `app/Http/Requests/StoreAvaluoRequest.php:22`
+- **Problema:** Solo valida extensión, no contenido real.
+- **Mejora sugerida:**
+  ```php
+  'documento' => 'nullable|file|mimes:pdf,jpg,png,jpeg|max:5120',
+  ```
+  Y además validar el contenido real del archivo en el controlador.
+
+#### 2. **Sanitizar nombres de archivos**
+- **Ubicación:** `app/Http/Controllers/AvaluoController.php:72`
+- **Problema:** El nombre original del archivo se usa en el path.
+- **Mejora sugerida:**
+  ```php
+  $fileName = Str::uuid() . '.' . $request->file('documento')->getClientOriginalExtension();
+  $path = $request->file('documento')->storeAs('avaluos', $fileName, 'public');
+  ```
+
+#### 3. **Agregar validación de CSRF**
+- **Ubicación:** Vistas `edit-add.blade.php:14`
+- **Estado:** ✓ Ya implementado con `@csrf`
+
+#### 4. **Validar permisos en download**
+- **Ubicación:** `app/Http/Controllers/AvaluoController.php:132`
+- **Estado:** ✓ Ya implementado con `authorize('view', $avaluo)`
+
+#### 5. **Agregar rate limiting**
+- **Ubicación:** Rutas en `routes/web.php`
+- **Faltante:** Prevenir abuse en endpoints públicos si se crea API.
+- **Implementación sugerida:**
+  ```php
+  Route::middleware('throttle:60,1')->group(function () {
+      Route::get('avaluos/ajax/list', [AvaluoController::class, 'list']);
+  });
+  ```
+
+---
+
+### 📍 UBICACIÓN DE ARCHIVOS DEL MÓDULO
+
+#### Estructura de archivos:
+
+```
+├── app/
+│   ├── Http/
+│   │   ├── Controllers/
+│   │   │   └── AvaluoController.php              # Controlador principal
+│   │   └── Requests/
+│   │       ├── StoreAvaluoRequest.php             # Validación de creación
+│   │       └── UpdateAvaluoRequest.php           # Validación de actualización
+│   ├── Models/
+│   │   └── Avaluo.php                             # Modelo Eloquent
+│   └── Policies/
+│       └── AvaluoPolicy.php                      # Politicas de permisos
+├── database/
+│   ├── migrations/
+│   │   └── 2025_09_22_122822_create_avaluos_table.php
+│   └── seeders/
+│       └── AvaluoSeeder.php
+├── resources/
+│   └── views/
+│       └── admin/
+│           └── avaluos/
+│               ├── browse.blade.php               # Página principal
+│               ├── list.blade.php                 # Tabla AJAX
+│               ├── edit-add.blade.php             # Formulario crear/editar
+│               └── read.blade.php                 # Vista detalle
+└── docs/
+    └── dev/
+        └── avaluos.md                             # Esta documentación
+```
+
+#### Archivos relacionados:
+
+- `app/Models/Inmueble.php:51-60` - Relación con inmuebles
+- `app/Http/Controllers/InmuebleController.php:92-95` - Validación de borrado
+- `routes/web.php:120-122` - Definición de rutas
+- `database/seeders/PermissionsTableSeeder.php:125-126` - Permisos
+- `database/seeders/IdtgbMenuAppendSeeder.php:45` - Menú de navegación
+- `resources/views/admin/inmuebles/read.blade.php:95-104` - Vista de avalúo en inmueble

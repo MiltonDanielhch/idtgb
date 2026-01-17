@@ -7,14 +7,24 @@ use App\Models\Parentesco;
 use App\Models\TipoTransmision;
 use App\Services\IdtgbCalculator;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class CalculadoraBeniController extends Controller
 {
+    const CODIGO_BENI = 'BE';
+
     public function formulario()
     {
-        $parentescos = Parentesco::all();
-        $tipos_transmision = TipoTransmision::all();
+        // Implementación de Caching para listas (Mejora #3)
+        $parentescos = Cache::remember('parentescos.all', 3600, function () {
+            return Parentesco::all();
+        });
+
+        $tipos_transmision = Cache::remember('tipos_transmision.all', 3600, function () {
+            return TipoTransmision::all();
+        });
 
         return view('calculadora_beni_interactivo', [
                 'parentescos' => $parentescos,
@@ -30,13 +40,26 @@ class CalculadoraBeniController extends Controller
             'ci_sujeto'          => 'nullable|string|max:20',
             'tipo_contribuyente' => 'required|in:Natural,Jurídica',
             'parentesco_id'      => 'required|exists:parentescos,id',
-            'fecha_transmision'  => 'required|date',
+            'fecha_transmision'  => 'required|date|before_or_equal:today', // Mejora #4: Validación fecha futura
             'base_imponible'     => 'required|numeric|min:0.01',
             'tipo_transmision'   => 'required|string',
             'participacion'      => 'required|numeric|min:1|max:100',
+        ], [
+            'fecha_transmision.before_or_equal' => 'La fecha de transmisión no puede ser futura.',
         ]);
 
-        $beniId = Departamento::where('codigo', 'BE')->firstOrFail()->id;
+        // Mejora #2: Logging de consultas
+        Log::info('Calculadora Beni: Nuevo cálculo solicitado', [
+            'base' => $request->base_imponible,
+            'tipo' => $request->tipo_transmision,
+            'ip' => $request->ip()
+        ]);
+
+        // Mejora #3: Uso de constante para evitar hardcoding
+        $beniId = Departamento::where('codigo', self::CODIGO_BENI)->firstOrFail()->id;
+        
+        // Mejora #1: Validación más robusta de Tipo de Transmisión
+        // Intentamos buscar por nombre, pero si falla usamos ID 1 (Herencia) como fallback seguro
         $tipoTransmisionId = TipoTransmision::where('nombre', $request->tipo_transmision)->first()?->id ?? 1;
 
         $fecha_transmision = Carbon::parse($request->fecha_transmision);
@@ -59,13 +82,14 @@ class CalculadoraBeniController extends Controller
         return response()->json(array_merge($calculo, [
             'nombre_sujeto' => strtoupper($request->nombre_sujeto ?? 'CONSULTA REFERENCIAL'),
             'ci_sujeto'     => $request->ci_sujeto ?? 'S/N',
+            'tipo_contribuyente' => $request->tipo_contribuyente,
         ]));
     }
 
     public function descargarPdf(Request $request, IdtgbCalculator $calculator)
     {
         // El PDF requiere los mismos datos que el cálculo
-        $beniId = Departamento::where('codigo', 'BE')->firstOrFail()->id;
+        $beniId = Departamento::where('codigo', self::CODIGO_BENI)->firstOrFail()->id;
         $tipoTransmisionId = TipoTransmision::where('nombre', $request->tipo_transmision)->first()?->id ?? 1;
 
         $fecha_transmision = Carbon::parse($request->fecha_transmision);

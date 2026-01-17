@@ -154,7 +154,7 @@ La creación de un trámite se realiza exclusivamente a través del `TramiteWiza
 ### `IdtgbCalculator`
 -   **Ubicación**: `app/Services/IdtgbCalculator.php`
 -   **Responsabilidad**: Centraliza toda la lógica de cálculo de impuestos.
--   **Método `calculateAndSave(Tramite $tramite)`**: Recibe un objeto `Tramite`, realiza todos los cálculos (impuesto base, mora, exenciones) y actualiza el modelo `Tramite` y sus relaciones (`AdquirenteTramite`) con los montos correctos.
+-   **Método `calculateAndSave(Tramite $tramite)`**: Recibe un objeto `Tramite`, realiza todos los cálculos (impuesto base, mora, exenciones) basándose en la Ley 812 (Tasas por Departamento/Parentesco/Tipo Transmisión) y actualiza el modelo `Tramite` y sus relaciones (`AdquirenteTramite`) con los montos correctos.
 
 ### `TramiteObserver`
 -   **Ubicación**: `app/Observers/TramiteObserver.php`
@@ -228,7 +228,7 @@ if ($totalPorcentaje != 100) {
 ```
 
 #### 3. Wizard: Bucle Infinito en Cálculo Preventivo
-**Ubicación**: `TramiteWizardController.php`, líneas 604-678
+**Ubicación**: `TramiteWizardController.php`, líneas 466-474
 
 **Problema:**
 ```php
