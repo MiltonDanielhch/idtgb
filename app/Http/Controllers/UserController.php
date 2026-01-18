@@ -32,7 +32,7 @@ class UserController extends Controller
 
         $search = request('search') ?? null;
         $paginate = request('paginate') ?? 10;
-        
+
         $data = User::with(['person'])
                     ->where(function($query) use ($search){
                         $query->OrWhereRaw($search ? "id = '$search'" : 1)
@@ -55,10 +55,10 @@ class UserController extends Controller
             return redirect()->route('voyager.users.index')->with(['message' => 'El correo ya existe.', 'alert-type' => 'warning    ']);
         }
         $person = Person::where('deleted_at', null)->where('status', 1)->where('id', $request->person_id)->first();
-    
+
         DB::beginTransaction();
         try {
-            
+
             User::create([
                 'person_id' => $request->person_id,
                 'name' =>  $person->first_name,
@@ -75,7 +75,7 @@ class UserController extends Controller
         } catch (\Exception $e) {
             DB::rollback();
             return redirect()->route('voyager.users.index')->with(['message' => 'Ocurrió un error.', 'alert-type' => 'error']);
-        }  
+        }
 
     }
 
@@ -87,7 +87,7 @@ class UserController extends Controller
             $user->update([
                 'status'=> $request->status?1:0,
             ]);
-            
+
             if($request->role_id)
             {
                 $user->update([
@@ -107,7 +107,7 @@ class UserController extends Controller
             DB::rollback();
 
             return redirect()->route('voyager.users.index')->with(['message' => 'Ocurrió un error.', 'alert-type' => 'error']);
-        }  
+        }
     }
 
     public function destroy(Request $request, $id)
@@ -121,6 +121,6 @@ class UserController extends Controller
         } catch (\Exception $e) {
             DB::rollback();
             return redirect()->route('voyager.users.index')->with(['message' => 'Ocurrió un error.', 'alert-type' => 'error']);
-        }  
+        }
     }
 }

@@ -18,7 +18,7 @@ class RoleController extends Controller
     //     $this->custom_authorize('browse_roles');
     //     return view('administrations.people.browse');
     // }
-    
+
     public function list(){
 
         $search = request('search') ?? null;
