@@ -374,6 +374,25 @@ public function destroy(Inmueble $inmueble)
 
 ## 🐛 Análisis del Módulo: Bugs, Mejoras y Optimizaciones
 
+### ✅ Bugs Resueltos
+
+#### 1. **Validación incompleta en eliminación de inmuebles** - RESUELTO
+**Estado:** Se ha añadido validación para verificar trámites asociados antes de eliminar inmuebles.
+
+**Ubicación:** `app/Http/Controllers/InmuebleController.php:89-99`
+
+**Solución implementada:**
+```php
+if ($inmueble->avaluos()->exists()) {
+    return back()->with(['message' => 'No se puede eliminar: tiene avalúos asociados.', 'alert-type' => 'error']);
+}
+if ($inmueble->tramiteInmuebles()->exists()) {
+    return back()->with(['message' => 'No se puede eliminar: tiene trámites asociados.', 'alert-type' => 'error']);
+}
+```
+
+---
+
 ### 🔴 Posibles Bugs (CRÍTICOS)
 
 #### 1. **Validación incompleta en eliminación de inmuebles**

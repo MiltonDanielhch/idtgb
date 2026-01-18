@@ -6,14 +6,14 @@
 2. [Base de Datos](#base-de-datos)
 3. [Modelo](#modelo)
 4. [Controlador](#controlador)
-5. [Rutas](#rutas)
-6. [Permisos](#permisos)
-7. [Vistas](#vistas)
-8. [Integración con otros módulos](#integración-con-otros-módulos)
-9. [Ejemplos de Uso](#ejemplos-de-uso)
-10. [Consideraciones Importantes](#consideraciones-importantes)
-11. [Guía para Desarrolladores](#guía-para-desarrolladores)
-12. [Análisis de Calidad y Mejoras](#análisis-de-calidad-y-mejoras)
+5. [Policy](#policy)
+6. [Requests](#requests)
+7. [Rutas](#rutas)
+8. [Vistas](#vistas)
+9. [Integración con otros módulos](#integración-con-otros-módulos)
+10. [Ejemplos de Uso](#ejemplos-de-uso)
+11. [Consideraciones Importantes](#consideraciones-importantes)
+12. [Guía para Desarrolladores](#guía-para-desarrolladores)
 
 ---
 
@@ -50,6 +50,9 @@ La clasificación del tipo de inmueble es fundamental para:
 | `nombre` | VARCHAR(50) | UNIQUE, NOT NULL | Nombre del tipo de inmueble (ej: "Urbano", "Rústico") |
 | `created_at` | TIMESTAMP | NULLABLE | Fecha de creación |
 | `updated_at` | TIMESTAMP | NULLABLE | Fecha de actualización |
+| `deleted_at` | TIMESTAMP | NULLABLE | Fecha de eliminación (Soft Deletes) |
+
+**Migración de Soft Deletes:** `add_soft_deletes_to_tipos_inmueble_table.php`
 
 ---
 
@@ -58,6 +61,10 @@ La clasificación del tipo de inmueble es fundamental para:
 ### Modelo: `TipoInmueble`
 
 **Ubicación:** `app/Models/TipoInmueble.php`
+
+**Traits:**
+- `HasFactory`
+- `SoftDeletes` - Permite la recuperación de registros eliminados
 
 **Atributos:**
 - `$table = 'tipos_inmueble'`
@@ -84,19 +91,84 @@ public function inmuebles()
 
 ### Métodos del Controlador
 
-- **`index()` y `list()`**: Muestran el listado principal y la tabla de datos vía AJAX.
-- **`create()` y `store(Request $request)`**: Muestran el formulario de creación y guardan un nuevo registro.
-- **`show(TipoInmueble $tipoInmueble)`**: Muestra la vista de detalle.
-- **`edit(TipoInmueble $tipoInmueble)` y `update(Request $request, TipoInmueble $tipoInmueble)`**: Muestran el formulario de edición y actualizan un registro existente.
-- **`destroy(TipoInmueble $tipoInmueble)`**: Elimina un registro, verificando primero que no esté en uso por ningún inmueble.
+- **`index()`**: Muestra el listado principal con autorización `viewAny`.
+- **`list()`**: Retorna la tabla de datos vía AJAX con conteo de inmuebles asociados (`withCount('inmuebles')`).
+- **`create()`**: Muestra el formulario de creación con autorización `create`.
+- **`store(StoreTipoInmuebleRequest $request)`**: Guarda un nuevo registro usando validación especializada.
+- **`show(TipoInmueble $tipoInmueble)`**: Muestra la vista de detalle con autorización `view`.
+- **`edit(TipoInmueble $tipoInmueble)`**: Muestra el formulario de edición con autorización `update`.
+- **`update(UpdateTipoInmuebleRequest $request, TipoInmueble $tipoInmueble)`**: Actualiza un registro existente.
+- **`destroy(TipoInmueble $tipoInmueble)`**: Elimina un registro (soft delete), verificando primero que no esté en uso por ningún inmueble.
+
+---
+
+## 🔒 Policy
+
+### Policy: `TipoInmueblePolicy`
+
+**Ubicación:** `app/Policies/TipoInmueblePolicy.php`
+
+**Registro:** `app/Providers/AuthServiceProvider.php`
+
+| Método | Permiso Requerido | Descripción |
+|--------|-------------------|-------------|
+| `viewAny()` | `browse_tipos-inmueble` | Permite ver el listado de tipos de inmueble. |
+| `view()` | `read_tipos-inmueble` | Permite ver el detalle de un tipo de inmueble. |
+| `create()` | `add_tipos-inmueble` | Permite mostrar el formulario y crear un tipo de inmueble. |
+| `update()` | `edit_tipos-inmueble` | Permite mostrar el formulario y actualizar un tipo de inmueble. |
+| `delete()` | `delete_tipos-inmueble` | Permite eliminar un tipo de inmueble. |
+| `before()` | `browse_admin` | Otorga todos los permisos al rol de administrador. |
+
+---
+
+## ✅ Requests
+
+### `StoreTipoInmuebleRequest`
+
+**Ubicación:** `app/Http/Requests/StoreTipoInmuebleRequest.php`
+
+```php
+public function authorize(): bool
+{
+    return Gate::allows('create', \App\Models\TipoInmueble::class);
+}
+
+public function rules(): array
+{
+    return [
+        'nombre' => 'required|string|max:50|unique:tipos_inmueble,nombre',
+    ];
+}
+```
+
+### `UpdateTipoInmuebleRequest`
+
+**Ubicación:** `app/Http/Requests/UpdateTipoInmuebleRequest.php`
+
+```php
+public function authorize(): bool
+{
+    return Gate::allows('update', $this->route('tipoInmueble'));
+}
+
+public function rules(): array
+{
+    return [
+        'nombre' => [
+            'required',
+            'string',
+            'max:50',
+            Rule::unique('tipos_inmueble')->ignore($this->route('tipoInmueble'))
+        ],
+    ];
+}
+```
 
 ---
 
 ## 🛣️ Rutas
 
 **Ubicación:** `routes/web.php`
-
-Se utiliza `Route::resource` para generar las rutas CRUD estándar y una ruta adicional para el listado AJAX.
 
 ```php
 Route::resource('tipos-inmueble', TipoInmuebleController::class)
@@ -107,11 +179,16 @@ Route::get('tipos-inmueble/ajax/list', [TipoInmuebleController::class, 'list'])
     ->name('admin.tipos-inmueble.ajax.list');
 ```
 
----
-
-## 🔒 Permisos
-
-Aunque en la base de datos (`PermissionsTableSeeder`) se generan permisos específicos para este módulo (`browse_tipos-inmueble`, `add_tipos-inmueble`, etc.), el `TipoInmuebleController` actualmente no los utiliza, basando su seguridad únicamente en el middleware `auth`.
+| Método | URI | Nombre | Descripción |
+|--------|-----|--------|-------------|
+| GET | `/admin/tipos-inmueble` | `admin.tipos-inmueble.index` | Listado principal. |
+| GET | `/admin/tipos-inmueble/create` | `admin.tipos-inmueble.create` | Formulario para crear. |
+| POST | `/admin/tipos-inmueble` | `admin.tipos-inmueble.store` | Guardar nuevo tipo. |
+| GET | `/admin/tipos-inmueble/{tipoInmueble}`| `admin.tipos-inmueble.show` | Ver detalle. |
+| GET | `/admin/tipos-inmueble/{tipoInmueble}/edit`| `admin.tipos-inmueble.edit` | Formulario para editar. |
+| PUT/PATCH| `/admin/tipos-inmueble/{tipoInmueble}`| `admin.tipos-inmueble.update` | Actualizar tipo. |
+| DELETE | `/admin/tipos-inmueble/{tipoInmueble}`| `admin.tipos-inmueble.destroy`| Eliminar tipo (soft delete). |
+| GET | `/admin/tipos-inmueble/ajax/list` | `admin.tipos-inmueble.ajax.list` | Listado para AJAX. |
 
 ---
 
@@ -119,17 +196,70 @@ Aunque en la base de datos (`PermissionsTableSeeder`) se generan permisos espec�
 
 **Ubicación:** `resources/views/admin/tipos-inmueble/`
 
-El módulo cuenta con vistas estándar para un CRUD:
-- `browse.blade.php`: Listado principal con buscador.
-- `list.blade.php`: Tabla de datos que se carga con AJAX.
-- `edit-add.blade.php`: Formulario para crear y editar.
-- `read.blade.php`: Vista de solo lectura.
+### 1. `browse.blade.php`
+- Vista principal del módulo.
+- Contiene el encabezado, el botón "Añadir nuevo" (protegido por permiso `create`), y los controles de búsqueda y paginación.
+- Utiliza JavaScript para realizar llamadas AJAX al endpoint `list` y renderizar los resultados.
+- **Modal de confirmación de eliminación:** Incluye un modal Bootstrap (`id="delete_modal"`) para confirmar la eliminación de tipos de inmueble antes de procesar la acción.
+
+### 2. `list.blade.php`
+- Plantilla parcial que renderiza la tabla de tipos de inmueble.
+- Muestra: ID, Nombre, Conteo de inmuebles (con badge), Fecha de creación.
+- Contiene los botones de acción (Ver, Editar, Borrar) para cada fila, protegidos por directivas `@can`.
+- El botón de borrar abre el modal de confirmación en lugar de ejecutar la acción inmediatamente.
+- Incluye la lógica de paginación de Laravel, adaptada para funcionar con AJAX.
+
+### 3. `edit-add.blade.php`
+- Formulario unificado para crear y editar tipos de inmueble.
+- El título y la acción del formulario cambian dinámicamente.
+- Muestra los errores de validación retornados por los `FormRequest`.
+
+### 4. `read.blade.php`
+- Vista de solo lectura que muestra todos los detalles de un tipo de inmueble en una tabla.
+
+---
+
+## 🔄 Flujo de Eliminación con Modal
+
+El módulo implementa un modal de confirmación para eliminar tipos de inmueble, siguiendo el patrón usado en otros módulos del sistema:
+
+### Implementación
+
+1. **Botón de borrar en `list.blade.php`:**
+   - Usa `data-delete-url` para almacenar la URL de eliminación
+   - Usa `data-delete-name` para almacenar el nombre del tipo a eliminar
+   - Usa `data-toggle="modal"` y `data-target="#delete_modal"` para abrir el modal
+
+2. **Modal en `browse.blade.php`:**
+   - ID del modal: `delete_modal`
+   - Clase: `modal modal-danger fade`
+   - Contiene un formulario con `method="POST"` y `@method('DELETE')`
+   - El formulario se actualiza dinámicamente mediante JavaScript
+
+3. **JavaScript:**
+   ```javascript
+   $(document).on('click', '.delete[data-toggle="modal"]', function() {
+       let url = $(this).data('delete-url');
+       let nombre = $(this).data('delete-name');
+       $('#delete_form').attr('action', url);
+       $('.modal-title').html('<i class="voyager-trash"></i> ¿Eliminar el tipo de inmueble "<strong>' + nombre + '</strong>"?');
+   });
+   ```
+
+### Ventajas
+- Evita eliminaciones accidentales
+- Muestra el nombre del item a eliminar para confirmación visual
+- Mejor experiencia de usuario con UI moderna de Bootstrap modals
 
 ---
 
 ## 🔗 Integración con otros Módulos
 
 La integración principal es con el módulo de **Inmuebles**. Cada `Inmueble` tiene un campo `tipo_inmueble_id` que es una clave foránea a esta tabla, siendo un campo obligatorio en el formulario de creación y edición de inmuebles.
+
+### Integración con Trámites
+- Los inmuebles se asocian a trámites a través de la tabla pivote `tramite_inmuebles`.
+- El tipo de inmueble se usa indirectamente para cálculos del impuesto.
 
 ---
 
@@ -152,76 +282,61 @@ if ($tipoInmueble->inmuebles()->exists()) {
 }
 ```
 
+**Recuperar un tipo eliminado (soft delete):**
+```php
+$tipo = TipoInmueble::withTrashed()->find(1);
+$tipo->restore();
+```
+
 ---
 
 ## 🔍 Consideraciones Importantes
 
 - **Unicidad:** El campo `nombre` es único. El sistema no permite dos tipos de inmueble con el mismo nombre.
 - **Dependencias:** El sistema protege la integridad de los datos al no permitir la eliminación de un tipo si está siendo utilizado por al menos un inmueble.
+- **Soft Deletes:** Los registros eliminados no se borran permanentemente, se marcan con `deleted_at` y pueden ser restaurados.
+- **Autorización:** Todo el módulo está protegido por Policies y FormRequests, siguiendo las mejores prácticas de Laravel.
 
 ---
 
 ## 📝 Guía para Desarrolladores
 
-Para extender el módulo, por ejemplo, para añadir un campo `descripcion`, se deben seguir los pasos estándar: crear una migración, añadir el campo a `$fillable` en el modelo, y actualizar las vistas y las reglas de validación en el controlador.
+### Crear un nuevo tipo de inmueble
+1. Acceder a la ruta `/admin/tipos-inmueble/create`
+2. El usuario debe tener el permiso `add_tipos-inmueble`
+3. Ingresar el nombre del tipo (máximo 50 caracteres)
+4. El nombre debe ser único en el sistema
+
+### Extender el módulo
+Para añadir un campo `descripcion`:
+1. Crear migración: `php artisan make:migration add_descripcion_to_tipos_inmueble_table`
+2. Añadir campo a `$fillable` en el modelo `TipoInmueble`
+3. Actualizar las reglas en `StoreTipoInmuebleRequest` y `UpdateTipoInmuebleRequest`
+4. Añadir el campo al formulario `edit-add.blade.php`
+5. Mostrar el campo en `read.blade.php` y `list.blade.php`
+
+### Ver tipos eliminados
+```php
+$tiposEliminados = TipoInmueble::onlyTrashed()->get();
+```
+
+### Restaurar un tipo eliminado
+```php
+$tipo = TipoInmueble::withTrashed()->find($id);
+$tipo->restore();
+```
+
+### Conteo de inmuebles por tipo
+El método `list()` del controlador carga el conteo usando `withCount('inmuebles')`, lo que permite mostrar cuántos inmuebles están asociados a cada tipo en la vista de listado.
 
 ---
-## 🚨 Análisis de Calidad y Mejoras
 
-### ✅ Corrección sobre la Documentación Anterior
+## ✅ Mejoras Implementadas
 
-La documentación original indicaba un bug crítico debido a una supuesta relación faltante (`inmuebles()`) en el modelo `TipoInmueble`. Tras analizar el código fuente (`app/Models/TipoInmueble.php`), se confirma que **esta relación sí existe y está correctamente implementada**.
-
-```php
-// app/Models/TipoInmueble.php - CORRECTO
-public function inmuebles()
-{
-    return $this->hasMany(Inmueble::class);
-}
-```
-Por lo tanto, la comprobación de dependencias en `TipoInmuebleController@destroy` funciona como se espera, previniendo la eliminación de tipos de inmueble en uso.
-
-### 🐛 Inconsistencias y Riesgos Potenciales
-
-1.  **Falta de Autorización Basada en Roles (Policies)**
-    *   **Ubicación**: `app/Http/Controllers/TipoInmuebleController.php` (todos los métodos).
-    *   **Problema**: El controlador incluye un comentario: `// En el futuro, aquí se pueden añadir autorizaciones con Policies`, confirmando que no se está utilizando un sistema de `Policies` para la autorización. Aunque hay permisos definidos en los seeders (`browse_tipos-inmueble`, `add_tipos-inmueble`, etc.), estos no se están aplicando en el backend.
-    *   **Impacto**: **Cualquier usuario autenticado**, sin importar su rol, tiene la capacidad de crear, editar y eliminar tipos de inmueble, lo cual es un **riesgo de seguridad y de integridad de datos**.
-    *   **Solución Crítica**: Crear e implementar una `TipoInmueblePolicy` y registrarla en el `AuthServiceProvider`. Luego, añadir `$this->authorize(...)` en cada método del controlador para hacer cumplir los permisos.
-
-2.  **Validación de Datos en el Controlador**
-    *   **Ubicación**: `app/Http/Controllers/TipoInmuebleController.php`, métodos `store()` y `update()`.
-    *   **Problema**: La lógica de validación se encuentra directamente en el controlador, lo que es inconsistente con otros módulos más robustos del sistema que utilizan clases `FormRequest` dedicadas.
-    *   **Impacto**: Dificulta la reutilización de la lógica de validación (por ejemplo, en una futura API) y sobrecarga el controlador con responsabilidades que no le corresponden.
-    *   **Solución Sugerida**: Abstraer la validación a clases como `StoreTipoInmuebleRequest` y `UpdateTipoInmuebleRequest`, lo que centralizaría tanto las reglas como la autorización de la petición.
-
-### 🚀 Oportunidades de Mejora y Optimización
-
-1.  **Estandarización del Código**
-    *   **Problema**: El módulo sigue un patrón más simple que otros CRUDs del proyecto. Carece de `Policies` y `FormRequests`.
-    *   **Mejora**: Refactorizar el `TipoInmuebleController` para alinearlo con las mejores prácticas de Laravel y la arquitectura del resto de la aplicación. Esto no solo mejora la seguridad, sino también la mantenibilidad a largo plazo.
-
-2.  **Añadir Conteo de Dependencias en la Vista**
-    *   **Ubicación**: `resources/views/admin/tipos-inmueble/list.blade.php`.
-    *   **Mejora**: Para mejorar la usabilidad, la tabla de listado debería mostrar cuántos inmuebles están asociados a cada tipo. Esto daría al administrador un contexto inmediato de cuán utilizado es un tipo antes de intentar editarlo o eliminarlo.
-    *   **Implementación Sugerida**:
-        ```php
-        // En TipoInmuebleController@list, usar withCount
-        $data = TipoInmueble::withCount('inmuebles')
-            ->when(...) // ...resto de la consulta
-
-        // En la vista list.blade.php, añadir la columna
-        // <td><span class="badge badge-info">{{ $item->inmuebles_count }}</span></td>
-        ```
-
-3.  **Implementar `SoftDeletes` para Recuperación**
-    *   **Problema**: La eliminación es destructiva. Un `TipoInmueble` borrado por error se pierde permanentemente.
-    *   **Mejora**: Añadir el trait `SoftDeletes` al modelo `TipoInmueble`. Esto permite "archivar" los registros en lugar de borrarlos, con la posibilidad de restaurarlos.
-    *   **Impacto**: Aumenta la robustez y seguridad del sistema, previniendo la pérdida de datos maestros.
-
-### 📋 Funcionalidades Faltantes
-
-1.  **Auditoría de Cambios**
-    *   **Problema**: No existe un registro de quién creó, modificó o eliminó un tipo de inmueble.
-    *   **Necesidad**: En un sistema de gestión, es fundamental poder rastrear los cambios en los datos maestros para fines de auditoría y depuración.
-    *   **Solución Sugerida**: Añadir columnas `created_by` y `updated_by` a la tabla y gestionarlas automáticamente, o implementar un sistema de logging de actividad más completo.
+1. **Implementación de Policy** - `TipoInmueblePolicy` con autorización basada en permisos
+2. **FormRequests** - `StoreTipoInmuebleRequest` y `UpdateTipoInmuebleRequest` para validación y autorización
+3. **Soft Deletes** - Implementación de eliminación suave en el modelo y base de datos
+4. **Conteo de Inmuebles** - `withCount('inmuebles')` en el listado para mostrar cuántos inmuebles usa cada tipo
+5. **Protección de vistas** - Directivas `@can` en botones de acción
+6. **Validación mejorada** - Mensajes personalizados en FormRequests
+7. **Modal de confirmación de eliminación** - Modal Bootstrap para confirmar la eliminación de tipos de inmueble, siguiendo el patrón del módulo de parentescos

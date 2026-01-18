@@ -10,9 +10,11 @@
                     <h1 class="page-title">
                         <i class="voyager-home"></i> Tipos de Inmueble
                     </h1>
-                    <a href="{{ route('admin.tipos-inmueble.create') }}" class="btn btn-success btn-add-new">
-                        <i class="voyager-plus"></i> <span>Añadir nuevo</span>
-                    </a>
+                    @can('create', \App\Models\TipoInmueble::class)
+                        <a href="{{ route('admin.tipos-inmueble.create') }}" class="btn btn-success btn-add-new">
+                            <i class="voyager-plus"></i> <span>Añadir nuevo</span>
+                        </a>
+                    @endcan
                 </div>
             </div>
         </div>
@@ -41,6 +43,27 @@
         </div>
     </div>
 
+    {{-- Modal eliminar --}}
+    <div class="modal modal-danger fade" tabindex="-1" id="delete_modal" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                    <h4 class="modal-title"><i class="voyager-trash"></i> ¿Desea eliminar este tipo de inmueble?</h4>
+                </div>
+                <div class="modal-footer">
+                    <form action="#" id="delete_form" method="POST">
+                        @method('DELETE') @csrf
+                        <input type="submit" class="btn btn-danger pull-right delete-confirm" value="Sí, eliminar">
+                    </form>
+                    <button type="button" class="btn btn-default pull-right" data-dismiss="modal">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     {{-- Scripts para la carga AJAX --}}
     @push('javascript')
         <script>
@@ -48,6 +71,13 @@
                 let page = 1;
                 let search = '';
                 let paginate = 10;
+
+                $(document).on('click', '.delete[data-toggle="modal"]', function() {
+                    let url = $(this).data('delete-url');
+                    let nombre = $(this).data('delete-name');
+                    $('#delete_form').attr('action', url);
+                    $('.modal-title').html('<i class="voyager-trash"></i> ¿Eliminar el tipo de inmueble "<strong>' + nombre + '</strong>"?');
+                });
 
                 function fetch_data(page, search, paginate) {
                     $('#div-results').loading({message: 'Cargando...'});

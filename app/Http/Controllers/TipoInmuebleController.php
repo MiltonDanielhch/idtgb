@@ -3,8 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\TipoInmueble;
+use App\Http\Requests\StoreTipoInmuebleRequest;
+use App\Http\Requests\UpdateTipoInmuebleRequest;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class TipoInmuebleController extends Controller
 {
@@ -15,16 +16,18 @@ class TipoInmuebleController extends Controller
 
     public function index()
     {
-        // En el futuro, aquí se pueden añadir autorizaciones con Policies
+        $this->authorize('viewAny', TipoInmueble::class);
         return view('admin.tipos-inmueble.browse');
     }
 
     public function list()
     {
+        $this->authorize('viewAny', TipoInmueble::class);
         $search = request('search');
         $paginate = request('paginate', 10);
 
-        $data = TipoInmueble::when($search, fn($q) => $q->where('nombre', 'like', "%{$search}%"))
+        $data = TipoInmueble::withCount('inmuebles')
+            ->when($search, fn($q) => $q->where('nombre', 'like', "%{$search}%"))
             ->orderByDesc('id')
             ->paginate($paginate);
 
@@ -33,16 +36,13 @@ class TipoInmuebleController extends Controller
 
     public function create()
     {
+        $this->authorize('create', TipoInmueble::class);
         return view('admin.tipos-inmueble.edit-add');
     }
 
-    public function store(Request $request)
+    public function store(StoreTipoInmuebleRequest $request)
     {
-        $validated = $request->validate([
-            'nombre' => 'required|string|max:50|unique:tipos_inmueble,nombre',
-        ]);
-
-        TipoInmueble::create($validated);
+        TipoInmueble::create($request->validated());
 
         return redirect()->route('admin.tipos-inmueble.index')
             ->with(['message' => 'Tipo de Inmueble creado exitosamente.', 'alert-type' => 'success']);
@@ -50,21 +50,19 @@ class TipoInmuebleController extends Controller
 
     public function show(TipoInmueble $tipoInmueble)
     {
+        $this->authorize('view', $tipoInmueble);
         return view('admin.tipos-inmueble.read', compact('tipoInmueble'));
     }
 
     public function edit(TipoInmueble $tipoInmueble)
     {
+        $this->authorize('update', $tipoInmueble);
         return view('admin.tipos-inmueble.edit-add', compact('tipoInmueble'));
     }
 
-    public function update(Request $request, TipoInmueble $tipoInmueble)
+    public function update(UpdateTipoInmuebleRequest $request, TipoInmueble $tipoInmueble)
     {
-        $validated = $request->validate([
-            'nombre' => 'required|string|max:50|unique:tipos_inmueble,nombre,' . $tipoInmueble->id,
-        ]);
-
-        $tipoInmueble->update($validated);
+        $tipoInmueble->update($request->validated());
 
         return redirect()->route('admin.tipos-inmueble.index')
             ->with(['message' => 'Tipo de Inmueble actualizado exitosamente.', 'alert-type' => 'success']);
@@ -72,7 +70,8 @@ class TipoInmuebleController extends Controller
 
     public function destroy(TipoInmueble $tipoInmueble)
     {
-        // Verificar si está en uso antes de borrar
+        $this->authorize('delete', $tipoInmueble);
+
         if ($tipoInmueble->inmuebles()->exists()) {
             return back()->with([
                 'message' => 'No se puede eliminar. El tipo de inmueble está siendo utilizado.',
