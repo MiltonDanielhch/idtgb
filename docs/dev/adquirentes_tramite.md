@@ -136,11 +136,12 @@ Gestiona el ciclo de vida de un adquirente dentro de un trámite.
 -   **`create()`**: Muestra el formulario para agregar un nuevo adquirente. Filtra las personas para no mostrar las que ya han sido agregadas al trámite.
 -   **`store(StoreAdquirenteTramiteRequest $request, Tramite $tramite)`**:
     1.  Valida la solicitud.
-    2.  Busca la `tasa` aplicable según el departamento, parentesco, tipo de transmisión y fecha.
-    3.  Gestiona la subida del archivo de sustento de exención si existe.
-    4.  Crea el registro `AdquirenteTramite`, dejando el `idtgb_proporcional` en 0.
-    5.  **Acción Clave**: Invoca a `app(IdtgbCalculator::class)->calcular($tramite)`, que se encarga de calcular y actualizar el `idtgb_proporcional` y los montos totales del trámite.
-    6.  Toda la operación se ejecuta dentro de una transacción de BD.
+    2.  Valida que el trámite tenga un departamento asignado.
+    3.  Busca la `tasa` aplicable usando el método centralizado `Tasa::findApplicableRate()`.
+    4.  Gestiona la subida del archivo de sustento de exención si existe.
+    5.  Crea el registro `AdquirenteTramite`, dejando el `idtgb_proporcional` en 0.
+    6.  **Acción Clave**: Invoca a `app(IdtgbCalculator::class)->calcular($tramite)`, que se encarga de calcular y actualizar el `idtgb_proporcional` y los montos totales del trámite.
+    7.  Toda la operación se ejecuta dentro de una transacción de BD.
 -   **`destroy(Tramite $tramite, AdquirenteTramite $item)`**:
     1.  Elimina el registro de `adquirentes_tramite`.
     2.  Si existe un documento de sustento, lo elimina del storage.
@@ -223,45 +224,64 @@ Basado en un análisis del código, se han identificado varias áreas de mejora 
 -   **Mejora Sugerida**:
     -   **Consolidar Bucles**: Unificar las operaciones en un solo bucle siempre que sea posible. Por ejemplo, mientras se itera para calcular el `idtgb_proporcional` de cada adquirente, se puede ir sumando el total para el trámite en la misma iteración, en lugar de hacerlo en un bucle separado posterior.
 
-### d. Mover Lógica de Búsqueda de `Tasa`
+### d. Centralización de Lógica de Búsqueda de `Tasa`
 
--   **Problema**: En `AdquirenteTramiteController@store`, hay una lógica explícita para buscar la tasa (`Tasa`) aplicable.
-    ```php
-    $tasa = Tasa::where('departamento_id', $tramite->departamento_id ?? 1)
-        ->where('parentesco_id', $request->parentesco_id)
-        // ...
-        ->firstOrFail();
-    ```
--   **Mejora Sugerida**:
-    -   **Centralizar la Lógica**: Esta consulta podría moverse a un método estático en el modelo `Tasa` o a un servicio dedicado. Esto limpiaría el controlador y haría la lógica reutilizable.
-    -   **Ejemplo en el modelo `Tasa`**:
+-   **Estado**: ✅ IMPLEMENTADO
+-   **Mejora**: La lógica de búsqueda de tasas ha sido centralizada en el método `Tasa::findApplicableRate()`.
+-   **Beneficios**:
+    -   Código más limpio y mantenible
+    -   Lógica reutilizable en otros controladores
+    -   Fácil de probar y modificar en un solo lugar
+    -   Ejemplo de uso:
         ```php
-        // app/Models/Tasa.php
-        public static function findApplicableRate(Tramite $tramite, int $parentescoId)
-        {
-            return self::where('departamento_id', $tramite->departamento_id ?? 1)
-                       ->where('parentesco_id', $parentescoId)
-                       ->where('tipo_transmision_id', $tramite->tipo_transmision_id)
-                       ->whereDate('fecha_inicio_vigencia', '<=', $tramite->fecha_tramite)
-                       ->orderBy('fecha_inicio_vigencia', 'desc')
-                       ->firstOrFail();
+        $tasaModel = Tasa::findApplicableRate(
+            $departamentoId,
+            $parentescoId,
+            $tipoTransmisionId,
+            $fechaPresentacion
+        );
+        ```
+
+### e. Validación Estricta de Departamento
+
+-   **Estado**: ✅ IMPLEMENTADO
+-   **Mejora**: El controlador ahora valida que el trámite tenga un departamento asignado antes de buscar tasas.
+-   **Beneficios**:
+    -   Detección temprana de errores de integridad de datos
+    -   Prevención de cálculos incorrectos silenciosos
+    -   Mensajes de error claros para el usuario
+    -   Implementación:
+        ```php
+        $departamentoId = $tramite->inmueble->municipio->provincia->departamento_id ?? null;
+
+        if (!$departamentoId) {
+            throw new \Exception("El trámite no tiene un departamento asignado. No se puede calcular la tasa.");
         }
         ```
-    -   El controlador simplemente llamaría: `$tasa = Tasa::findApplicableRate($tramite, $request->parentesco_id);`
 
-### e. Posible Bug: ID de Departamento Codificado (`Hardcoded`)
+---
 
--   **Problema**: En la consulta para buscar la tasa, se utiliza un valor por defecto `?? 1` para `departamento_id`.
-    ```php
-    $tasa = Tasa::where('departamento_id', $tramite->departamento_id ?? 1) ...
-    ```
--   **Riesgo**: Si un trámite, por alguna razón, no tiene un `departamento_id` asignado, el sistema no fallará, sino que silenciosamente usará el departamento con ID `1`. Esto podría llevar a cálculos de impuestos incorrectos que serían difíciles de detectar.
--   **Solución Sugerida**:
-    -   **Validación Estricta**: Es más seguro lanzar una excepción si el `departamento_id` no está presente. Se puede añadir una validación al inicio del método `store` o `calculateAndSave` para asegurar que el trámite tenga todos los datos necesarios antes de proceder.
-    ```php
-    // En AdquirenteTramiteController@store
-    if (!$tramite->departamento_id) {
-        throw new \Exception("El trámite con ID {$tramite->id} no tiene un departamento asignado.");
-    }
-    ```
-    -   Esto haría que los errores de integridad de datos fueran evidentes de inmediato, en lugar de causar problemas silenciosos en los cálculos.
+**Última actualización:** Enero 2026
+
+**Versión:** 2.0.0
+
+## 📝 Historial de Cambios
+
+### Versión 2.0.0 (Enero 2026)
+
+**Mejoras Implementadas:**
+1. ✅ **Validación estricta de departamento**
+   - Ahora se valida que el trámite tenga un departamento asignado antes de buscar tasas
+   - Se lanza excepción específica si no hay departamento
+   - Prevención de cálculos incorrectos silenciosos
+
+2. ✅ **Centralización de búsqueda de tasas**
+   - Uso del método `Tasa::findApplicableRate()` en lugar de consulta directa
+   - Código más limpio y mantenible
+   - Lógica reutilizable en otros controladores
+
+3. ✅ **Mejor manejo de errores**
+   - Mensajes de error más específicos
+   - Validaciones más robustas
+
+---

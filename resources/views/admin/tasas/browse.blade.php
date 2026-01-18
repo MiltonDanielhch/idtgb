@@ -61,7 +61,7 @@
     @include('partials.modal-delete')
 @stop
 
-@push('javascript')
+    @push('javascript')
 <script>
     window.countPage = 10;
     window.list = function (page = 1) {
@@ -75,6 +75,14 @@
          .fail(xhr => console.error(xhr))
          .always(() => $('#div-results').loading('toggle'));
     };
+
+    function deleteItem(url, descripcion) {
+        $('#delete_form').attr('action', url);
+        $('#delete_modal_title').html('<i class="voyager-trash"></i> ¿Eliminar esta tasa?');
+        $('#delete_modal_message').html('<b>' + descripcion + '</b>');
+        $('#deleteObservation').val('');
+        $('#delete_confirm_checkbox').prop('checked', false);
+    }
 
     $(function () {
         window.list();

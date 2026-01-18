@@ -37,14 +37,19 @@
                                 <i class="voyager-edit"></i> Editar
                             </a>
                         @endcan
-                        @can('delete', $t)
-                            <form action="{{ route('admin.tasas.destroy', $t) }}" method="POST" style="display: inline-block;" onsubmit="return confirm('¿Borrar esta tasa?')">
-                                @csrf @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-danger">
-                                    <i class="voyager-trash"></i> Borrar
-                                </button>
-                            </form>
-                        @endcan
+                         @can('delete', $t)
+                             @php
+                                 $desc = $t->departamento->nombre . ' / ' . $t->parentesco->nombre . ' / ' . number_format($t->tasa, 2) . '%';
+                                 $url = route('admin.tasas.destroy', $t);
+                             @endphp
+                             <button type="button"
+                                     class="btn btn-sm btn-danger"
+                                     onclick="deleteItem('{{ $url }}', '{{ $desc }}')"
+                                     data-toggle="modal"
+                                     data-target="#modal-delete">
+                                 <i class="voyager-trash"></i> Borrar
+                             </button>
+                         @endcan
                     </td>
                 </tr>
             @empty

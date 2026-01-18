@@ -649,11 +649,15 @@ $parentescos = Parentesco::with(['tasas' => function ($query) use ($beni) {
 **Servicio:** `App\Services\IdtgbCalculator`
 **Ubicación:** `app/Services/IdtgbCalculator.php`
 
-**Método optimizado en modelo Tasa:**
+**Métodos optimizados en modelo Tasa:**
 
 ```php
 // Usar el método centralizado en lugar de queries dispersos
 $tasaModel = Tasa::findApplicableRate($depId, $adq['parentesco_id'], $tipoId, $fPres);
+
+// Método vigente ahora acepta parámetro opcional tipoTransmisionId
+$tasa = Tasa::vigente($depId, $parId, $fecha, $tipoId);
+// Prioriza tasas específicas sobre tasas genéricas
 ```
 
 **Nuevo método en Tasa:**
@@ -1252,3 +1256,21 @@ php artisan cache:clear
 **Última actualización:** Enero 2026
 
 **Versión:** 2.0.0
+
+## 📝 Historial de Cambios
+
+### Versión 2.0.0 (Enero 2026)
+
+**Mejoras en módulo de Tasas:**
+- Método `Tasa::vigente()` actualizado para aceptar parámetro opcional `tipoTransmisionId`
+- Ahora prioriza tasas específicas sobre tasas genéricas cuando se proporciona el tipo de transmisión
+- Usa `orderBy('tipo_transmision_id', 'desc')` para asegurar el orden correcto
+- Mejora en el método `Tasa::findApplicableRate()` con lógica centralizada
+
+**Beneficios:**
+- Cálculos más precisos cuando existen tasas específicas y genéricas
+- Previene errores legales en el cálculo del impuesto
+- Código más mantenible y reutilizable
+
+---
+

@@ -76,12 +76,20 @@ class AdquirenteTramiteController extends Controller
 
         DB::beginTransaction();
         try {
-            $tasa = Tasa::where('departamento_id', $tramite->inmueble->municipio->provincia->departamento_id)
-                ->where('parentesco_id', $request->parentesco_id)
-                ->where('tipo_transmision_id', $tramite->tipo_transmision_id)
-                ->whereDate('vigente_desde', '<=', $tramite->fecha_presentacion)
-                ->where(fn($q) => $q->whereNull('vigente_hasta')->orWhereDate('vigente_hasta', '>=', $tramite->fecha_presentacion))
-                ->value('tasa') ?? 0;
+            $departamentoId = $tramite->inmueble->municipio->provincia->departamento_id ?? null;
+
+            if (!$departamentoId) {
+                throw new \Exception("El trámite no tiene un departamento asignado. No se puede calcular la tasa.");
+            }
+
+            $tasaModel = Tasa::findApplicableRate(
+                $departamentoId,
+                $request->parentesco_id,
+                $tramite->tipo_transmision_id,
+                $tramite->fecha_presentacion
+            );
+
+            $tasa = $tasaModel ? $tasaModel->tasa : 0;
 
             $path = null;
             if ($request->hasFile('documento_sustento_exencion')) {

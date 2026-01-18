@@ -42,16 +42,24 @@ class Tasa extends Model
     }
 
     /* ==================  HELPERS  ================== */
-    public static function vigente(int $departamentoId, int $parentescoId, ?string $fecha = null): ?self
+    public static function vigente(int $departamentoId, int $parentescoId, ?string $fecha = null, ?int $tipoTransmisionId = null): ?self
     {
         $fecha = $fecha ?? today()->toDateString();
 
-        return self::where('departamento_id', $departamentoId)
+        $query = self::where('departamento_id', $departamentoId)
                    ->where('parentesco_id', $parentescoId)
                    ->where('vigente_desde', '<=', $fecha)
                    ->where(fn ($q) => $q->whereNull('vigente_hasta')
-                                         ->orWhere('vigente_hasta', '>=', $fecha))
-                   ->first();
+                                         ->orWhere('vigente_hasta', '>=', $fecha));
+
+        if ($tipoTransmisionId !== null) {
+            $query->where(function ($q) use ($tipoTransmisionId) {
+                $q->where('tipo_transmision_id', $tipoTransmisionId)
+                  ->orWhereNull('tipo_transmision_id');
+            })->orderBy('tipo_transmision_id', 'desc');
+        }
+
+        return $query->first();
     }
 
     public static function findApplicableRate(int $departamentoId, int $parentescoId, int $tipoTransmisionId, ?string $fecha = null): ?self

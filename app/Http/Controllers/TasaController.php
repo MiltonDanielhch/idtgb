@@ -6,6 +6,7 @@ use App\Models\Tasa;
 use App\Models\Departamento;
 use App\Models\Parentesco;
 use App\Models\TipoTransmision;
+use App\Models\AdquirenteTramite;
 use App\Http\Requests\StoreTasaRequest;
 use App\Http\Requests\UpdateTasaRequest;
 use Illuminate\Support\Facades\DB;
@@ -92,6 +93,16 @@ class TasaController extends Controller
     public function destroy(Tasa $tasa)
     {
         $this->authorize('delete', $tasa);
+
+        $enUso = AdquirenteTramite::whereHas('tramite.inmuebles.municipio.provincia.departamento', fn($q) => $q->where('id', $tasa->departamento_id))
+            ->where('parentesco_id', $tasa->parentesco_id)
+            ->exists();
+
+        if ($enUso) {
+            return redirect()->route('admin.tasas.index')
+                ->with(['message' => 'No se puede eliminar: La tasa está siendo utilizada en trámites existentes.', 'alert-type' => 'error']);
+        }
+
         $tasa->delete();
         return redirect()->route('admin.tasas.index')
             ->with(['message' => 'Tasa eliminada.', 'alert-type' => 'success']);
