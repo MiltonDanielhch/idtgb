@@ -53,4 +53,18 @@ class Tasa extends Model
                                          ->orWhere('vigente_hasta', '>=', $fecha))
                    ->first();
     }
+
+    public static function findApplicableRate(int $departamentoId, int $parentescoId, int $tipoTransmisionId, ?string $fecha = null): ?self
+    {
+        $fecha = $fecha ?? today()->toDateString();
+
+        return self::where('departamento_id', $departamentoId)
+                   ->where('parentesco_id', $parentescoId)
+                   ->where('tipo_transmision_id', $tipoTransmisionId)
+                   ->where('vigente_desde', '<=', $fecha)
+                   ->where(fn ($q) => $q->whereNull('vigente_hasta')
+                                         ->orWhere('vigente_hasta', '>=', $fecha))
+                   ->latest('vigente_desde')
+                   ->first();
+    }
 }

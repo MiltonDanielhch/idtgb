@@ -30,7 +30,8 @@ class ParentescoController extends Controller
         $search   = $request->get('search', '');
         $paginate = $request->get('paginate', 10);
 
-        $parentescos = Parentesco::when($search, function ($query) use ($search) {
+        $parentescos = Parentesco::withCount(['tasas', 'adquirentesTramite'])
+            ->when($search, function ($query) use ($search) {
                 $query->where('nombre', 'like', '%' . $search . '%');
             })
             ->orderBy('id', 'desc')
@@ -83,10 +84,14 @@ class ParentescoController extends Controller
     {
         $this->authorize('delete', $parentesco);
 
-        // Validación de dependencias antes de eliminar (si tiene tasas asociadas)
-        if ($parentesco->tasas()->count() > 0) {
+        if ($parentesco->tasas()->exists()) {
             return redirect()->route('admin.parentescos.index')
                 ->with(['message' => 'No se puede eliminar: El parentesco tiene tasas asociadas.', 'alert-type' => 'error']);
+        }
+
+        if ($parentesco->adquirentesTramite()->exists()) {
+            return redirect()->route('admin.parentescos.index')
+                ->with(['message' => 'No se puede eliminar: El parentesco está siendo utilizado en trámites existentes.', 'alert-type' => 'error']);
         }
 
         try {
@@ -94,10 +99,9 @@ class ParentescoController extends Controller
             return redirect()->route('admin.parentescos.index')
                 ->with(['message' => 'Parentesco eliminado.', 'alert-type' => 'success']);
         } catch (\Exception $e) {
-             // Esto captura errores si la BBDD impone alguna otra restricción
-            // Log::error("Error al eliminar Parentesco #{$parentesco->id}: " . $e->getMessage());
-             return redirect()->route('admin.parentescos.index')
-                ->with(['message' => 'Error al eliminar el parentesco.', 'alert-type' => 'error']);
+            Log::error("Error al eliminar Parentesco #{$parentesco->id}: " . $e->getMessage());
+            return redirect()->route('admin.parentescos.index')
+                ->with(['message' => 'Ocurrió un error inesperado al intentar eliminar el parentesco.', 'alert-type' => 'error']);
         }
     }
 

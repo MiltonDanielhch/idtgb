@@ -14,7 +14,6 @@
 10. [Ejemplos de Uso](#ejemplos-de-uso)
 11. [Consideraciones Importantes](#consideraciones-importantes)
 12. [Guía para Desarrolladores](#guía-para-desarrolladores)
-13. [Análisis de Calidad y Mejoras](#análisis-de-calidad-y-mejoras)
 
 ---
 
@@ -27,6 +26,7 @@ El módulo de **Parentescos** gestiona los tipos de relaciones familiares que pu
 - Asociar tasas impositivas a cada parentesco por departamento
 - Permitir la selección del parentesco al crear adquirentes en trámites
 - Gestionar el ciclo de vida CRUD completo de parentescos
+- Mantener auditoría de cambios y permitir recuperación de registros eliminados
 
 ### Importancia en el Sistema ITGB
 El parentesco seleccionado para un adquirente determina directamente la tasa impositiva aplicable en el cálculo del ITGB. Diferentes parentescos tienen tasas diferentes según la legislación vigente en cada departamento.
@@ -35,33 +35,27 @@ El parentesco seleccionado para un adquirente determina directamente la tasa imp
 
 ## 🗄️ Base de Datos
 
-### Migración: `create_parentescos_table.php`
-
-**Ubicación:** `database/migrations/2025_09_22_122721_create_parentescos_table.php`
-
-**Estructura de la tabla:**
+### Estructura de la tabla: `parentescos`
 
 | Campo | Tipo | Atributos | Descripción |
 |-------|------|------------|-------------|
 | `id` | BIGINT | PK, AUTO_INCREMENT | Identificador único |
 | `nombre` | VARCHAR(50) | UNIQUE, NOT NULL | Nombre del parentesco (ej: "Padre", "Hermano") |
+| `created_by` | BIGINT | FK → users.id, NULLABLE | Usuario que creó el registro |
+| `updated_by` | BIGINT | FK → users.id, NULLABLE | Usuario que actualizó el registro |
 | `created_at` | TIMESTAMP | NULLABLE | Fecha de creación |
 | `updated_at` | TIMESTAMP | NULLABLE | Fecha de actualización |
+| `deleted_at` | TIMESTAMP | NULLABLE | Fecha de eliminación suave |
 
 **Relaciones:**
 - Tiene muchos `Tasa` (un parentesco puede tener múltiples tasas asociadas por departamento)
 - Es utilizado por la tabla pivote `adquirentes_tramites`
+- Pertenece a `User` (created_by, updated_by)
 
-**Ejemplo de SQL:**
-
-```sql
-CREATE TABLE parentescos (
-    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    nombre VARCHAR(50) NOT NULL UNIQUE,
-    created_at TIMESTAMP NULL,
-    updated_at TIMESTAMP NULL
-);
-```
+**Migraciones aplicadas:**
+- `2025_09_22_122721_create_parentescos_table.php` - Creación de tabla
+- `2026_01_17_233959_add_soft_deletes_to_parentescos_table.php` - Soft Deletes
+- `2026_01_17_234227_add_audit_fields_to_parentescos_table.php` - Campos de auditoría
 
 ---
 
@@ -71,9 +65,13 @@ CREATE TABLE parentescos (
 
 **Ubicación:** `app/Models/Parentesco.php`
 
+**Traits:**
+- `HasFactory`
+- `SoftDeletes`
+
 **Atributos:**
 - `$table = 'parentescos'`
-- `$fillable = ['nombre']`
+- `$fillable = ['nombre', 'created_by', 'updated_by']`
 
 **Métodos de relación:**
 
@@ -82,19 +80,67 @@ public function tasas()
 {
     return $this->hasMany(Tasa::class);
 }
+
+public function adquirentesTramite()
+{
+    return $this->hasMany(AdquirenteTramite::class);
+}
+
+public function createdBy()
+{
+    return $this->belongsTo(User::class, 'created_by');
+}
+
+public function updatedBy()
+{
+    return $this->belongsTo(User::class, 'updated_by');
+}
+```
+
+**Eventos de modelo:**
+
+```php
+protected static function boot()
+{
+    parent::boot();
+
+    static::creating(function ($model) {
+        if (auth()->check()) {
+            $model->created_by = auth()->id();
+        }
+    });
+
+    static::updating(function ($model) {
+        if (auth()->check()) {
+            $model->updated_by = auth()->id();
+        }
+    });
+}
 ```
 
 **Uso del modelo:**
 
 ```php
-// Obtener todos los parentescos
+// Obtener todos los parentescos (sin eliminados)
 $parentescos = Parentesco::all();
+
+// Incluir parentescos eliminados
+$parentescos = Parentesco::withTrashed()->get();
+
+// Solo parentescos eliminados
+$parentescos = Parentesco::onlyTrashed()->get();
+
+// Restaurar parentesco eliminado
+$parentesco->restore();
 
 // Obtener un parentesco específico
 $parentesco = Parentesco::find(1);
 
 // Obtener parentescos con sus tasas cargadas
 $parentescos = Parentesco::with('tasas')->get();
+
+// Obtener con contadores de relaciones
+$parentescos = Parentesco::withCount(['tasas', 'adquirentesTramite'])->get();
 
 // Crear un nuevo parentesco
 Parentesco::create(['nombre' => 'Padre']);
@@ -106,7 +152,12 @@ $parentesco->update(['nombre' => 'Padre Biológico']);
 $parentesco = Parentesco::where('nombre', 'Hermano')->first();
 
 // Verificar si tiene tasas asociadas
-if ($parentesco->tasas()->count() > 0) {
+if ($parentesco->tasas()->exists()) {
+    // No se puede eliminar
+}
+
+// Verificar si está en uso en trámites
+if ($parentesco->adquirentesTramite()->exists()) {
     // No se puede eliminar
 }
 ```
@@ -136,11 +187,12 @@ GET /admin/parentescos
 ```
 GET /admin/parentescos/ajax/list
 ```
-- Retorna lista paginada de parentescos
+- Retorna lista paginada de parentescos con contadores de relaciones
 - Parámetros:
   - `search` (string): Filtro por nombre
   - `paginate` (int): Cantidad de registros por página (default: 10)
 - Ordenamiento: ID descendente
+- Incluye `withCount(['tasas', 'adquirentesTramite'])`
 
 **Código del método:**
 
@@ -152,7 +204,8 @@ public function list(Request $request)
     $search   = $request->get('search', '');
     $paginate = $request->get('paginate', 10);
 
-    $parentescos = Parentesco::when($search, function ($query) use ($search) {
+    $parentescos = Parentesco::withCount(['tasas', 'adquirentesTramite'])
+        ->when($search, function ($query) use ($search) {
             $query->where('nombre', 'like', '%' . $search . '%');
         })
         ->orderBy('id', 'desc')
@@ -181,6 +234,7 @@ GET /admin/parentescos/create
 POST /admin/parentescos
 ```
 - Valida y crea nuevo parentesco
+- Registra automáticamente `created_by`
 - Redirige al listado con mensaje de éxito
 - Requiere permiso: `add_parentescos`
 
@@ -208,6 +262,7 @@ GET /admin/parentescos/{parentesco}/edit
 PUT /admin/parentescos/{parentesco}
 ```
 - Valida y actualiza parentesco
+- Registra automáticamente `updated_by`
 - Redirige al listado con mensaje de éxito
 - Requiere permiso: `edit_parentescos`
 
@@ -223,11 +278,14 @@ public function update(UpdateParentescoRequest $request, Parentesco $parentesco)
 }
 ```
 
-#### 8. `destroy(Parentesco $parentesco)` - Eliminar
+#### 8. `destroy(Parentesco $parentesco)` - Eliminar (soft delete)
 ```
 DELETE /admin/parentescos/{parentesco}
 ```
 - Verifica que no tenga tasas asociadas antes de eliminar
+- Verifica que no esté en uso en trámites antes de eliminar
+- Realiza soft delete (no elimina permanentemente)
+- Registra errores en logs
 - Retorna error si tiene dependencias
 - Requiere permiso: `delete_parentescos`
 
@@ -238,10 +296,14 @@ public function destroy(Parentesco $parentesco)
 {
     $this->authorize('delete', $parentesco);
 
-    // Validación de dependencias antes de eliminar
-    if ($parentesco->tasas()->count() > 0) {
+    if ($parentesco->tasas()->exists()) {
         return redirect()->route('admin.parentescos.index')
             ->with(['message' => 'No se puede eliminar: El parentesco tiene tasas asociadas.', 'alert-type' => 'error']);
+    }
+
+    if ($parentesco->adquirentesTramite()->exists()) {
+        return redirect()->route('admin.parentescos.index')
+            ->with(['message' => 'No se puede eliminar: El parentesco está siendo utilizado en trámites existentes.', 'alert-type' => 'error']);
     }
 
     try {
@@ -249,8 +311,9 @@ public function destroy(Parentesco $parentesco)
         return redirect()->route('admin.parentescos.index')
             ->with(['message' => 'Parentesco eliminado.', 'alert-type' => 'success']);
     } catch (\Exception $e) {
+        Log::error("Error al eliminar Parentesco #{$parentesco->id}: " . $e->getMessage());
         return redirect()->route('admin.parentescos.index')
-            ->with(['message' => 'Error al eliminar el parentesco.', 'alert-type' => 'error']);
+            ->with(['message' => 'Ocurrió un error inesperado al intentar eliminar el parentesco.', 'alert-type' => 'error']);
     }
 }
 ```
@@ -261,7 +324,7 @@ public function destroy(Parentesco $parentesco)
 
 ### Rutas Definidas
 
-**Ubicación:** `routes/web.php:100-101`
+**Ubicación:** `routes/web.php`
 
 ```php
 Route::resource('parentescos', ParentescoController::class)
@@ -281,19 +344,12 @@ Route::get('parentescos/ajax/list', [ParentescoController::class, 'list'])
 | GET | `/admin/parentescos/{parentesco}` | `admin.parentescos.show` | Ver detalle |
 | GET | `/admin/parentescos/{parentesco}/edit` | `admin.parentescos.edit` | Formulario editar |
 | PUT/PATCH | `/admin/parentescos/{parentesco}` | `admin.parentescos.update` | Actualizar |
-| DELETE | `/admin/parentescos/{parentesco}` | `admin.parentescos.destroy` | Eliminar |
+| DELETE | `/admin/parentescos/{parentesco}` | `admin.parentescos.destroy` | Eliminar (soft delete) |
 | GET | `/admin/parentescos/ajax/list` | `admin.parentescos.ajax.list` | Listado AJAX |
 
 **Middleware aplicado:**
 - `loggin` - Autenticación de usuario
 - `system` - Verificación de sistema
-
-**Grupo de rutas:**
-```php
-Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
-    // Rutas de parentescos aquí
-});
-```
 
 ---
 
@@ -349,7 +405,7 @@ class ParentescoPolicy
 
 ### Permisos en Base de Datos
 
-**Ubicación:** `database/seeders/PermissionsTableSeeder.php:79-83`
+**Ubicación:** `database/seeders/PermissionsTableSeeder.php`
 
 ```php
 'browse_parentescos' => 'Ver lista de parentescos',
@@ -358,8 +414,6 @@ class ParentescoPolicy
 'add_parentescos' => 'Agregar nuevos parentescos',
 'delete_parentescos' => 'Eliminar parentescos',
 ```
-
-**Tabla de permisos:** `permissions` con `table_name = 'parentescos'`
 
 ### Permisos por Rol
 
@@ -470,51 +524,12 @@ public function authorize(): bool
 - Modal de confirmación para eliminar
 - Auto-dismiss de alertas después de 5 segundos
 
-**Funcionalidades JavaScript:**
-- Búsqueda con debounce (500ms)
-- Paginación dinámica
-- Loading con animación
-- Manejo de errores AJAX
-
-**Código JavaScript principal:**
-
-```javascript
-function list(page = 1) {
-    let url = '/admin/parentescos/ajax/list';
-    let search = $('#input-search').val() ? $('#input-search').val().trim() : '';
-
-    // Mostrar loading
-    $('#div-results').html(`
-        <div class="text-center" style="padding: 40px">
-            <i class="voyager-refresh voyager-2x loading-icon"></i>
-            <br>Cargando...
-        </div>
-    `);
-
-    $.ajax({
-        url: `${url}?search=${encodeURIComponent(search)}&paginate=${countPage}&page=${page}`,
-        type: 'get',
-        success: function (response) {
-            $('#div-results').html(response);
-        },
-        error: function (xhr) {
-            console.error('Error:', xhr.responseText);
-            $('#div-results').html(`
-                <div class="alert alert-danger text-center">
-                    <i class="voyager-warning"></i><br>
-                    Error al cargar los datos.<br>
-                    <button onclick="list(${page})" class="btn btn-xs btn-default mt-2">Reintentar</button>
-                </div>
-            `);
-        }
-    });
-}
-```
-
 ### 2. `list.blade.php` - Contenido tabla AJAX
 
 **Características:**
-- Tabla con columnas: ID, Nombre, Acciones
+- Tabla con columnas: ID, Nombre, Tasas, Trámites, Acciones
+- Badges con contadores de relaciones
+- Colores dinámicos según cantidad de relaciones
 - Botones de acción controlados por `@can` directives
 - Paginación Laravel
 - Estado vacío con imagen
@@ -527,6 +542,8 @@ function list(page = 1) {
         <tr>
             <th>#</th>
             <th>Nombre</th>
+            <th>Tasas</th>
+            <th>Trámites</th>
             <th class="text-right">Acciones</th>
         </tr>
     </thead>
@@ -535,6 +552,14 @@ function list(page = 1) {
         <tr>
             <td>{{ $p->id }}</td>
             <td>{{ $p->nombre }}</td>
+            <td class="text-center">
+                <span class="badge badge-info">{{ $p->tasas_count }}</span>
+            </td>
+            <td class="text-center">
+                <span class="badge badge-{{ $p->adquirentes_tramite_count > 0 ? 'warning' : 'secondary' }}">
+                    {{ $p->adquirentes_tramite_count }}
+                </span>
+            </td>
             <td class="text-right">
                 @can('view', $p)
                     <a href="{{ route('admin.parentescos.show', $p) }}" class="btn btn-sm btn-warning">
@@ -559,8 +584,12 @@ function list(page = 1) {
         </tr>
         @empty
         <tr>
-            <td colspan="3">
-                <h5 class="text-center">No se encontraron parentescos</h5>
+            <td colspan="5">
+                <h5 class="text-center">
+                    <img src="{{ asset('images/empty.png') }}" width="120px" alt="">
+                    <br><br>
+                    No se encontraron parentescos
+                </h5>
             </td>
         </tr>
         @endforelse
@@ -578,65 +607,11 @@ function list(page = 1) {
 - Mensajes de ayuda al usuario
 - Validación frontend adicional
 
-**Ejemplo de código:**
-
-```blade
-<form action="{{ ($parentesco->exists ?? false)
-        ? route('admin.parentescos.update', $parentesco)
-        : route('admin.parentescos.store') }}"
-      method="POST" id="parentesco-form">
-    @csrf
-    @if($parentesco->exists ?? false) @method('PUT') @endif
-
-    <div class="form-group">
-        <label for="nombre">Nombre <span class="required">*</span></label>
-        <input type="text"
-               name="nombre"
-               id="nombre"
-               class="form-control @error('nombre') is-invalid @enderror"
-               placeholder="Ej: Padre, Madre, Hermano, etc."
-               maxlength="50"
-               value="{{ old('nombre', optional($parentesco)->nombre) }}"
-               required
-               autofocus>
-        @error('nombre')
-            <div class="invalid-feedback">{{ $message }}</div>
-        @enderror
-        <small class="form-text text-muted">
-            Máximo 50 caracteres. El nombre debe ser único en el sistema.
-        </small>
-    </div>
-
-    <button type="submit" class="btn btn-primary">
-        {{ ($parentesco->exists ?? false) ? 'Actualizar' : 'Guardar' }}
-    </button>
-</form>
-```
-
-**JavaScript de validación:**
-
-```javascript
-$('#nombre').on('blur', function() {
-    $(this).val($(this).val().trim());
-});
-
-$('#parentesco-form').on('submit', function() {
-    const nombre = $('#nombre').val().trim();
-    $('#nombre').val(nombre);
-
-    if (!nombre) {
-        alert('El nombre del parentesco es obligatorio');
-        $('#nombre').focus();
-        return false;
-    }
-});
-```
-
 ### 4. `read.blade.php` - Vista detalle
 
 **Características:**
 - Información detallada del parentesco
-- Muestra campos: ID, nombre, fechas
+- Muestra campos: ID, nombre, fechas, creador, actualizador
 - Botones para editar o volver
 
 ---
@@ -669,76 +644,37 @@ $parentescos = Parentesco::with(['tasas' => function ($query) use ($beni) {
 });
 ```
 
-**Vista:** `admin/tramites/wizard/create_step_3.blade.php`
-
-- Select2 para elegir parentesco al agregar adquirente
-- Muestra la tasa aplicable junto al parentesco
-- Validación: `parentesco_id` es requerido y debe existir
-
-**Validación al agregar adquirente:**
-
-```php
-$request->validate([
-    'person_id' => 'required|exists:people,id',
-    'parentesco_id' => 'required|exists:parentescos,id',
-    'porcentaje' => 'required|numeric|min:0.01|max:100',
-]);
-```
-
-**Al guardar el trámite:**
-
-```php
-$tramite->adquirentes()->create([
-    'person_id' => $adqData['person_id'],
-    'parentesco_id' => $adqData['parentesco_id'],
-    'tasa_aplicada' => 0,
-    'porcentaje' => $adqData['porcentaje'] ?? 0,
-    'idtgb_proporcional' => 0,
-    'es_beneficiario_exencion' => false
-]);
-```
-
 ### 2. Módulo de Cálculo ITGB
 
 **Servicio:** `App\Services\IdtgbCalculator`
 **Ubicación:** `app/Services/IdtgbCalculator.php`
 
-**Uso en cálculo:**
+**Método optimizado en modelo Tasa:**
 
 ```php
-// Se usa parentesco_id y tipo_transmision_id para calcular la tasa aplicable
-$tasaModel = $this->tasaVigente($depId, $adq['parentesco_id'], $tipoId, $fPres);
+// Usar el método centralizado en lugar de queries dispersos
+$tasaModel = Tasa::findApplicableRate($depId, $adq['parentesco_id'], $tipoId, $fPres);
 ```
 
-**Ejemplo de uso en el servicio:**
+**Nuevo método en Tasa:**
 
 ```php
-$adquirentesData = collect($wizardData['step3']['adquirentes'])->map(function($adq) {
-    return [
-        'parentesco_id' => $adq['parentesco_id'],
-        'porcentaje' => $adq['porcentaje'],
-    ];
-})->all();
+public static function findApplicableRate(int $departamentoId, int $parentescoId, int $tipoTransmisionId, ?string $fecha = null): ?self
+{
+    $fecha = $fecha ?? today()->toDateString();
+
+    return self::where('departamento_id', $departamentoId)
+               ->where('parentesco_id', $parentescoId)
+               ->where('tipo_transmision_id', $tipoTransmisionId)
+               ->where('vigente_desde', '<=', $fecha)
+               ->where(fn ($q) => $q->whereNull('vigente_hasta')
+                                     ->orWhere('vigente_hasta', '>=', $fecha))
+               ->latest('vigente_desde')
+               ->first();
+}
 ```
 
-### 3. Calculadora Beni
-
-**Controlador:** `CalculadoraBeniController`
-**Ubicación:** `app/Http/Controllers/CalculadoraBeniController.php`
-
-**Uso:**
-
-```php
-$parentescos = Parentesco::all();
-```
-
-**Validación:**
-
-```php
-'parentesco_id' => 'required|exists:parentescos,id',
-```
-
-### 4. Tabla adquirentes_tramites
+### 3. Tabla adquirentes_tramites
 
 La tabla pivote `adquirentes_tramites` incluye el campo `parentesco_id`:
 
@@ -751,12 +687,15 @@ La tabla pivote `adquirentes_tramites` incluye el campo `parentesco_id`:
 | `tasa_aplicada` | DECIMAL | Tasa calculada |
 | `idtgb_proporcional` | DECIMAL | Monto calculado |
 
-### 5. Vistas de reportes
+### 4. Índice compuesto en tasas
 
-**Vistas que muestran parentescos:**
-- `admin/tramites/adquirentes/read.blade.php:43` - Muestra parentesco del adquirente
-- `admin/tramites/wizard/create_step_3.blade.php:97` - Selector de parentesco
-- `admin/tramites/wizard/create_step_7.blade.php` - Resumen con parentescos
+**Migración:** `2026_01_17_234526_add_composite_index_to_tasas_table.php`
+
+```php
+$table->index(['departamento_id', 'parentesco_id', 'tipo_transmision_id', 'vigente_desde'], 'tasas_composite_index');
+```
+
+Este índice optimiza las búsquedas de tasas por departamento, parentesco, tipo de transmisión y vigencia.
 
 ---
 
@@ -830,59 +769,43 @@ $liquidacion = $calculator->calculateEstimate(
 ```php
 $parentesco = Parentesco::find(1);
 
-if ($parentesco->tasas()->count() > 0) {
-    // No se puede eliminar
+if ($parentesco->tasas()->exists()) {
     throw new Exception('El parentesco tiene tasas asociadas');
 }
 
-$parentesco->delete();
-```
-
-### Ejemplo 5: Listado con AJAX
-
-```javascript
-// JavaScript en browse.blade.php
-function list(page = 1) {
-    let url = '/admin/parentescos/ajax/list';
-    let search = $('#input-search').val().trim();
-    let paginate = $('#select-paginate').val();
-
-    $.ajax({
-        url: `${url}?search=${encodeURIComponent(search)}&paginate=${paginate}&page=${page}`,
-        type: 'get',
-        success: function (response) {
-            $('#div-results').html(response);
-        }
-    });
+if ($parentesco->adquirentesTramite()->exists()) {
+    throw new Exception('El parentesco está en uso en trámites');
 }
+
+$parentesco->delete(); // Soft delete
 ```
 
-### Ejemplo 6: Formulario de creación
+### Ejemplo 5: Restaurar parentesco eliminado
 
-```blade
-<!-- resources/views/admin/parentescos/edit_add.blade.php -->
-<form action="{{ route('admin.parentescos.store') }}" method="POST">
-    @csrf
+```php
+// Encontrar parentesco eliminado
+$parentesco = Parentesco::onlyTrashed()->find(1);
 
-    <div class="form-group">
-        <label for="nombre">Nombre <span class="required">*</span></label>
-        <input type="text"
-               name="nombre"
-               id="nombre"
-               class="form-control"
-               placeholder="Ej: Padre, Madre, Hermano, etc."
-               maxlength="50"
-               required
-               autofocus>
-        <small class="form-text text-muted">
-            Máximo 50 caracteres. El nombre debe ser único en el sistema.
-        </small>
-    </div>
+// Restaurar
+$parentesco->restore();
 
-    <button type="submit" class="btn btn-primary">
-        Guardar
-    </button>
-</form>
+// O con withTrashed
+$parentesco = Parentesco::withTrashed()->find(1);
+$parentesco->restore();
+```
+
+### Ejemplo 6: Listado con contadores
+
+```php
+$parentescos = Parentesco::withCount(['tasas', 'adquirentesTramite'])
+    ->orderBy('id', 'desc')
+    ->paginate(10);
+
+foreach ($parentescos as $p) {
+    echo $p->nombre . ': ';
+    echo $p->tasas_count . ' tasas, ';
+    echo $p->adquirentes_tramite_count . ' trámites';
+}
 ```
 
 ---
@@ -892,10 +815,12 @@ function list(page = 1) {
 ### Reglas de Negocio
 
 1. **Unicidad:** El nombre del parentesco debe ser único en todo el sistema
-2. **Dependencias:** No se puede eliminar un parentesco si tiene tasas asociadas
+2. **Dependencias:** No se puede eliminar un parentesco si tiene tasas asociadas o está en uso en trámites
 3. **Longitud máxima:** El nombre no puede exceder 50 caracteres
 4. **Tasas vigentes:** Solo se muestran tasas vigentes en el wizard de trámites
 5. **Requerido:** El parentesco es obligatorio para los adquirentes en trámites
+6. **Soft Deletes:** La eliminación es suave, los registros pueden restaurarse
+7. **Auditoría:** Se registra automáticamente quién crea y modifica cada parentesco
 
 ### Validaciones Implementadas
 
@@ -903,45 +828,25 @@ function list(page = 1) {
 - Nombre requerido
 - Máximo 50 caracteres
 - Debe ser único
+- Registra `created_by` automáticamente
 
 **Al actualizar:**
 - Nombre requerido
 - Máximo 50 caracteres
 - Debe ser único (ignorando el registro actual)
+- Registra `updated_by` automáticamente
 
 **Al eliminar:**
 - Verificar que no tenga tasas asociadas
-- Capturar excepciones de base de datos
+- Verificar que no esté en uso en trámites
+- Realiza soft delete
+- Registra errores en logs
 
-### Permisos por Rol
+### Índices de Base de Datos
 
-| Rol | browse | read | add | edit | delete |
-|-----|--------|------|-----|------|--------|
-| Admin | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Operador | ✓ | ✓ | ✓ | ✓ | ✗ |
-| Visitante | ✓ | ✓ | ✗ | ✗ | ✗ |
-
-### Ícono en Menú
-
-**Ubicación:** `database/seeders/IdtgbMenuAppendSeeder.php:29`
-
-```php
-['title' => 'Parentescos',
- 'route' => 'admin.parentescos.index',
- 'icon_class' => 'fa-solid fa-people-group',
- 'order' => 4]
-```
-
-### Mensajes de Éxito/Error
-
-**Éxito:**
-- "Parentesco creado."
-- "Parentesco actualizado."
-- "Parentesco eliminado."
-
-**Error:**
-- "No se puede eliminar: El parentesco tiene tasas asociadas."
-- "Error al eliminar el parentesco."
+1. **Índice único:** `nombre` en tabla `parentescos`
+2. **Índice compuesto:** `tasas_composite_index` en tabla `tasas` (departamento_id, parentesco_id, tipo_transmision_id, vigente_desde)
+3. **Índices de foreign keys:** `created_by`, `updated_by`
 
 ---
 
@@ -971,77 +876,87 @@ public function up(): void
 **Paso 3:** Agregar a fillables
 
 ```php
-// app/Models/Parentesco.php
 protected $fillable = [
     'nombre',
     'descripcion',
+    'created_by',
+    'updated_by',
 ];
 ```
 
 **Paso 4:** Actualizar Requests
 
 ```php
-// app/Http/Requests/StoreParentescoRequest.php
-'nombre' => 'required|string|max:50|unique:parentescos,nombre',
-'descripcion' => 'nullable|string|max:500',
+public function rules(): array
+{
+    return [
+        'nombre' => 'required|string|max:50|unique:parentescos,nombre',
+        'descripcion' => 'nullable|string|max:500',
+    ];
+}
 ```
 
 **Paso 5:** Actualizar vistas
 
 ```blade
-<!-- resources/views/admin/parentescos/edit_add.blade.php -->
 <div class="form-group">
     <label for="descripcion">Descripción</label>
-    <textarea name="descripcion" id="descripcion" class="form-control" rows="3">{{ old('descripcion', optional($parentesco)->descripcion) }}</textarea>
+    <textarea name="descripcion" id="descripcion" class="form-control" rows="3">
+        {{ old('descripcion', optional($parentesco)->descripcion) }}
+    </textarea>
 </div>
 ```
 
 #### 2. Agregar nuevas relaciones
 
 ```php
-// app/Models/Parentesco.php
-public function adquirentes()
-{
-    return $this->hasManyThrough(Person::class, AdquirenteTramite::class);
-}
-
 public function exenciones()
 {
     return $this->belongsToMany(Exencion::class, 'exencion_parentesco');
 }
 ```
 
-#### 3. Modificar lógica de eliminación
+#### 3. Implementar vista de papelera
 
-**Implementar Soft Deletes:**
-
-```bash
-php artisan make:migration add_soft_deletes_to_parentescos_table --table=parentescos
-```
+**Crear ruta:**
 
 ```php
-// app/Models/Parentesco.php
-use Illuminate\Database\Eloquent\SoftDeletes;
+Route::get('parentescos/trashed', [ParentescoController::class, 'trashed'])
+    ->name('admin.parentescos.trashed');
+```
 
-class Parentesco extends Model
+**Crear método en controlador:**
+
+```php
+public function trashed(Request $request)
 {
-    use HasFactory, SoftDeletes;
+    $this->authorize('viewAny', Parentesco::class);
 
-    // ...
+    $search = $request->get('search', '');
+
+    $parentescos = Parentesco::onlyTrashed()
+        ->when($search, function ($query) use ($search) {
+            $query->where('nombre', 'like', '%' . $search . '%');
+        })
+        ->orderBy('deleted_at', 'desc')
+        ->paginate(10);
+
+    return view('admin.parentescos.trashed', compact('parentescos'));
 }
 ```
 
-**Actualizar método destroy:**
+**Crear método restore:**
 
 ```php
-public function destroy(Parentesco $parentesco)
+public function restore($id)
 {
-    $this->authorize('delete', $parentesco);
+    $this->authorize('delete', Parentesco::class);
 
-    $parentesco->delete(); // Soft delete
+    $parentesco = Parentesco::onlyTrashed()->findOrFail($id);
+    $parentesco->restore();
 
-    return redirect()->route('admin.parentescos.index')
-        ->with(['message' => 'Parentesco eliminado (soft delete).', 'alert-type' => 'success']);
+    return redirect()->route('admin.parentescos.trashed')
+        ->with(['message' => 'Parentesco restaurado.', 'alert-type' => 'success']);
 }
 ```
 
@@ -1051,9 +966,10 @@ public function destroy(Parentesco $parentesco)
 2. **Autorización:** Siempre verificar permisos en Policies antes de ejecutar acciones
 3. **Carga diferida:** Usar `with()` para relaciones en consultas de listado (N+1 problem)
 4. **Cache:** Considerar caché para listados que no cambian frecuentemente
-5. **Logs:** Implementar logs de auditoría para cambios en parentescos
+5. **Logs:** Los errores se registran automáticamente en `destroy()`
 6. **Soft Deletes:** Usar soft deletes para mantener histórico
-7. **Eventos:** Usar modelos de eventos para lógica adicional al crear/actualizar/eliminar
+7. **Eventos:** Los eventos del modelo registran automáticamente `created_by` y `updated_by`
+8. **withCount:** Usar `withCount()` para mostrar contadores de relaciones en listados
 
 **Ejemplo de eager loading:**
 
@@ -1077,7 +993,7 @@ foreach ($parentescos as $parentesco) {
 use Illuminate\Support\Facades\Cache;
 
 $parentescos = Cache::remember('parentescos.all', 3600, function () {
-    return Parentesco::all();
+    return Parentesco::with('tasas')->get();
 });
 ```
 
@@ -1120,7 +1036,10 @@ class ParentescoTest extends TestCase
         $response = $this->actingAs($user)
             ->post(route('admin.parentescos.store'), $data);
 
-        $this->assertDatabaseHas('parentescos', $data);
+        $this->assertDatabaseHas('parentescos', [
+            'nombre' => 'Padre',
+            'created_by' => $user->id
+        ]);
         $response->assertRedirect(route('admin.parentescos.index'));
     }
 
@@ -1152,11 +1071,15 @@ class ParentescoTest extends TestCase
         $response = $this->actingAs($user)
             ->put(route('admin.parentescos.update', $parentesco), $data);
 
-        $this->assertDatabaseHas('parentescos', $data);
+        $this->assertDatabaseHas('parentescos', [
+            'id' => $parentesco->id,
+            'nombre' => 'Padre Biológico',
+            'updated_by' => $user->id
+        ]);
     }
 
     /** @test */
-    public function test_delete_without_tasas()
+    public function test_soft_delete_parentesco()
     {
         $user = User::factory()->create();
         $user->givePermission('delete_parentescos');
@@ -1166,7 +1089,8 @@ class ParentescoTest extends TestCase
         $response = $this->actingAs($user)
             ->delete(route('admin.parentescos.destroy', $parentesco));
 
-        $this->assertDatabaseMissing('parentescos', ['id' => $parentesco->id]);
+        $this->assertSoftDeleted('parentescos', ['id' => $parentesco->id]);
+        $this->assertDatabaseHas('parentescos', ['id' => $parentesco->id]);
     }
 
     /** @test */
@@ -1188,6 +1112,24 @@ class ParentescoTest extends TestCase
         $response->assertRedirect(route('admin.parentescos.index'));
         $response->assertSessionHas('alert-type', 'error');
         $this->assertDatabaseHas('parentescos', ['id' => $parentesco->id]);
+        $this->assertNull($parentesco->deleted_at);
+    }
+
+    /** @test */
+    public function test_cannot_delete_with_adquirentes()
+    {
+        $user = User::factory()->create();
+        $user->givePermission('delete_parentescos');
+
+        $parentesco = Parentesco::create(['nombre' => 'Padre']);
+
+        $response = $this->actingAs($user)
+            ->delete(route('admin.parentescos.destroy', $parentesco));
+
+        $response->assertRedirect(route('admin.parentescos.index'));
+        $response->assertSessionHas('alert-type', 'error');
+        $this->assertDatabaseHas('parentescos', ['id' => $parentesco->id]);
+        $this->assertNull($parentesco->deleted_at);
     }
 
     /** @test */
@@ -1266,125 +1208,47 @@ php artisan cache:clear
 
 ---
 
-## 📞 Soporte y Mantenimiento
+## 📊 Resumen de Mejoras Implementadas
 
-Para consultas o reportar issues relacionados con el módulo de Parentescos, contactar al equipo de desarrollo o revisar la documentación del sistema ITGB.
+### Bugs Corregidos ✅
 
-**Documentación relacionada:**
-- Documentación del módulo de Trámites
-- Documentación del servicio IdtgbCalculator
-- Documentación del módulo de Tasas
+1. **Protección contra eliminación de parentescos en uso**
+   - Agregada relación `adquirentesTramite()` en modelo
+   - Validación en `destroy()` antes de eliminar
+   - Previene integridad referencial rota
+
+2. **Manejo de errores mejorado**
+   - Logging activado en `destroy()`
+   - Mensajes de error más específicos
+   - Facilita depuración de problemas
+
+### Mejoras Implementadas 🚀
+
+1. **Soft Deletes**
+   - Migración creada y ejecutada
+   - Trait agregado al modelo
+   - Posibilidad de restaurar registros
+
+2. **Listados optimizados**
+   - `withCount(['tasas', 'adquirentesTramite'])` agregado
+   - Vista actualizada con badges de contadores
+   - Colores dinámicos según estado
+
+3. **Auditoría completa**
+   - Campos `created_by`, `updated_by` agregados
+   - Eventos de modelo automáticos
+   - Relaciones con usuarios
+
+4. **Optimización de búsquedas de tasas**
+   - Método `Tasa::findApplicableRate()` creado
+   - Centraliza lógica de búsqueda
+   - Incluye tipo de transmisión
+
+5. **Índice compuesto en tasas**
+   - Migración creada y ejecutada
+   - Optimiza búsquedas por departamento, parentesco, tipo y vigencia
+   - Mejora rendimiento general
 
 **Última actualización:** Enero 2026
 
-**Versión:** 1.0.0
----
-
-## 🚨 Análisis de Calidad y Mejoras
-
-A continuación se detallan posibles bugs, inconsistencias y oportunidades de mejora detectadas en el análisis del código del módulo de Parentescos.
-
-### 🐛 Bugs Potenciales y Riesgos
-
-1.  **Falta de Protección contra Eliminación de Parentescos en Uso (Adquirentes)**
-    *   **Ubicación**: `app/Http/Controllers/ParentescoController.php`, método `destroy()`, línea 100.
-    *   **Problema**: El método verifica si un parentesco tiene `tasas` asociadas antes de eliminarlo, lo cual es correcto. Sin embargo, **no verifica si el parentesco está siendo utilizado en la tabla `adquirentes_tramite`**.
-    *   **Impacto**: Un usuario podría eliminar un parentesco como "Hijo" mientras existen trámites activos donde un adquirente es "Hijo". Esto rompería la integridad referencial si la base de datos no tiene una restricción `FOREIGN KEY` estricta, o causaría un error 500 si la tiene. En el mejor de los casos, los trámites antiguos mostrarían un parentesco vacío o un ID roto.
-    *   **Solución Sugerida**: Añadir una verificación de la relación con `adquirentesTramite` antes de eliminar.
-
-        ```php
-        // En app/Models/Parentesco.php, añadir la relación faltante
-        public function adquirentesTramite()
-        {
-            return $this->hasMany(AdquirenteTramite::class);
-        }
-
-        // En app/Http/Controllers/ParentescoController.php, método destroy()
-        public function destroy(Parentesco $parentesco)
-        {
-            $this->authorize('delete', $parentesco);
-
-            if ($parentesco->tasas()->exists()) { // exists() es más eficiente que count() > 0
-                return redirect()->route('admin.parentescos.index')
-                    ->with(['message' => 'No se puede eliminar: El parentesco tiene tasas asociadas.', 'alert-type' => 'error']);
-            }
-
-            // AÑADIR ESTA VALIDACIÓN
-            if ($parentesco->adquirentesTramite()->exists()) {
-                return redirect()->route('admin.parentescos.index')
-                    ->with(['message' => 'No se puede eliminar: El parentesco está siendo utilizado en trámites existentes.', 'alert-type' => 'error']);
-            }
-
-            // ... resto del método
-        }
-        ```
-
-2.  **Manejo de Errores Genérico en `destroy()`**
-    *   **Ubicación**: `app/Http/Controllers/ParentescoController.php`, línea 108.
-    *   **Problema**: El bloque `catch (\Exception $e)` captura cualquier excepción y redirige con un mensaje genérico "Error al eliminar el parentesco".
-    *   **Impacto**: Oculta la causa real del problema al desarrollador (ej. un error de base de datos por una restricción de clave foránea no contemplada).
-    *   **Solución Sugerida**: Registrar el error real para facilitar la depuración.
-
-        ```php
-        catch (\Exception $e) {
-             \Log::error("Error al eliminar Parentesco #{$parentesco->id}: " . $e->getMessage()); // Registrar el error
-             return redirect()->route('admin.parentescos.index')
-                ->with(['message' => 'Ocurrió un error inesperado al intentar eliminar el parentesco.', 'alert-type' => 'error']);
-        }
-        ```
-
-### 🚀 Oportunidades de Mejora y Optimización
-
-1.  **Consistencia en la Experiencia de Usuario (Modal de Eliminación)**
-    *   **Ubicación**: `resources/views/admin/parentescos/list.blade.php`, línea 29.
-    *   **Problema**: El botón de eliminar invoca una función JavaScript `deleteItem(...)` que muestra un modal de confirmación. Este es un buen patrón, pero no parece ser consistente en todos los módulos CRUD del sistema.
-    *   **Mejora**: Estandarizar este comportamiento creando un componente de Blade o un script global para la confirmación de eliminación, asegurando que todos los módulos se comporten de la misma manera.
-
-2.  **Optimización de Consultas en el Listado**
-    *   **Ubicación**: `app/Http/Controllers/ParentescoController.php`, método `list()`.
-    *   **Mejora**: Aunque el módulo es simple y no tiene relaciones que cargar en el listado, es una buena práctica añadir un `withCount` para mostrar cuántas tasas o trámites están asociados a cada parentesco. Esto puede ayudar al administrador a decidir si es seguro eliminarlo.
-    *   **Implementación Sugerida**:
-        ```php
-        // En ParentescoController@list
-        $parentescos = Parentesco::withCount(['tasas', 'adquirentesTramite'])
-            ->when($search, function ($query) use ($search) {
-                $query->where('nombre', 'like', '%' . $search . '%');
-            })
-            ->orderBy('id', 'desc')
-            ->paginate($paginate);
-        
-        // En list.blade.php, añadir las columnas
-        // <td>{{ $p->tasas_count }}</td>
-        // <td>{{ $p->adquirentes_tramite_count }}</td>
-        ```
-
-3.  **Implementar `SoftDeletes` para Recuperación**
-    *   **Problema**: Actualmente, la eliminación es permanente. Si un administrador borra un parentesco por error, no hay forma de recuperarlo fácilmente.
-    *   **Mejora**: Implementar el trait `SoftDeletes` en el modelo `Parentesco`. Esto cambia el `delete()` por una actualización de la columna `deleted_at`, ocultando el registro en lugar de borrarlo.
-    *   **Impacto**: Mayor seguridad y capacidad de recuperación de datos. Se podría añadir una vista de "Papelera" para restaurar parentescos eliminados.
-
-### 📋 Funcionalidades Faltantes
-
-1.  **Auditoría de Cambios**
-    *   **Problema**: No se registra quién crea, modifica o elimina un parentesco.
-    *   **Necesidad**: En un sistema de impuestos, es fundamental tener un registro de auditoría completo. ¿Quién añadió el parentesco "Sobrino Político" y cuándo? ¿Quién cambió su nombre?
-    *   **Solución Sugerida**:
-        *   **Simple**: Añadir columnas `created_by` y `updated_by` a la tabla `parentescos` y gestionarlas automáticamente con un Trait o en los métodos `store`/`update`.
-        *   **Avanzada**: Implementar un paquete como `owen-it/laravel-auditing` para un log de cambios detallado.
-
-2.  **API Endpoints para Gestión Asíncrona**
-    *   **Problema**: Toda la gestión se realiza a través de recargas de página o AJAX que devuelve HTML.
-    *   **Necesidad**: Si una futura interfaz (ej. construida con Vue o React) necesita gestionar parentescos, requerirá endpoints de API que devuelvan JSON.
-    *   **Solución Sugerida**: Crear un `Api/ParentescoController` que devuelva respuestas JSON para las acciones CRUD.
-
-3.  **Traducciones y Localización**
-    *   **Problema**: Los nombres de los parentescos y los mensajes de error están "hardcodeados" en español.
-    *   **Necesidad**: Si el sistema necesitara soportar otros idiomas, sería imposible sin una refactorización.
-    *   **Solución Sugerida**: Utilizar los archivos de localización de Laravel (`lang/es/messages.php`) y la función `__()` para todos los textos visibles por el usuario.
-        ```php
-        // En lugar de:
-        return back()->with(['message' => 'Parentesco creado.']);
-
-        // Usar:
-        return back()->with(['message' => __('messages.parentesco_created')]);
-        ```
+**Versión:** 2.0.0

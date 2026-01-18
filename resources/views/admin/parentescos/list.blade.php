@@ -5,6 +5,8 @@
                 <tr>
                     <th>#</th>
                     <th>Nombre</th>
+                    <th>Tasas</th>
+                    <th>Trámites</th>
                     <th class="text-right">Acciones</th>
                 </tr>
             </thead>
@@ -13,7 +15,15 @@
                 <tr>
                     <td>{{ $p->id }}</td>
                     <td>{{ $p->nombre }}</td>
-                    <td class="text-right" style="width: 40%">
+                    <td class="text-center">
+                        <span class="badge badge-info">{{ $p->tasas_count }}</span>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge badge-{{ $p->adquirentes_tramite_count > 0 ? 'warning' : 'secondary' }}">
+                            {{ $p->adquirentes_tramite_count }}
+                        </span>
+                    </td>
+                    <td class="text-right" style="width: 30%">
                         @can('view', $p)
                             <a href="{{ route('admin.parentescos.show', $p) }}" title="Ver" class="btn btn-sm btn-warning">
                                 <i class="voyager-eye"></i> Ver
@@ -38,7 +48,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="3">
+                    <td colspan="5">
                         <h5 class="text-center" style="margin-top: 50px">
                             <img src="{{ asset('images/empty.png') }}" width="120px" alt="" style="opacity: 0.8">
                             <br><br>
