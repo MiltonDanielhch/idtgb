@@ -10,9 +10,11 @@
                     <h1 class="page-title">
                         <i class="fa-solid fa-arrow-right-arrow-left"></i> Tipos de Transmisión
                     </h1>
-                    <a href="{{ route('admin.tipos-transmision.create') }}" class="btn btn-success btn-add-new">
-                        <i class="voyager-plus"></i> <span>Añadir nuevo</span>
-                    </a>
+                    @can('create', \App\Models\TipoTransmision::class)
+                        <a href="{{ route('admin.tipos-transmision.create') }}" class="btn btn-success btn-add-new">
+                            <i class="voyager-plus"></i> <span>Añadir nuevo</span>
+                        </a>
+                    @endcan
                 </div>
             </div>
         </div>
@@ -85,3 +87,33 @@
         </script>
     @endpush
 @stop
+
+@section('javascript')
+<script>
+    function deleteItem(url, nombre) {
+        $('#delete_form').attr('action', url);
+        $('.modal-title').html('<i class="voyager-trash"></i> ¿Eliminar el tipo de transmisión "<strong>' + nombre + '</strong>"?');
+    }
+</script>
+@endsection
+
+{{-- Modal eliminar --}}
+<div class="modal modal-danger fade" tabindex="-1" id="delete_modal" role="dialog">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <h4 class="modal-title"><i class="voyager-trash"></i> ¿Desea eliminar este tipo de transmisión?</h4>
+            </div>
+            <div class="modal-footer">
+                <form action="#" id="delete_form" method="POST">
+                    @method('DELETE') @csrf
+                    <input type="submit" class="btn btn-danger pull-right delete-confirm" value="Sí, eliminar">
+                </form>
+                <button type="button" class="btn btn-default pull-right" data-dismiss="modal">Cancelar</button>
+            </div>
+        </div>
+    </div>
+</div>
