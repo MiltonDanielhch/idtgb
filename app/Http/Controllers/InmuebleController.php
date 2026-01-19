@@ -5,9 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Inmueble;
 use App\Models\TipoInmueble;
 use App\Models\Municipio;
-use App\Http\Requests\StoreInmuebleRequest;
 use App\Http\Requests\UpdateInmuebleRequest;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 
 class InmuebleController extends Controller
@@ -54,16 +54,40 @@ class InmuebleController extends Controller
         return view('admin.inmuebles.edit-add', [
             'inmueble'    => new Inmueble(),
             'tipos'       => TipoInmueble::orderBy('nombre')->get(),
-            'municipios'  => Municipio::with('provincia.departamento')->orderBy('nombre')->get(),
+            'municipios'   => Municipio::limit(100)->with('provincia.departamento')->orderBy('nombre')->get(),
         ]);
     }
 
-    public function store(StoreInmuebleRequest $request)
+    public function store(Request $request)
     {
         $this->authorize('create', Inmueble::class);
-        Inmueble::create($request->validated());
-        return redirect()->route('admin.inmuebles.index')
-            ->with(['message' => 'Inmueble creado.', 'alert-type' => 'success']);
+
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+            'catastro' => 'required|unique:inmuebles,catastro',
+            'direccion' => 'required',
+            'tipo_inmueble_id' => 'required',
+            'municipio_id' => 'required',
+            'valor_catastral' => 'required|numeric',
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput()->with(['message' => 'Error de validación: ' . $validator->errors()->first(), 'alert-type' => 'error']);
+        }
+
+        try {
+            $data = $validator->validated();
+            $data['created_by'] = auth()->id();
+            $data['updated_by'] = auth()->id();
+
+            Inmueble::create($data);
+
+            return redirect()->route('admin.inmuebles.index')
+                ->with(['message' => 'Inmueble creado exitosamente.', 'alert-type' => 'success']);
+        } catch (\Exception $e) {
+            Log::error('Error al crear inmueble: ' . $e->getMessage());
+            return back()->withInput()
+                ->with(['message' => 'Ocurrió un error al guardar el inmueble.', 'alert-type' => 'error']);
+        }
     }
 
     /* ----------  EDICIÓN  ---------- */
@@ -73,16 +97,29 @@ class InmuebleController extends Controller
         return view('admin.inmuebles.edit-add', [
             'inmueble'    => $inmueble,
             'tipos'       => TipoInmueble::orderBy('nombre')->get(),
-            'municipios'  => Municipio::with('provincia.departamento')->orderBy('nombre')->get(),
+            'municipios'   => Municipio::limit(100)->with('provincia.departamento')->orderBy('nombre')->get(),
         ]);
     }
 
     public function update(UpdateInmuebleRequest $request, Inmueble $inmueble)
     {
         $this->authorize('update', $inmueble);
-        $inmueble->update($request->validated());
-        return redirect()->route('admin.inmuebles.index')
-            ->with(['message' => 'Inmueble actualizado.', 'alert-type' => 'success']);
+
+        try {
+            $validated = $request->validated();
+
+            // Asignar usuario actual
+            $validated['updated_by'] = auth()->id();
+
+            $inmueble->update($validated);
+
+            return redirect()->route('admin.inmuebles.index')
+                ->with(['message' => 'Inmueble actualizado exitosamente.', 'alert-type' => 'success']);
+        } catch (\Exception $e) {
+            Log::error('Error al actualizar inmueble: ' . $e->getMessage());
+            return back()->withInput()
+                ->with(['message' => 'Ocurrió un error al actualizar el inmueble.', 'alert-type' => 'error']);
+        }
     }
 
     /* ----------  BORRADO  ---------- */

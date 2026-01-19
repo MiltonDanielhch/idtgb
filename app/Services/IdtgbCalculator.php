@@ -27,6 +27,12 @@ class IdtgbCalculator
         return DB::transaction(function () use ($tramite) {
             // 1. Asegurar que las relaciones están cargadas
             $tramite->load(['inmuebles.municipio.provincia.departamento', 'adquirentes', 'tramiteExenciones']);
+ 
+            // FIX: Validar que el trámite tenga inmuebles antes de calcular
+            $primerInmueble = $tramite->inmuebles->first();
+            if (!$primerInmueble) {
+                throw new \Exception('El trámite no tiene inmuebles asociados. No se puede calcular el impuesto.');
+            }
 
             $porcentajeParticipacion = $tramite->adquirentes->sum('porcentaje') ?: 100;
 
@@ -44,11 +50,14 @@ class IdtgbCalculator
             })->all();
 
             // 2. Ejecutar el cálculo CORE
+            // FIX: Usar departamento_id validado desde el primer inmueble
+            $departamentoId = $primerInmueble->municipio?->provincia?->departamento_id ?? 1; // Default Beni
+
             // FIX: Pasamos 100% de participación porque los porcentajes individuales ya definen la cuota.
             // Si pasamos $porcentajeParticipacion (suma), se aplicaría doble reducción.
             $resultados = $this->performCalculation(
                 $tramite->base_imponible,
-                $tramite->inmuebles->first()->municipio->provincia->departamento_id ?? 1, // Default Beni
+                $departamentoId,
                 $tramite->tipo_transmision_id,
                 $tramite->fecha_presentacion->toDateString(), // Usar fecha de registro del trámite
                 $tramite->fecha_transmision->toDateString(),
@@ -69,11 +78,11 @@ class IdtgbCalculator
 
             // 4. ACTUALIZACIÓN DE LOS ADQUIRENTES (Para que el Formulario A-01 no salga en 0)
             foreach ($tramite->adquirentes as $adq) {
-                // Buscamos la tasa específica para este adquirente
+                // FIX: Usar departamento_id validado
                 $tasaModel = $this->tasaVigente(
-                    $tramite->inmuebles->first()->municipio->provincia->departamento_id,
+                    $departamentoId,
                     $adq->parentesco_id,
-                    $tramite->tipo_transmision_id, // FIX: Incluir tipo de transmisión
+                    $tramite->tipo_transmision_id,
                     $tramite->fecha_presentacion
                 );
 

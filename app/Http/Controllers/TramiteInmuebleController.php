@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Tramite;
 use App\Models\Inmueble;
 use App\Models\TramiteInmueble;
+use App\Services\IdtgbCalculator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -74,6 +75,9 @@ class TramiteInmuebleController extends Controller
                 'inmueble_id' => $request->inmueble_id,
             ]);
 
+            // FIX: Recalcular impuesto al agregar inmueble
+            app(IdtgbCalculator::class)->calcular($tramite);
+
             DB::commit();
 
             return redirect()->route('admin.tramites.inmuebles.index', $tramite)
@@ -90,9 +94,18 @@ class TramiteInmuebleController extends Controller
     {
         $this->authorize('delete', $item);
 
+        // FIX: Validar que el item pertenezca al tramite
+        if ($item->tramite_id !== $tramite->id) {
+            abort(404);
+        }
+
         DB::beginTransaction();
         try {
             $item->delete();
+
+            // FIX: Recalcular impuesto al eliminar inmueble
+            app(IdtgbCalculator::class)->calcular($tramite);
+
             DB::commit();
 
             return redirect()->route('admin.tramites.inmuebles.index', $tramite)

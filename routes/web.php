@@ -188,6 +188,7 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
         Route::get('/ajax/list', [TramiteInmuebleController::class, 'list'])->name('ajax.list');
         Route::get('/create', [TramiteInmuebleController::class, 'create'])->name('create');
         Route::post('/', [TramiteInmuebleController::class, 'store'])->name('store');
+        Route::get('/{item}', [TramiteInmuebleController::class, 'show'])->name('show');
         Route::delete('/{item}', [TramiteInmuebleController::class, 'destroy'])->name('destroy');
     });
 

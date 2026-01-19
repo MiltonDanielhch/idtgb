@@ -11,11 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('tramite_inmuebles', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('tramite_id')->constrained()->restrictOnDelete();
-            $table->foreignId('inmueble_id')->constrained()->restrictOnDelete();
-            $table->timestamps();
+        Schema::table('inmuebles', function (Blueprint $table) {
+            $table->softDeletes();
         });
     }
 
@@ -24,6 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('tramite_inmuebles');
+        Schema::table('inmuebles', function (Blueprint $table) {
+            $table->dropSoftDeletes();
+        });
     }
 };

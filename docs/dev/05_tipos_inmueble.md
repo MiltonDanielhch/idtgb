@@ -253,7 +253,7 @@ El módulo implementa un modal de confirmación para eliminar tipos de inmueble,
 
 ---
 
-## 🔗 Integración con otros Módulos
+## 🔗 Integración con otros módulos
 
 La integración principal es con el módulo de **Inmuebles**. Cada `Inmueble` tiene un campo `tipo_inmueble_id` que es una clave foránea a esta tabla, siendo un campo obligatorio en el formulario de creación y edición de inmuebles.
 
@@ -331,12 +331,5 @@ El método `list()` del controlador carga el conteo usando `withCount('inmuebles
 
 ---
 
-## ✅ Mejoras Implementadas
-
-1. **Implementación de Policy** - `TipoInmueblePolicy` con autorización basada en permisos
-2. **FormRequests** - `StoreTipoInmuebleRequest` y `UpdateTipoInmuebleRequest` para validación y autorización
-3. **Soft Deletes** - Implementación de eliminación suave en el modelo y base de datos
-4. **Conteo de Inmuebles** - `withCount('inmuebles')` en el listado para mostrar cuántos inmuebles usa cada tipo
-5. **Protección de vistas** - Directivas `@can` en botones de acción
-6. **Validación mejorada** - Mensajes personalizados en FormRequests
-7. **Modal de confirmación de eliminación** - Modal Bootstrap para confirmar la eliminación de tipos de inmueble, siguiendo el patrón del módulo de parentescos
+**Última actualización:** Enero 2026
+**Versión:** 1.0.0

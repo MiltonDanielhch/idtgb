@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Inmueble extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'inmuebles';
 
@@ -23,6 +24,7 @@ class Inmueble extends Model
         'matricula_rr',
         'es_vivienda_unica_familiar',
         'estado_inmueble',
+        'updated_by',
     ];
 
     protected $casts = [
