@@ -128,11 +128,29 @@ class Person extends Model
         return $this->birth_date ? $this->birth_date->format('d/m/Y') : null;
     }
     /* -------------------------------------------------
-     *  SCOPES
-     * ------------------------------------------------- */
+      *  SCOPES
+      * ------------------------------------------------- */
     public function scopeActive($query)
     {
         return $query->where('status', self::STATUS_ACTIVE);
+    }
+
+    public function scopeSearch($query, $search)
+    {
+        if (!$search) {
+            return $query;
+        }
+
+        return $query->where(function ($q) use ($search) {
+            $q->where('ci', 'like', "%{$search}%")
+                ->orWhere('nit', 'like', "%{$search}%")
+                ->orWhere('first_name', 'like', "%{$search}%")
+                ->orWhere('paternal_surname', 'like', "%{$search}%")
+                ->orWhere('maternal_surname', 'like', "%{$search}%")
+                ->orWhere('legal_name', 'like', "%{$search}%")
+                ->orWhere('phone', 'like', "%{$search}%")
+                ->orWhere('email', 'like', "%{$search}%");
+        });
     }
 
 

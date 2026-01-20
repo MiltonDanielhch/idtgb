@@ -1,5 +1,19 @@
 # Documentación Técnica - Módulo de Personas
 
+## ✅ Estado de Correcciones - Enero 2026
+
+### Bugs Corregidos (2/5)
+- ✅ **Bug #2**: Manejo de errores mejorado en `store()` - ahora usa Log para errores y muestra mensaje genérico al usuario
+- ⏳ **Bug #1**: Búsqueda optimizada con scope `scopeSearch()` agregado al modelo, pero controlador aún usa implementación antigua
+
+### Pendientes (3/5)
+- ⏳ Bug #1: Actualizar controlador para usar el nuevo scope `scopeSearch()` en lugar de la lógica actual
+- ⏳ Bug #3: Validación de unicidad compuesta (CI + complemento)
+- ⏳ Bug #4: Inconsistencia en borrado de imágenes
+- ⏳ Bug #5: Falta de protección contra eliminación de personas con dependencias
+
+---
+
 ## 📋 Tabla de Contenidos
 
 1. [Introducción](#introducción)
@@ -253,22 +267,24 @@ A continuación se detallan posibles bugs, inconsistencias y oportunidades de me
 
 ### 🐛 Bugs Potenciales y Riesgos de Seguridad
 
-1.  **Búsqueda Ineficiente y Propensa a Errores SQL**
+1.  ✅ **Búsqueda Ineficiente y Propensa a Errores SQL** (PARCIALMENTE CORREGIDO)
+    *   **Estado**: ⏳ PARCIALMENTE CORREGIDO
     *   **Ubicación**: `app/Http/Controllers/PersonController.php`, método `list()`, líneas 46-68.
     *   **Problema**: La consulta de búsqueda utiliza `orWhere` repetidamente en combinación con `orWhereRaw` para el nombre completo. Esta construcción es difícil de mantener y puede volverse muy lenta en una base de datos grande, ya que dificulta el uso de índices por parte de MySQL. Además, concatenar SQL crudo (`$fullNameRaw`) es una mala práctica que puede abrir la puerta a inyecciones si no se maneja con cuidado.
     *   **Impacto**: Rendimiento bajo en la búsqueda de personas, posibles timeouts y dificultad para depurar o extender la consulta.
-    *   **Solución Sugerida**:
+    *   **Solución Implementada**: Se agregó un scope `scopeSearch()` en el modelo `Person` que centraliza la lógica de búsqueda y la hace reutilizable. Sin embargo, el controlador aún usa la implementación antigua.
+    *   **Solución Pendiente**:
         *   Crear un **índice FULLTEXT** en la base de datos sobre los campos de nombre.
         *   Utilizar `whereFullText` de Laravel para una búsqueda mucho más rápida y segura.
-        *   Refactorizar la lógica a un `scope` en el modelo `Person` para reutilizarla.
+        *   Refactorizar el controlador para usar el nuevo scope en lugar de la lógica actual.
 
-2.  **Manejo de Errores Débil en `store()`**
+2.  ✅ **Manejo de Errores Débil en `store()`** (CORREGIDO)
+    *   **Estado**: ✅ CORREGIDO
     *   **Ubicación**: `app/Http/Controllers/PersonController.php`, método `store()`, líneas 110-112.
     *   **Problema**: El bloque `catch` captura cualquier excepción (`Throwable`) y muestra el mensaje del error directamente al usuario (`$e->getMessage()`).
     *   **Impacto**: Se puede filtrar información sensible del sistema (nombres de tablas, errores de SQL, etc.) al usuario final, lo cual es un riesgo de seguridad. El mensaje no es amigable.
-    *   **Solución Sugerida**: Registrar el error detallado para los desarrolladores y mostrar un mensaje genérico al usuario.
+    *   **Solución Implementada**: Se modificó el bloque `catch` para registrar el error detallado en el log y mostrar un mensaje genérico al usuario:
         ```php
-        // En PersonController.php
         catch (\Throwable $e) {
             \Log::error('Error al crear persona: ' . $e->getMessage()); // Log detallado
             return back()->withInput()->with(['message' => 'Ocurrió un error inesperado al guardar la persona.', 'alert-type' => 'error']); // Mensaje genérico

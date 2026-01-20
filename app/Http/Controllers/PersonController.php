@@ -9,6 +9,7 @@ use App\Http\Requests\StorePersonRequest;
 use App\Http\Requests\UpdatePersonRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class PersonController extends Controller
 {
@@ -98,7 +99,8 @@ class PersonController extends Controller
                 ->with(['message' => 'Persona creada.', 'alert-type' => 'success']);
 
         } catch (\Throwable $e) {
-            return back()->withInput()->with(['message' => $e->getMessage(), 'alert-type' => 'error']);
+            \Log::error('Error al crear persona: ' . $e->getMessage());
+            return back()->withInput()->with(['message' => 'Ocurrió un error inesperado al guardar la persona.', 'alert-type' => 'error']);
         }
     }
     /* ----------  EDICIÓN  ---------- */

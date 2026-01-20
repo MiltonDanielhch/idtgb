@@ -1,5 +1,21 @@
 # Documentación Técnica - Módulo de División Política (Geografía)
 
+## ✅ Estado de Correcciones - Enero 2026
+
+### Bugs Corregidos (3/8)
+- ✅ **Bug #4**: Restricciones unique compuestas en provincias y municipios implementadas
+- ✅ **Bug #5**: Relaciones faltantes en modelos (municipios, tasas) agregadas
+- ✅ **Bug #7**: Constantes de códigos de departamentos agregadas al modelo
+
+### Pendientes (5/8)
+- ⏳ Bug #1: Optimización de selects pesados
+- ⏳ Bug #2: Eliminar dependencia de códigos hardcoded
+- ⏳ Bug #3: Validación de integridad referencial en seeders
+- ⏳ Bug #6: Campo `codigo` en municipios no implementado
+- ⏳ Bug #8: Validación de integridad referencial en modelos
+
+---
+
 ## 📋 Tabla de Contenidos
 
 1. [Introducción](#introducción)
@@ -197,23 +213,27 @@ Municipio::create([
     -   **Riesgo:** Si se vuelven a correr los seeders sin limpiar la tabla, se pueden duplicar registros si no se usa `updateOrCreate` o si no hay índices únicos en los nombres.
     -   **Ubicación:** `database/seeders/DepartamentoSeeder.php`, `database/seeders/ProvinciaSeeder.php`, `database/seeders/MunicipioSeeder.php`
 
-### 4.  **Falta de Restricciones Unique Compuestas:**
+### 4.  ✅ **Falta de Restricciones Unique Compuestas:** (CORREGIDO)
+    -   **Estado:** ✅ CORREGIDO
     -   **Problema:** Las tablas `provincias` y `municipios` no tienen restricciones unique compuestas para evitar nombres duplicados dentro del mismo departamento o provincia.
     -   **Ubicación:** `database/migrations/2025_09_22_122711_create_provincias_table.php:16`, `database/migrations/2025_09_22_122715_create_municipios_table.php:16`
     -   **Riesgo:** Se pueden crear dos provincias con el mismo nombre en el mismo departamento (ej: "Cercado" en Beni y otra "Cercado" también en Beni).
-    -   **Solución:** Agregar restricciones unique compuestas:
+    -   **Solución Implementada:** Se creó la migración `2026_01_19_194859_add_unique_composite_to_provincias_and_municipios_tables.php` que agrega:
         ```php
-        // En create_provincias_table.php
-        $table->unique(['nombre', 'departamento_id']);
-        
-        // En create_municipios_table.php
-        $table->unique(['nombre', 'provincia_id']);
+        Schema::table('provincias', function (Blueprint $table) {
+            $table->unique(['nombre', 'departamento_id']);
+        });
+
+        Schema::table('municipios', function (Blueprint $table) {
+            $table->unique(['nombre', 'provincia_id']);
+        });
         ```
 
-### 5.  **Inconsistencia en Modelo Departamento:**
+### 5.  ✅ **Inconsistencia en Modelo Departamento:** (CORREGIDO)
+    -   **Estado:** ✅ CORREGIDO
     -   **Problema:** La documentación menciona relaciones `municipios()` y `tasas()` en el modelo Departamento, pero estas NO existen en el código actual.
     -   **Ubicación:** `app/Models/Departamento.php:16-20` (solo tiene `provincias()`)
-    -   **Solución:** Agregar las relaciones faltantes al modelo:
+    -   **Solución Implementada:** Se agregaron las relaciones faltantes al modelo:
         ```php
         public function municipios()
         {
@@ -234,15 +254,22 @@ Municipio::create([
         $table->string('codigo', 10)->nullable();
         ```
 
-### 7.  **Ausencia de Constantes en Modelo Departamento:**
+### 7.  ✅ **Ausencia de Constantes en Modelo Departamento:** (CORREGIDO)
+    -   **Estado:** ✅ CORREGIDO
     -   **Problema:** No hay constantes definidas para los códigos de departamento (ej: `CODIGO_BENI = 'BE'`).
     -   **Ubicación:** `app/Models/Departamento.php` (líneas 8-20)
     -   **Riesgo:** Los códigos están hardcodeados en múltiples lugares del sistema (CalculadoraBeniController, TasaSeeder, etc.), lo que hace difícil mantenerlos.
-    -   **Solución:** Agregar constantes al modelo:
+    -   **Solución Implementada:** Se agregaron las constantes al modelo:
         ```php
         const CODIGO_BENI = 'BE';
         const CODIGO_SANTA_CRUZ = 'SC';
-        // ... otros códigos
+        const CODIGO_LA_PAZ = 'LP';
+        const CODIGO_COCHABAMBA = 'CB';
+        const CODIGO_ORURO = 'OR';
+        const CODIGO_POTOSI = 'PT';
+        const CODIGO_TARIJA = 'TJ';
+        const CODIGO_CHUQUISACA = 'CH';
+        const CODIGO_PANDO = 'PA';
         ```
 
 ### 8.  **Falta de Validación de Integridad Referencial en Modelos:**
@@ -537,25 +564,25 @@ Municipio::create([
 
 ## 📊 Resumen de Problemas por Severidad
 
-| Severidad | Problema | Ubicación |
-|-----------|----------|-----------|
-| **CRÍTICO** | Falta de restricciones unique compuestas | `database/migrations/2025_09_22_122711_create_provincias_table.php`, `2025_09_22_122715_create_municipios_table.php` |
-| **CRÍTICO** | Relaciones faltantes en modelos (pueden causar errores) | `app/Models/Departamento.php`, `app/Models/Municipio.php` |
-| **ALTO** | Hardcoded 'BE' en múltiples lugares | `CalculadoraBeniController.php`, `TasaSeeder.php`, `TramiteWizardController.php` |
-| **ALTO** | Consultas ineficientes de municipios | `PersonController.php:83,108`, `InmuebleController.php:57,76` |
-| **MEDIO** | Campo `codigo` en municipios no implementado | `database/migrations/2025_09_22_122715_create_municipios_table.php` |
-| **MEDIO** | No hay CRUD para administración de geografía | `database/seeders/IdtgbMenuAppendSeeder.php:26-28` |
-| **BAJO** | Falta de constantes en modelo Departamento | `app/Models/Departamento.php` |
-| **BAJO** | Formatos inconsistentes en vistas | `resources/views/admin/people/edit-add.blade.php:173`, `resources/views/admin/inmuebles/edit-add.blade.php:64` |
+| Severidad | Problema | Ubicación | Estado |
+|-----------|----------|-----------|--------|
+| **CRÍTICO** | Falta de restricciones unique compuestas | `database/migrations/2025_09_22_122711_create_provincias_table.php`, `2025_09_22_122715_create_municipios_table.php` | ✅ CORREGIDO |
+| **CRÍTICO** | Relaciones faltantes en modelos (pueden causar errores) | `app/Models/Departamento.php`, `app/Models/Municipio.php` | ✅ CORREGIDO |
+| **ALTO** | Hardcoded 'BE' en múltiples lugares | `CalculadoraBeniController.php`, `TasaSeeder.php`, `TramiteWizardController.php` | ⏳ Pendiente |
+| **ALTO** | Consultas ineficientes de municipios | `PersonController.php:83,108`, `InmuebleController.php:57,76` | ⏳ Pendiente |
+| **MEDIO** | Campo `codigo` en municipios no implementado | `database/migrations/2025_09_22_122715_create_municipios_table.php` | ⏳ Pendiente |
+| **MEDIO** | No hay CRUD para administración de geografía | `database/seeders/IdtgbMenuAppendSeeder.php:26-28` | ⏳ Pendiente |
+| **BAJO** | Falta de constantes en modelo Departamento | `app/Models/Departamento.php` | ✅ CORREGIDO |
+| **BAJO** | Formatos inconsistentes en vistas | `resources/views/admin/people/edit-add.blade.php:173`, `resources/views/admin/inmuebles/edit-add.blade.php:64` | ⏳ Pendiente |
 
 ---
 
 ## 🛠️ Prioridad de Implementación Sugerida
 
-### 1.  **CRÍTICO (Implementar inmediatamente):**
-    -   Agregar restricciones unique compuestas en migraciones (nueva migración)
-    -   Completar relaciones faltantes en modelos
-    -   Agregar constantes de códigos en modelo Departamento
+### 1.  ✅ **CRÍTICO (Completado):**
+    -   ✅ Agregar restricciones unique compuestas en migraciones (nueva migración)
+    -   ✅ Completar relaciones faltantes en modelos
+    -   ✅ Agregar constantes de códigos en modelo Departamento
 
 ### 2.  **ALTO (Implementar pronto):**
     -   Implementar selects en cascada con AJAX

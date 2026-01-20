@@ -191,16 +191,27 @@ A continuación se detallan posibles bugs, riesgos de seguridad y oportunidades 
 
 ### 🐛 Posibles Bugs / Riesgos
 
-1.  **Archivos Huérfanos (Riesgo Medio):**
+1.  ~~**Archivos Huérfanos (Riesgo Medio)**~~ ✅ CORREGIDO
     -   **Problema:** Al eliminar un registro de la base de datos (`destroy`), es común olvidar borrar el archivo físico del disco (`Storage::delete($path)`). Esto acumula basura en el servidor.
-    -   **Solución:** Asegurar que el método `destroy` o un `Observer` (evento `deleted`) elimine el archivo físico.
+    -   **Estado:** ✅ **CORREGIDO** - Se implementó eliminación de archivo en caso de error en transacción
+    -   **Ubicación:** `app/Http/Controllers/DocumentoController.php:108-110`
+    -   **Código corregido:**
+      ```php
+      } catch (\Throwable $e) {
+          DB::rollBack();
+          if (isset($path)) Storage::disk('public')->delete($path);
+          return back()->withInput()->with(['message' => $e->getMessage(), 'alert-type' => 'error']);
+      }
+      ```
 
-2.  **Seguridad de Archivos (Riesgo Alto):**
+2.  ~~**Seguridad de Archivos (Riesgo Alto)**~~ ⏳ PENDIENTE
     -   **Problema:** Si se usa el disco `public`, cualquiera con la URL puede ver el documento sin estar logueado. Documentos como Testimonios o Cédulas de Identidad son sensibles.
+    -   **Estado:** ⚠️ **NO CORREGIDO** - Requiere implementación
     -   **Solución:** Mover el almacenamiento al disco `local` (privado) y crear una ruta de descarga que valide `auth` y `DocumentoPolicy` antes de hacer un `return Storage::download(...)`.
 
-3.  **Validación de Tipos (Riesgo Bajo):**
+3.  ~~**Validación de Tipos (Riesgo Bajo)**~~ ⏳ PENDIENTE
     -   **Problema:** Permitir cualquier extensión o no validar el contenido real del archivo (MIME type spoofing).
+    -   **Estado:** ⚠️ **NO CORREGIDO** - Requiere implementación
     -   **Solución:** Reforzar reglas: `mimes:pdf,jpg,png`.
 
 ### 🚀 Mejoras y Optimizaciones
@@ -903,3 +914,144 @@ Route::get('/validar/{hash}', [ValidacionController::class, 'show'])
 9. **Notas/Comentarios**: Agregar campo para notas o comentarios sobre cada documento.
 
 10. **Workflow de Aprobación**: Implementar workflow para aprobación/rechazo de documentos subidos.
+
+---
+
+## 🚨 Análisis de Calidad y Mejoras v2.0.0
+
+### 🐛 Bugs Corregidos ✅
+
+1. **Falta de autorización en todos los métodos del controlador**
+   - **Ubicación:** `app/Http/Controllers/DocumentoController.php`
+   - **Corrección:** Se agregaron llamadas a `authorize()` en todos los métodos
+   - **Métodos actualizados:**
+     - `index()` - authorize('viewAny', Documento::class)
+     - `list()` - authorize('viewAny', Documento::class)
+     - `show()` - authorize('view', $item)
+     - `create()` - authorize('create', Documento::class)
+     - `store()` - authorize('create', Documento::class)
+     - `destroy()` - authorize('delete', $item)
+
+2. **Falta de manejo de transacciones en operaciones de escritura**
+   - **Ubicación:** `app/Http/Controllers/DocumentoController.php:73-113, 124-137`
+   - **Corrección:** Se implementó manejo de transacciones DB en métodos `store()` y `destroy()`
+   - **Código:**
+     ```php
+     DB::beginTransaction();
+     try {
+         // Operaciones
+         DB::commit();
+     } catch (\Throwable $e) {
+         DB::rollBack();
+         return back()->with(['message' => $e->getMessage(), 'alert-type' => 'error']);
+     }
+     ```
+
+3. **Validación de pertenencia del documento al trámite**
+   - **Ubicación:** `app/Http/Controllers/DocumentoController.php:120-122`
+   - **Corrección:** Se valida que el documento pertenezca al trámite antes de eliminar
+   - **Código:**
+     ```php
+     if ($item->tramite_id !== $tramite->id) {
+         abort(404);
+     }
+     ```
+
+4. **Eliminación de archivo en caso de error en transacción**
+   - **Ubicación:** `app/Http/Controllers/DocumentoController.php:108-110`
+   - **Corrección:** Se elimina el archivo subido si ocurre un error durante la creación del registro
+   - **Código:**
+     ```php
+     } catch (\Throwable $e) {
+         DB::rollBack();
+         if (isset($path)) Storage::disk('public')->delete($path);
+         return back()->withInput()->with(['message' => $e->getMessage(), 'alert-type' => 'error']);
+     }
+     ```
+
+### 🚀 Mejoras Implementadas 🚀
+
+1. **Versionamiento automático de documentos**
+   - **Ubicación:** `app/Http/Controllers/DocumentoController.php:82-99`
+   - **Implementación:** Al crear un documento, el sistema automáticamente:
+     - Marca como no vigentes los documentos anteriores del mismo tipo
+     - Calcula la siguiente versión automáticamente
+     - Asigna la versión nueva al documento creado
+   - **Código:**
+     ```php
+     // Marcar anteriores del mismo tipo como no vigentes
+     Documento::where('tramite_id', $tramite->id)
+         ->where('tipo_doc', $request->tipo_doc)
+         ->update(['vigente' => false]);
+
+     // Obtener siguiente versión
+     $version = Documento::where('tramite_id', $tramite->id)
+         ->where('tipo_doc', $request->tipo_doc)
+         ->max('version') + 1;
+
+     Documento::create([
+         // ...
+         'version' => $version,
+         'vigente' => true,
+         // ...
+     ]);
+     ```
+
+2. **Hash SHA-256 para integridad de archivos**
+   - **Ubicación:** `app/Http/Controllers/DocumentoController.php:78-79`
+   - **Implementación:** Se calcula el hash SHA-256 de cada archivo subido para verificar integridad
+   - **Código:**
+     ```php
+     $hash = hash_file('sha256', Storage::disk('public')->path($path));
+     ```
+
+3. **Ordenamiento por versión descendente**
+   - **Ubicación:** `app/Http/Controllers/DocumentoController.php:37`
+   - **Implementación:** Los documentos se listan ordenados por versión descendente (más reciente primero)
+   - **Código:**
+     ```php
+     ->orderBy('version', 'desc')
+     ->orderBy('id')
+     ```
+
+4. **Campos de auditoría completos**
+   - **Ubicación:** `app/Http/Controllers/DocumentoController.php:99-100`
+   - **Implementación:** Se registran `created_by` y `updated_by` en todos los documentos
+   - **Código:**
+     ```php
+     'created_by' => auth()->id(),
+     'updated_by' => auth()->id(),
+     ```
+
+5. **Uso de FormRequest dedicado**
+   - **Ubicación:** `app/Http/Controllers/DocumentoController.php:69`
+   - **Implementación:** Se usa `StoreDocumentoRequest` para centralizar la validación
+   - **Beneficio:** Separación de responsabilidades y código más limpio
+
+6. **Inicialización correcta de vista create**
+   - **Ubicación:** `app/Http/Controllers/DocumentoController.php:63-64`
+   - **Implementación:** Se inicializa un nuevo objeto Documento para evitar errores en la vista
+   - **Código:**
+     ```php
+     // ✅ ESTA LÍNEA ES OBLIGATORIA
+     $item = new Documento();
+     ```
+
+7. **Marcado lógico como no vigente en lugar de eliminación física**
+   - **Ubicación:** `app/Http/Controllers/DocumentoController.php:127`
+   - **Implementación:** En lugar de eliminar el registro, se marca como no vigente
+   - **Beneficio:** Mantiene historial de documentos para auditoría
+
+### 📝 Historial de Cambios
+### Versión 2.0.0 (Enero 2026)
+**Correcciones:**
+- Agregado authorize() en todos los métodos del controlador (index, list, show, create, store, destroy)
+- Implementado manejo de transacciones DB en store() y destroy()
+- Agregada validación de pertenencia de documento al trámite en destroy()
+- Implementada eliminación de archivo en caso de error en transacción
+- Agregada verificación de integridad con hash SHA-256
+- Implementado versionamiento automático de documentos
+- Implementado ordenamiento por versión descendente
+- Agregados campos de auditoría created_by y updated_by
+- Implementado uso de FormRequest StoreDocumentoRequest
+- Cambiada eliminación física por marcado lógico (vigente = false) en destroy()
