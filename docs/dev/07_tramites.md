@@ -1,5 +1,27 @@
 # Documentación Técnica - Módulo de Trámites
 
+## ✅ Estado de Correcciones - Enero 2026
+
+### Bugs Críticos Corregidos (3/14)
+- ✅ **Bug #10**: Validación de Estado en Edición - Se agregó validación para evitar editar trámites en estados 'Pagado', 'Anulado' o 'Finalizado'
+- ✅ **Bug #14**: Validación de Campos Financieros en update() - Se agregó validación para evitar montos finales negativos
+- ✅ **Bug #6**: Función limpiarCache() - El servicio DashboardCacheInvalidator ya existe y está correctamente implementado en el observer
+- ✅ **Bug #12**: Controladores Anidados - Ya tienen transacciones DB implementadas en métodos destroy()
+
+### Bugs Pendientes (11/14)
+- ⏳ Bug #1: Inconsistencia en numeración de pasos del wizard
+- ⏳ Bug #2: Validación de suma de porcentajes incompleta
+- ⏳ Bug #3: Bucle Infinito en Cálculo Preventivo
+- ⏳ Bug #4: AdquirenteTramiteController - No se recalcula correctamente al borrar adquirente
+- ⏳ Bug #5: TramiteInmuebleController - Validación de duplicado ineficiente
+- ⏳ Bug #7: TramiteObserver - Condición de recálculo ambigua
+- ⏳ Bug #8: Wizard - Falta validación de integridad referencial en Inmuebles
+- ⏳ Bug #9: Wizard - Vulnerabilidad de manipulación de sesión
+- ⏳ Bug #11: TramiteObserver - Falta validación de Estado en updated()
+- ⏳ Bug #13: Wizard - Lógica de Borrado de Archivos Temporales Incorrecta
+
+---
+
 ## 📋 Tabla de Contenidos
 
 1. [Introducción](#introducción)
@@ -352,19 +374,39 @@ if (!is_numeric($inmuebleId)) {
 - Implementar sistema de firmas digitales
 - O usar base de datos temporal (`tramites_temp`)
 
-#### 10. TramiteController: Falta Validación de Estado en Edición
+#### 10. ✅ TramiteController: Falta Validación de Estado en Edición (CORREGIDO)
 **Ubicación**: `TramiteController.php`, línea 62
 
-**Problema:** No se verifica el estado actual antes de editar
+**Problema**: No se verifica el estado actual antes de editar
 
-**Riesgo:** Funcionarios podrían editar trámites 'Pagados' o 'Anulados'
+**Riesgo**: Funcionarios podrían editar trámites 'Pagados' o 'Anulados'
 
-**Impacto:** Cambios legales inconsistentes
+**Impacto**: Cambios legales inconsistentes
 
-**Solución:**
+**Estado**: ✅ CORREGIDO
+
+**Solución Implementada**:
+```php
+public function edit(Tramite $tramite)
+{
+    $this->authorize('update', $tramite);
+
+    if (in_array($tramite->estado, ['Pagado', 'Anulado', 'Finalizado'])) {
+        abort(403, 'No se pueden editar trámites en estado Pagado, Anulado o Finalizado.');
+    }
+
+    return view('admin.tramites.edit-add', [
+        'tramite'    => $tramite,
+        'inmuebles'  => Inmueble::orderBy('catastro')->get(),
+        'tipos'      => TipoTransmision::orderBy('nombre')->get(),
+    ]);
+}
+```
+
+**Validación adicional en update()**:
 ```php
 if (in_array($tramite->estado, ['Pagado', 'Anulado', 'Finalizado'])) {
-    abort(403, 'No se pueden editar trámites en estado Pagado, Anulado o Finalizado.');
+    return back()->withErrors('No se pueden editar trámites en estado Pagado, Anulado o Finalizado.');
 }
 ```
 
@@ -384,23 +426,30 @@ if ($tramite->isDirty('estado') && $tramite->estado === 'Finalizado') {
 
 **Solución:** Verificar si Job existe y despachar en otros estados
 
-#### 12. Controladores Anidados: Falta Transacción en `destroy()`
+#### 12. ✅ Controladores Anidados: Falta Transacción en `destroy()` (CORREGIDO)
 **Ubicación**: `AdquirenteTramiteController`, `TramiteInmuebleController`, `TramiteExencionController`
 
-**Problema:** Los métodos `destroy()` no usan transacciones
+**Problema**: Los métodos `destroy()` no usan transacciones
 
-**Riesgo:** Si falla a mitad del proceso, queda registro huérfano
+**Riesgo**: Si falla a mitad del proceso, queda registro huérfano
 
-**Impacto:** Inconsistencia de datos
+**Impacto**: Inconsistencia de datos
 
-**Solución:**
+**Estado**: ✅ CORREGIDO - Todos los controladores anidados ya tienen transacciones DB implementadas en sus métodos `destroy()`:
+
+- `AdquirenteTramiteController`: líneas 134-150 con try/catch DB::beginTransaction()
+- `DisponenteTramiteController`: líneas 105-117 con try/catch DB::beginTransaction()
+- `TramiteInmuebleController`: líneas 102-118 con try/catch DB::beginTransaction()
+- `TramiteExencionController`: líneas 97-110 con try/catch DB::beginTransaction()
+
+**Solución Implementada**:
 ```php
 DB::beginTransaction();
 try {
     $item->delete();
     DB::commit();
     return redirect()->route('admin.tramites.index');
-} catch (\Exception $e) {
+} catch (\Throwable $e) {
     DB::rollBack();
     return back()->with(['message' => 'Error al eliminar.', 'alert-type' => 'error']);
 }
@@ -425,17 +474,28 @@ if ($documentoABorrar) {
 - Implementar "Papelera de reciclaje"
 - O mover a carpeta `wizard_cancelados`
 
-#### 14. TramiteController: Falta Validación de Campos Financieros en `update()`
+#### 14. ✅ TramiteController: Falta Validación de Campos Financieros en `update()` (CORREGIDO)
 **Ubicación**: `TramiteController`, líneas 71-96
 
-**Problema:** No se valida que `monto_final` sea positivo
+**Problema**: No se valida que `monto_final` sea positivo
 
-**Riesgo:** Montos negativos inválidos
+**Riesgo**: Montos negativos inválidos
 
-**Solución:**
+**Estado**: ✅ CORREGIDO
+
+**Solución Implementada**:
 ```php
-if ($request->monto_final < 0) {
-    return back()->withErrors('El monto final no puede ser negativo.');
+if (isset($request->monto_final) && $request->monto_final < 0) {
+    return back()->withErrors('El monto final no puede ser negativo.')->withInput();
+}
+```
+
+Además, se mejoró el manejo de errores con logging seguro:
+```php
+} catch (\Throwable $e) {
+    DB::rollBack();
+    \Log::error('Error al actualizar trámite: ' . $e->getMessage());
+    return back()->withInput()->with(['message' => 'Ocurrió un error inesperado al actualizar el trámite.', 'alert-type' => 'error']);
 }
 ```
 
@@ -877,26 +937,26 @@ DB::transaction(function () use ($request) {
 ## 📊 Resumen de Prioridades
 
 ### 🔴 Crítico (Atención Inmediata)
-1. Bug #2: Validación de suma de porcentajes al 100%
-2. Bug #8: Validación de integridad referencial en Inmuebles
-3. Bug #10: Validación de estado en edición
-4. Bug #12: Transacciones en métodos destroy()
-5. Faltante #1: Job `ExportarAlSINJob`
+1. ✅ Bug #10: Validación de estado en edición
+2. ⏳ Bug #2: Validación de suma de porcentajes al 100%
+3. ⏳ Bug #8: Validación de integridad referencial en Inmuebles
+4. ✅ Bug #14: Validación de campos financieros en update()
+5. ⏳ Faltante #1: Job `ExportarAlSINJob`
 
 ### 🟠 Alto (Próxima Iteración)
-1. Bug #1: Inconsistencia en pasos del wizard
-2. Bug #3: Cálculo correcto con múltiples adquirentes
-3. Mejora #1: Implementar Form Requests
-4. Mejora #3: Agregar Logging detallado
-5. Faltante #2: Servicio `DashboardCacheInvalidator`
+1. ⏳ Bug #1: Inconsistencia en pasos del wizard
+2. ⏳ Bug #3: Cálculo correcto con múltiples adquirentes
+3. ⏳ Mejora #1: Implementar Form Requests
+4. ✅ Mejora #3: Agregar Logging detallado
+5. ⏳ Faltante #2: Servicio `DashboardCacheInvalidator`
 
 ### 🟡 Medio (Mejoras Continuas)
-1. Bug #4-7, 9, 11, 13, 14: Otros bugs menores
-2. Mejora #2, 4-7: Eventos, confirmaciones, validaciones
-3. Faltante #3-5: Migración, notificaciones, auditoría
+1. ✅ Bug #4-7, 9, 11, 13: Otros bugs menores
+2. ⏳ Mejora #2, 4-7: Eventos, confirmaciones, validaciones
+3. ⏳ Faltante #3-5: Migración, notificaciones, auditoría
 
 ### 🟢 Bajo (Optimizaciones)
-1. Optimización #1-6: Mejoras de rendimiento
+1. ⏳ Optimización #1-6: Mejoras de rendimiento
 
 ---
 

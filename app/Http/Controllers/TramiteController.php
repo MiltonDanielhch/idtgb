@@ -10,6 +10,7 @@ use App\Http\Requests\StoreTramiteRequest;
 use App\Http\Requests\UpdateTramiteRequest;
 use App\Services\IdtgbCalculator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class TramiteController extends Controller
 {
@@ -61,6 +62,11 @@ class TramiteController extends Controller
     public function edit(Tramite $tramite)
     {
         $this->authorize('update', $tramite);
+
+        if (in_array($tramite->estado, ['Pagado', 'Anulado', 'Finalizado'])) {
+            abort(403, 'No se pueden editar trámites en estado Pagado, Anulado o Finalizado.');
+        }
+
         return view('admin.tramites.edit-add', [
             'tramite'    => $tramite,
             'inmuebles'  => Inmueble::orderBy('catastro')->get(),
@@ -71,6 +77,14 @@ class TramiteController extends Controller
     public function update(UpdateTramiteRequest $request, Tramite $tramite)
     {
         $this->authorize('update', $tramite);
+
+        if (in_array($tramite->estado, ['Pagado', 'Anulado', 'Finalizado'])) {
+            return back()->withErrors('No se pueden editar trámites en estado Pagado, Anulado o Finalizado.');
+        }
+
+        if (isset($request->monto_final) && $request->monto_final < 0) {
+            return back()->withErrors('El monto final no puede ser negativo.')->withInput();
+        }
 
         DB::beginTransaction();
         try {
@@ -91,7 +105,8 @@ class TramiteController extends Controller
 
         } catch (\Throwable $e) {
             DB::rollBack();
-            return back()->withInput()->with(['message' => $e->getMessage(), 'alert-type' => 'error']);
+            \Log::error('Error al actualizar trámite: ' . $e->getMessage());
+            return back()->withInput()->with(['message' => 'Ocurrió un error inesperado al actualizar el trámite.', 'alert-type' => 'error']);
         }
     }
 
