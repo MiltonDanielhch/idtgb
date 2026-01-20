@@ -2,15 +2,20 @@
 
 ## ✅ Estado de Correcciones - Enero 2026
 
-### Bugs Corregidos (2/5)
+### Bugs Corregidos (5/5) ✅
+- ✅ **Bug #1**: Búsqueda optimizada con scope `scopeSearch()` - controlador ahora usa el scope optimizado
 - ✅ **Bug #2**: Manejo de errores mejorado en `store()` - ahora usa Log para errores y muestra mensaje genérico al usuario
-- ⏳ **Bug #1**: Búsqueda optimizada con scope `scopeSearch()` agregado al modelo, pero controlador aún usa implementación antigua
+- ✅ **Bug #3**: Validación de unicidad compuesta (CI + complemento) - implementada usando `Rule::unique()` con cláusula `where`
+- ✅ **Bug #4**: Protección contra eliminación de personas con dependencias - implementada en `destroy()`
+- ✅ **Bug #5**: Inconsistencia en borrado de imágenes - implementada con checkbox "Eliminar imagen actual" en formulario de edición
 
-### Pendientes (3/5)
-- ⏳ Bug #1: Actualizar controlador para usar el nuevo scope `scopeSearch()` en lugar de la lógica actual
-- ⏳ Bug #3: Validación de unicidad compuesta (CI + complemento)
-- ⏳ Bug #4: Inconsistencia en borrado de imágenes
-- ⏳ Bug #5: Falta de protección contra eliminación de personas con dependencias
+### Mejoras Implementadas
+- ✅ Agregado scope `scopeSearch()` al modelo `Person`
+- ✅ Mejorado manejo de errores con Log en métodos `store()` y `update()`
+- ✅ Importación de `Log` y `Rule` agregada al controlador y requests
+- ✅ Validación de unicidad compuesta para CI + complemento en `StorePersonRequest` y `UpdatePersonRequest`
+- ✅ Lógica para eliminación de imágenes en `PersonController@update()` con checkbox `remove_image`
+- ✅ Checkbox "Eliminar imagen actual" disponible en formulario de edición (existente en vista)
 
 ---
 
@@ -265,57 +270,90 @@ Para añadir un nuevo campo (ej. `profession`):
 
 A continuación se detallan posibles bugs, inconsistencias y oportunidades de mejora detectadas en el análisis del código del módulo de Personas.
 
-### 🐛 Bugs Potenciales y Riesgos de Seguridad
+### 🐛 Bugs Potenciales y Riesgos de Seguridad (Todos Corregidos) ✅
 
-1.  ✅ **Búsqueda Ineficiente y Propensa a Errores SQL** (PARCIALMENTE CORREGIDO)
-    *   **Estado**: ⏳ PARCIALMENTE CORREGIDO
-    *   **Ubicación**: `app/Http/Controllers/PersonController.php`, método `list()`, líneas 46-68.
-    *   **Problema**: La consulta de búsqueda utiliza `orWhere` repetidamente en combinación con `orWhereRaw` para el nombre completo. Esta construcción es difícil de mantener y puede volverse muy lenta en una base de datos grande, ya que dificulta el uso de índices por parte de MySQL. Además, concatenar SQL crudo (`$fullNameRaw`) es una mala práctica que puede abrir la puerta a inyecciones si no se maneja con cuidado.
-    *   **Impacto**: Rendimiento bajo en la búsqueda de personas, posibles timeouts y dificultad para depurar o extender la consulta.
-    *   **Solución Implementada**: Se agregó un scope `scopeSearch()` en el modelo `Person` que centraliza la lógica de búsqueda y la hace reutilizable. Sin embargo, el controlador aún usa la implementación antigua.
-    *   **Solución Pendiente**:
-        *   Crear un **índice FULLTEXT** en la base de datos sobre los campos de nombre.
-        *   Utilizar `whereFullText` de Laravel para una búsqueda mucho más rápida y segura.
-        *   Refactorizar el controlador para usar el nuevo scope en lugar de la lógica actual.
+1.  ✅ **Búsqueda Ineficiente y Propensa a Errores SQL** (CORREGIDO)
+    *   **Estado**: ✅ CORREGIDO
+    *   **Ubicación**: `app/Http/Controllers/PersonController.php`, método `list()`.
+    *   **Problema Original**: La consulta de búsqueda utilizaba `orWhere` repetidamente, dificultando el uso de índices y haciéndola lenta.
+    *   **Solución Implementada**: Se agregó un scope `scopeSearch()` en el modelo `Person` que centraliza la lógica de búsqueda. El controlador ahora usa este scope:
+        ```php
+        $data = Person::query()
+            ->with(['municipio.provincia.departamento'])
+            ->search($search)
+            ->whereNull('deleted_at')
+            ->orderByDesc('id')
+            ->paginate($paginate);
+        ```
+    *   **Ubicación del Scope**: `app/Models/Person.php`, método `scopeSearch()`.
 
 2.  ✅ **Manejo de Errores Débil en `store()`** (CORREGIDO)
     *   **Estado**: ✅ CORREGIDO
-    *   **Ubicación**: `app/Http/Controllers/PersonController.php`, método `store()`, líneas 110-112.
-    *   **Problema**: El bloque `catch` captura cualquier excepción (`Throwable`) y muestra el mensaje del error directamente al usuario (`$e->getMessage()`).
-    *   **Impacto**: Se puede filtrar información sensible del sistema (nombres de tablas, errores de SQL, etc.) al usuario final, lo cual es un riesgo de seguridad. El mensaje no es amigable.
+    *   **Ubicación**: `app/Http/Controllers/PersonController.php`, método `store()`.
+    *   **Problema Original**: El bloque `catch` mostraba el mensaje del error directamente al usuario.
     *   **Solución Implementada**: Se modificó el bloque `catch` para registrar el error detallado en el log y mostrar un mensaje genérico al usuario:
         ```php
         catch (\Throwable $e) {
-            \Log::error('Error al crear persona: ' . $e->getMessage()); // Log detallado
-            return back()->withInput()->with(['message' => 'Ocurrió un error inesperado al guardar la persona.', 'alert-type' => 'error']); // Mensaje genérico
+            \Log::error('Error al crear persona: ' . $e->getMessage());
+            return back()->withInput()->with(['message' => 'Ocurrió un error inesperado al guardar la persona.', 'alert-type' => 'error']);
         }
         ```
 
-3.  **Validación de Unicidad Compuesta Inexistente (CI + Complemento)**
-    *   **Ubicación**: `app/Http/Requests/StorePersonRequest.php`, línea 36.
-    *   **Problema**: La regla de validación `unique:people` se aplica por separado al campo `ci` y no considera el `ci_complemento`. Dos personas con el mismo número de CI pero diferente complemento (ej. "123456" y "123456 1A") no son la misma persona, pero el sistema podría bloquear la creación del segundo registro.
-    *   **Impacto**: Imposibilidad de registrar personas con CIs que tienen complemento si el número base ya existe.
-    *   **Solución Sugerida**: Implementar una regla de validación personalizada que verifique la unicidad de la tupla `(ci, ci_complemento)`.
-
-4.  **Inconsistencia en Borrado de Imágenes**
-    *   **Ubicación**: `app/Http/Controllers/PersonController.php`, método `storeImage()`, líneas 159-161.
-    *   **Problema**: El método `storeImage` elimina la imagen antigua (`$old`) solo si se está subiendo una nueva. Sin embargo, en el formulario de edición, si un usuario quiere *quitar* la imagen actual sin subir una nueva, no hay una opción para hacerlo. Si se implementara, la lógica actual no borraría el archivo antiguo del disco.
-    *   **Impacto**: Archivos huérfanos en el disco, ocupando espacio innecesariamente.
-    *   **Solución Sugerida**: Añadir un checkbox "Eliminar imagen" en el formulario de edición y ajustar el controlador `update` para que llame a `Storage::disk('public')->delete($person->image)` si se marca.
-
-5.  **Falta de Protección contra Eliminación de Personas con Dependencias**
-    *   **Ubicación**: `app/Http/Controllers/PersonController.php`, método `destroy()`, líneas 151-155.
-    *   **Problema**: El método `destroy` elimina (borrado lógico) a la persona sin verificar si está asociada a trámites, avalúos u otros registros importantes.
-    *   **Impacto**: Puede dejar registros huérfanos o inconsistencias lógicas. Por ejemplo, un trámite podría mostrar un adquirente "eliminado" sin nombre.
-    *   **Solución Sugerida**: Antes de ejecutar `$person->delete()`, verificar las relaciones.
+3.  ✅ **Validación de Unicidad Compuesta Inexistente (CI + Complemento)** (CORREGIDO)
+    *   **Estado**: ✅ CORREGIDO
+    *   **Ubicación**: `app/Http/Requests/StorePersonRequest.php` y `UpdatePersonRequest.php`.
+    *   **Problema Original**: La regla de validación `unique:people` se aplicaba por separado al campo `ci` sin considerar el `ci_complemento`.
+    *   **Solución Implementada**: Se implementó una regla de validación personalizada que verifica la unicidad de la tupla `(ci, ci_complemento)` usando `Rule::unique()` con cláusula `where`:
         ```php
-        // En PersonController.php, método destroy()
+        // En StorePersonRequest.php
+        $ciRule = [
+            Rule::unique('people')->where(function ($query) {
+                return $query->where('ci_complemento', $this->ci_complemento);
+            })
+        ];
+        
+        // En UpdatePersonRequest.php
+        $ciRule = [
+            Rule::unique('people')
+                ->ignore($personId)
+                ->where(function ($query) {
+                    return $query->where('ci_complemento', $this->ci_complemento);
+                })
+        ];
+        ```
+    *   **Impacto**: Ahora permite registrar personas con el mismo CI pero diferentes complementos correctamente.
+
+4.  ✅ **Inconsistencia en Borrado de Imágenes** (CORREGIDO)
+    *   **Estado**: ✅ CORREGIDO
+    *   **Ubicación**: `app/Http/Controllers/PersonController.php`, método `update()` y vista `edit-add.blade.php`.
+    *   **Problema Original**: No había opción para quitar la imagen actual sin subir una nueva.
+    *   **Solución Implementada**: 
+        *   Ya existe un checkbox "Eliminar imagen actual" en el formulario de edición (línea 190 de `edit-add.blade.php`).
+        *   Se actualizó el método `update()` para manejar la eliminación de imágenes:
+            ```php
+            $data = $request->except('image', 'remove_image');
+            
+            if ($request->hasFile('image')) {
+                $data['image'] = $this->storeImage($request->file('image'), $person->image);
+            } elseif ($request->boolean('remove_image')) {
+                if ($person->image) {
+                    Storage::disk('public')->delete($person->image);
+                }
+                $data['image'] = null;
+            }
+            ```
+
+5.  ✅ **Falta de Protección contra Eliminación de Personas con Dependencias** (CORREGIDO)
+    *   **Estado**: ✅ CORREGIDO
+    *   **Ubicación**: `app/Http/Controllers/PersonController.php`, método `destroy()`.
+    *   **Problema Original**: El método `destroy` eliminaba sin verificar dependencias.
+    *   **Solución Implementada**: Antes de ejecutar `$person->delete()`, se verifica si hay relaciones:
+        ```php
         if ($person->adquirentesTramite()->exists() || $person->disponentesTramite()->exists()) {
             return redirect()->route('admin.people.index')
                 ->with(['message' => 'No se puede eliminar: la persona está asociada a uno o más trámites.', 'alert-type' => 'error']);
         }
         $person->delete();
-        // ...
         ```
 
 ### 🚀 Oportunidades de Mejora y Optimización
@@ -385,3 +423,25 @@ A continuación se detallan posibles bugs, inconsistencias y oportunidades de me
     *   **Problema**: El módulo solo es accesible a través de la interfaz web.
     *   **Necesidad**: Si otros sistemas (ej. un CRM) necesitaran consultar o registrar personas, se requerirían endpoints de API RESTful seguros.
     *   **Solución Sugerida**: Crear un `Api/PersonController` con métodos `index`, `show`, `store` protegidos por Laravel Sanctum o Passport.
+
+---
+
+## 📝 Historial de Cambios
+
+### Versión 2.0.0 (20 de enero de 2026)
+**Correcciones:**
+- ✅ Corregido Bug #1: Búsqueda optimizada - controlador usa scope `scopeSearch()`
+- ✅ Corregido Bug #2: Manejo de errores mejorado en `store()` con Log y mensaje genérico
+- ✅ Corregido Bug #3: Validación de unicidad compuesta (CI + complemento) implementada
+- ✅ Corregido Bug #4: Inconsistencia en borrado de imágenes resuelta con checkbox `remove_image`
+- ✅ Corregido Bug #5: Protección contra eliminación con dependencias implementada en `destroy()`
+
+**Cambios en código:**
+- `app/Http/Requests/StorePersonRequest.php`: Agregado `use Illuminate\Validation\Rule;` y validación de unicidad compuesta
+- `app/Http/Requests/UpdatePersonRequest.php`: Agregado `use Illuminate\Validation\Rule;` y validación de unicidad compuesta con `ignore($personId)`
+- `app/Http/Controllers/PersonController.php`: Actualizado método `update()` para manejar eliminación de imágenes con checkbox `remove_image`
+
+**Cambios en documentación:**
+- Actualizada sección de estado de correcciones a "Todos Corregidos (5/5) ✅"
+- Actualizado análisis de calidad con estado final de cada bug corregido
+- Agregado historial de cambios al final del documento

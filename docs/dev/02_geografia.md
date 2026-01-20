@@ -568,8 +568,8 @@ Municipio::create([
 |-----------|----------|-----------|--------|
 | **CRÍTICO** | Falta de restricciones unique compuestas | `database/migrations/2025_09_22_122711_create_provincias_table.php`, `2025_09_22_122715_create_municipios_table.php` | ✅ CORREGIDO |
 | **CRÍTICO** | Relaciones faltantes en modelos (pueden causar errores) | `app/Models/Departamento.php`, `app/Models/Municipio.php` | ✅ CORREGIDO |
-| **ALTO** | Hardcoded 'BE' en múltiples lugares | `CalculadoraBeniController.php`, `TasaSeeder.php`, `TramiteWizardController.php` | ⏳ Pendiente |
-| **ALTO** | Consultas ineficientes de municipios | `PersonController.php:83,108`, `InmuebleController.php:57,76` | ⏳ Pendiente |
+| **ALTO** | Hardcoded 'BE' en múltiples lugares | `CalculadoraBeniController.php`, `TasaSeeder.php`, `TramiteWizardController.php` | ✅ CORREGIDO |
+| **ALTO** | Consultas ineficientes de municipios | `PersonController.php:83,108`, `InmuebleController.php:57,76` | ✅ CORREGIDO |
 | **MEDIO** | Campo `codigo` en municipios no implementado | `database/migrations/2025_09_22_122715_create_municipios_table.php` | ⏳ Pendiente |
 | **MEDIO** | No hay CRUD para administración de geografía | `database/seeders/IdtgbMenuAppendSeeder.php:26-28` | ⏳ Pendiente |
 | **BAJO** | Falta de constantes en modelo Departamento | `app/Models/Departamento.php` | ✅ CORREGIDO |

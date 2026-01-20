@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 
 class Municipio extends Model
 {
@@ -26,5 +27,35 @@ class Municipio extends Model
     public function personas()
     {
         return $this->hasMany(Person::class);
+    }
+
+    public function scopeByDepartamento($query, $departamentoId)
+    {
+        return $query->whereHas('provincia', fn($q) => $q->where('departamento_id', $departamentoId));
+    }
+
+    public function scopeByProvincia($query, $provinciaId)
+    {
+        return $query->where('provincia_id', $provinciaId);
+    }
+
+    public static function getForSelect()
+    {
+        return self::select('id', 'nombre', 'provincia_id')
+            ->with(['provincia:id,nombre,departamento_id', 'provincia.departamento:id,nombre,codigo'])
+            ->orderBy('nombre')
+            ->get();
+    }
+
+    public static function getCachedForSelect()
+    {
+        return Cache::remember('municipios.all_with_relations', 3600, function () {
+            return self::getForSelect();
+        });
+    }
+
+    public static function clearCache()
+    {
+        Cache::forget('municipios.all_with_relations');
     }
 }

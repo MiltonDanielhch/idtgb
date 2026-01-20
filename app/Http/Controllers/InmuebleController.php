@@ -54,7 +54,7 @@ class InmuebleController extends Controller
         return view('admin.inmuebles.edit-add', [
             'inmueble'    => new Inmueble(),
             'tipos'       => TipoInmueble::orderBy('nombre')->get(),
-            'municipios'   => Municipio::limit(100)->with('provincia.departamento')->orderBy('nombre')->get(),
+            'municipios'    => Municipio::getCachedForSelect(),
         ]);
     }
 

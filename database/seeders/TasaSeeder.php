@@ -20,7 +20,7 @@ class TasaSeeder extends Seeder
     public function run(): void
     {
         // 1. Obtener el Departamento de Beni
-        $beni = Departamento::where('codigo', 'BE')->firstOrFail();
+        $beni = Departamento::where('codigo', Departamento::CODIGO_BENI)->firstOrFail();
 
         // Mapeo: nombre de parentesco → Tasa Legal del Beni (en porcentaje)
         $tasasBeniLegales = [

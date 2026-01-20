@@ -163,7 +163,7 @@ class TramiteWizardController extends Controller
         })->filter();
 
         // MODIFICADO: Cargar parentescos con sus tasas para el departamento del Beni
-        $beni = \App\Models\Departamento::where('codigo', 'BE')->first();
+        $beni = \App\Models\Departamento::where('codigo', \App\Models\Departamento::CODIGO_BENI)->first();
         $parentescos = Parentesco::with(['tasas' => function ($query) use ($beni) {
             if ($beni) {
                 $query->where('departamento_id', $beni->id)

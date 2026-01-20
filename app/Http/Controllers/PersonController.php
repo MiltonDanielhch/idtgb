@@ -35,41 +35,14 @@ class PersonController extends Controller
 
     public function list()
     {
-        $this->authorize('viewAny', Person::class); // ✅ POLICY
+        $this->authorize('viewAny', Person::class); 
 
         $search   = request('search');
         $paginate = request('paginate', 10);
 
-        // nombre completo para búsqueda
-        $fullNameRaw = "TRIM(CONCAT(
-            COALESCE(first_name, ''), ' ',
-            COALESCE(middle_name, ''), ' ',
-            COALESCE(paternal_surname, ''), ' ',
-            COALESCE(maternal_surname, '')
-        ))";
-
         $data = Person::query()
             ->with(['municipio.provincia.departamento'])
-            ->select('*')
-            ->selectRaw("$fullNameRaw as full_name")
-            ->when($search, function ($q) use ($search, $fullNameRaw) {
-                if (is_numeric($search)) {
-                    $q->where(function ($sub) use ($search) {
-                        $sub->where('id', $search)
-                            ->orWhere('ci', 'like', "%{$search}%")
-                            ->orWhere('nit', 'like', "%{$search}%");
-                    });
-                }
-                $q->orWhere(function ($sub) use ($search, $fullNameRaw) {
-                    $sub->where('phone', 'like', "%{$search}%")
-                        ->orWhere('first_name', 'like', "%{$search}%")
-                        ->orWhere('middle_name', 'like', "%{$search}%")
-                        ->orWhere('paternal_surname', 'like', "%{$search}%")
-                        ->orWhere('maternal_surname', 'like', "%{$search}%")
-                        ->orWhere('legal_name', 'like', "%{$search}%")
-                        ->orWhereRaw("{$fullNameRaw} like ?", ["%{$search}%"]);
-                });
-            })
+            ->search($search)
             ->whereNull('deleted_at')
             ->orderByDesc('id')
             ->paginate($paginate);
@@ -81,7 +54,7 @@ class PersonController extends Controller
     public function create()
     {
         $this->authorize('create', Person::class); // ✅ POLICY
-        $municipios = Municipio::with('provincia.departamento')->get();
+        $municipios = Municipio::getCachedForSelect();
         return view('admin.people.edit-add', ['person' => new Person(), 'municipios' => $municipios ]);
     }
 
@@ -107,7 +80,7 @@ class PersonController extends Controller
     public function edit(Person $person)
     {
         $this->authorize('update', $person); // ✅ POLICY
-        $municipios = Municipio::with('provincia.departamento')->get();
+        $municipios = Municipio::getCachedForSelect();
         $person->load('municipio');
         return view('admin.people.edit-add', [
             'person' => $person,
@@ -121,10 +94,17 @@ class PersonController extends Controller
 
         DB::beginTransaction();
         try {
-            $data = $request->except('image');
+            $data = $request->except('image', 'remove_image');
+            
             if ($request->hasFile('image')) {
                 $data['image'] = $this->storeImage($request->file('image'), $person->image);
+            } elseif ($request->boolean('remove_image')) {
+                if ($person->image) {
+                    Storage::disk('public')->delete($person->image);
+                }
+                $data['image'] = null;
             }
+            
             $person->update($data);
             DB::commit();
 
@@ -139,8 +119,15 @@ class PersonController extends Controller
     /* ----------  ELIMINAR  ---------- */
     public function destroy(Person $person)
     {
-        $this->authorize('delete', $person); // ✅ POLICY
+        $this->authorize('delete', $person); 
+
+        if ($person->adquirentesTramite()->exists() || $person->disponentesTramite()->exists()) {
+            return redirect()->route('admin.people.index')
+                ->with(['message' => 'No se puede eliminar: la persona está asociada a uno o más trámites.', 'alert-type' => 'error']);
+        }
+
         $person->delete();
+
         return redirect()->route('admin.people.index')
             ->with(['message' => 'Persona eliminada.', 'alert-type' => 'success']);
     }
