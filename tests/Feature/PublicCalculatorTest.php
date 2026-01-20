@@ -39,7 +39,7 @@ class PublicCalculatorTest extends TestCase
         $this->seed(\Database\Seeders\UfvSeeder::class); // <-- AÑADIDO: Cargar las UFVs
 
         // Obtener los modelos que usaremos en las pruebas
-        $this->departamento = Departamento::where('codigo', 'BE')->firstOrFail();
+        $this->departamento = Departamento::where('codigo', Departamento::CODIGO_BENI)->firstOrFail();
         $this->parentescoHijo = Parentesco::where('nombre', 'Hijo/a')->firstOrFail();
         $this->tipoTransmisionDonacion = TipoTransmision::where('nombre', 'Donación')->firstOrFail();
 

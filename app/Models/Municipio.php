@@ -12,7 +12,22 @@ class Municipio extends Model
 
     protected $table = 'municipios';
 
-    protected $fillable = ['nombre', 'provincia_id'];
+    protected $fillable = ['nombre', 'provincia_id', 'codigo'];
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::deleting(function ($municipio) {
+            if ($municipio->inmuebles()->exists()) {
+                throw new \Exception('No se puede eliminar el municipio: tiene inmuebles asociados.');
+            }
+
+            if ($municipio->personas()->exists()) {
+                throw new \Exception('No se puede eliminar el municipio: tiene personas asociadas.');
+            }
+        });
+    }
 
     public function provincia()
     {

@@ -39,9 +39,11 @@ class TramiteObserver
         // 1. Recalcular montos si el estado es Borrador (para mantener la boleta al día)
         $this->ejecutarRecalculo($tramite);
 
-        // 2. Exportación al SIN si el trámite finaliza con éxito
-        if ($tramite->isDirty('estado') && $tramite->estado === 'Finalizado') {
-            dispatch(new ExportarAlSINJob($tramite));
+        // 2. Exportación al SIN si el trámite se finaliza o paga con éxito
+        if ($tramite->isDirty('estado')) {
+            if (in_array($tramite->estado, ['Finalizado', 'Pagado'])) {
+                dispatch(new ExportarAlSINJob($tramite));
+            }
         }
 
         // 3. Invalida el caché del Dashboard para que los contadores se actualicen
@@ -65,7 +67,7 @@ class TramiteObserver
     {
         // Solo recalculamos automáticamente si el trámite está en flujo activo
         // y tiene adquirentes cargados. No tocamos trámites "Finalizados" o "Anulados".
-        if (in_array($tramite->estado, ['Borrador', 'Pendiente'])) {
+        if (in_array($tramite->estado, ['Borrador', 'Pendiente', 'Pagado'])) {
             if ($tramite->adquirentes()->exists()) {
                 // Evitamos un bucle infinito: el calculador hace un ->update(),
                 // por lo que usamos 'withoutEvents' dentro del servicio o controlamos aquí.

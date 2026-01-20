@@ -11,6 +11,8 @@ use App\Models\Tramite;
 use App\Services\IdtgbCalculator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class TramiteWizardController extends Controller
@@ -43,6 +45,42 @@ class TramiteWizardController extends Controller
     private function updateWizardData(Request $request, $data)
     {
         $request->session()->put($this->getSessionKey(), $data);
+    }
+
+    private function validateWizardIntegrity(array $wizardData)
+    {
+        $errors = [];
+
+        if (!empty($wizardData['step2']['disponentes'])) {
+            foreach ($wizardData['step2']['disponentes'] as $personId) {
+                if (!is_numeric($personId) || Person::where('id', $personId)->doesntExist()) {
+                    $errors[] = "Disponente inválido: ID {$personId}";
+                }
+            }
+        }
+
+        if (!empty($wizardData['step3']['adquirentes'])) {
+            foreach ($wizardData['step3']['adquirentes'] as $adquirente) {
+                $personId = $adquirente['person_id'] ?? null;
+                if (!is_numeric($personId) || Person::where('id', $personId)->doesntExist()) {
+                    $errors[] = "Adquirente inválido: ID {$personId}";
+                }
+            }
+        }
+
+        if (!empty($wizardData['step4']['inmuebles'])) {
+            foreach ($wizardData['step4']['inmuebles'] as $inmuebleId) {
+                if (!is_numeric($inmuebleId) || Inmueble::where('id', $inmuebleId)->doesntExist()) {
+                    $errors[] = "Inmueble inválido: ID {$inmuebleId}";
+                }
+            }
+        }
+
+        if (!empty($errors)) {
+            throw new \InvalidArgumentException('Datos del wizard corruptos: ' . implode(', ', $errors));
+        }
+
+        return true;
     }
 
     // ==================== PASO 1: DATOS GENERALES ====================
@@ -139,6 +177,12 @@ class TramiteWizardController extends Controller
         $wizardData = $this->getWizardData($request);
         if (empty($wizardData['step2']['disponentes'])) {
             return back()->withErrors('Debe agregar al menos un disponente.');
+        }
+
+        try {
+            $this->validateWizardIntegrity($wizardData);
+        } catch (\InvalidArgumentException $e) {
+            return back()->withErrors($e->getMessage());
         }
 
         return redirect()->route('admin.tramites.wizard.create.step3');
@@ -239,8 +283,14 @@ class TramiteWizardController extends Controller
         }
 
         $totalPorcentaje = collect($wizardData['step3']['adquirentes'])->sum('porcentaje');
-        if ($totalPorcentaje > 100) {
-            return back()->withErrors("La suma de los porcentajes de los adquirentes ({$totalPorcentaje}%) no puede superar el 100%.");
+        if ($totalPorcentaje != 100) {
+            return back()->withErrors("La suma de porcentajes de los adquirentes debe ser exactamente 100%. Actual: {$totalPorcentaje}%.");
+        }
+
+        try {
+            $this->validateWizardIntegrity($wizardData);
+        } catch (\InvalidArgumentException $e) {
+            return back()->withErrors($e->getMessage());
         }
 
         return redirect()->route('admin.tramites.wizard.create.step4');
@@ -254,7 +304,12 @@ class TramiteWizardController extends Controller
             return redirect()->route('admin.tramites.wizard.create.step3');
         }
 
-        $inmuebles = collect($wizardData['step4']['inmuebles'] ?? [])->map(function($inmuebleId) {
+        $inmuebles = collect($wizardData['step4']['inmuebles'] ?? [])->filter(function($inmuebleId) {
+            if (!is_numeric($inmuebleId)) {
+                return false;
+            }
+            return true;
+        })->map(function($inmuebleId) {
             return Inmueble::find($inmuebleId);
         })->filter();
 
@@ -294,6 +349,12 @@ class TramiteWizardController extends Controller
         $wizardData = $this->getWizardData($request);
         if (empty($wizardData['step4']['inmuebles'])) {
             return back()->withErrors('Debe agregar al menos un inmueble.');
+        }
+
+        try {
+            $this->validateWizardIntegrity($wizardData);
+        } catch (\InvalidArgumentException $e) {
+            return back()->withErrors($e->getMessage());
         }
 
         return redirect()->route('admin.tramites.wizard.create.step5'); // Redirige al nuevo paso 5
@@ -463,15 +524,34 @@ class TramiteWizardController extends Controller
         })->all();
 
         // Invocamos el cálculo (Simulación para el resumen)
-        $liquidacion = $calculator->calculateEstimate(
-            $wizardData['step1']['base_imponible'],
-            $depId,
-            $adquirentesData[0]['parentesco_id'], // El calculador estimate toma uno, o puedes ajustar el core
-            $wizardData['step1']['tipo_transmision_id'],
-            $wizardData['step1']['fecha_transmision'],
-            now()->toDateString(), // Fecha de hoy (Presentación/Pago)
-            Carbon::parse($wizardData['step1']['fecha_presentacion'])->addDays(30)->toDateString() // Vencimiento estimado
-        );
+        // Sumar los cálculos de todos los adquirentes
+        $totalLiquidacion = [
+            'idtgb_base' => 0,
+            'mora' => 0,
+            'total' => 0,
+            'ufv' => 1,
+            'fecha_vencimiento' => Carbon::parse($wizardData['step1']['fecha_presentacion'])->addDays(30)->toDateString()
+        ];
+
+        foreach ($adquirentesData as $adquirente) {
+            $liquidacion = $calculator->calculateEstimate(
+                $wizardData['step1']['base_imponible'] * ($adquirente['porcentaje'] / 100),
+                $depId,
+                $adquirente['parentesco_id'],
+                $wizardData['step1']['tipo_transmision_id'],
+                $wizardData['step1']['fecha_transmision'],
+                now()->toDateString(),
+                $totalLiquidacion['fecha_vencimiento']
+            );
+
+            if (is_array($liquidacion)) {
+                $totalLiquidacion['idtgb_base'] += $liquidacion['idtgb_base'] ?? 0;
+                $totalLiquidacion['mora'] += $liquidacion['mora'] ?? 0;
+                $totalLiquidacion['total'] += $liquidacion['total'] ?? 0;
+            }
+        }
+
+        $liquidacion = $totalLiquidacion;
 
         // 3. Llamar al showSummary pasando la $liquidacion
         return $this->showSummary($request, $wizardData, $liquidacion);
@@ -560,6 +640,13 @@ class TramiteWizardController extends Controller
             empty($wizardData['step4']['inmuebles'])) { // Exenciones son opcionales
             return redirect()->route('admin.tramites.wizard.create.step1')
                 ->withErrors('Datos incompletos. Por favor, complete todos los pasos.');
+        }
+
+        try {
+            $this->validateWizardIntegrity($wizardData);
+        } catch (\InvalidArgumentException $e) {
+            return redirect()->route('admin.tramites.wizard.create.step7')
+                ->withErrors($e->getMessage());
         }
 
         try {
@@ -696,11 +783,28 @@ class TramiteWizardController extends Controller
 
     public function cancelWizard(Request $request)
     {
+        $wizardData = $this->getWizardData($request);
+
+        // Mover documentos temporales a carpeta de cancelados en lugar de borrarlos
+        if (!empty($wizardData['step5']['documentos'])) {
+            foreach ($wizardData['step5']['documentos'] as $docData) {
+                $tempPath = $docData['temp_path'] ?? null;
+                if ($tempPath && \Storage::disk('local')->exists($tempPath)) {
+                    $cancelledPath = str_replace('wizard_temp_docs', 'wizard_cancelled', $tempPath);
+                    \Storage::disk('local')->move($tempPath, $cancelledPath);
+                    \Log::info("Documento temporal movido a cancelados", [
+                        'original' => $tempPath,
+                        'nuevo' => $cancelledPath
+                    ]);
+                }
+            }
+        }
+
         $request->session()->forget($this->getSessionKey());
 
         return redirect()->route('admin.tramites.index')
             ->with([
-                'message' => 'Creación de trámite cancelada',
+                'message' => 'Creación de trámite cancelada. Los documentos han sido guardados temporalmente.',
                 'alert-type' => 'info'
             ]);
     }

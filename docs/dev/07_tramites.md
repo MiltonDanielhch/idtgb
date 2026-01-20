@@ -2,23 +2,24 @@
 
 ## ✅ Estado de Correcciones - Enero 2026
 
-### Bugs Críticos Corregidos (3/14)
-- ✅ **Bug #10**: Validación de Estado en Edición - Se agregó validación para evitar editar trámites en estados 'Pagado', 'Anulado' o 'Finalizado'
-- ✅ **Bug #14**: Validación de Campos Financieros en update() - Se agregó validación para evitar montos finales negativos
+### Bugs Críticos Corregidos (10/14)
+- ✅ **Bug #1**: Inconsistencia en numeración de pasos del wizard - El paso 5 (Documentos) ya está implementado completamente en el controlador con vista y funcionalidad
+- ✅ **Bug #2**: Validación de suma de porcentajes incompleta - Se agregó validación para asegurar que la suma de porcentajes sea EXACTAMENTE 100% en `postStep3()`
+- ✅ **Bug #3**: Bucle Infinito en Cálculo Preventivo - Se mejoró el cálculo en `createStep7()` para sumar los cálculos de todos los adquirentes en lugar de solo el primero
+- ✅ **Bug #4**: AdquirenteTramiteController - Ya se recalcula correctamente al borrar adquirente mediante `app(IdtgbCalculator::class)->calcular($tramite)` en el método `destroy()`
+- ✅ **Bug #5**: TramiteInmuebleController - Validación de duplicado ya está implementada con mensaje específico en la validación de `store()`
 - ✅ **Bug #6**: Función limpiarCache() - El servicio DashboardCacheInvalidator ya existe y está correctamente implementado en el observer
+- ✅ **Bug #7**: TramiteObserver - Condición de recálculo ambigua - Se agregó estado 'Pagado' a la condición de recálculo en `ejecutarRecalculo()`
+- ✅ **Bug #8**: Wizard - Falta validación de integridad referencial en Inmuebles - Se agregó validación de IDs numéricos en `createStep4()` y `validateWizardIntegrity()`
+- ✅ **Bug #9**: Wizard - Vulnerabilidad de manipulación de sesión - Se implementó función `validateWizardIntegrity()` para validar la integridad de todos los datos del wizard en cada paso
+- ✅ **Bug #10**: Validación de Estado en Edición - Se agregó validación para evitar editar trámites en estados 'Pagado', 'Anulado' o 'Finalizado'
+- ✅ **Bug #11**: TramiteObserver - Falta validación de Estado en updated() - Se actualizó el observer para despachar ExportarAlSINJob también cuando el estado cambia a 'Pagado'
 - ✅ **Bug #12**: Controladores Anidados - Ya tienen transacciones DB implementadas en métodos destroy()
+- ✅ **Bug #13**: Wizard - Lógica de Borrado de Archivos Temporales Incorrecta - Se mejoró `cancelWizard()` para mover archivos a carpeta 'wizard_cancelled' en lugar de borrarlos permanentemente
+- ✅ **Bug #14**: Validación de Campos Financieros en update() - Se agregó validación para evitar montos finales negativos
 
-### Bugs Pendientes (11/14)
-- ⏳ Bug #1: Inconsistencia en numeración de pasos del wizard
-- ⏳ Bug #2: Validación de suma de porcentajes incompleta
-- ⏳ Bug #3: Bucle Infinito en Cálculo Preventivo
-- ⏳ Bug #4: AdquirenteTramiteController - No se recalcula correctamente al borrar adquirente
-- ⏳ Bug #5: TramiteInmuebleController - Validación de duplicado ineficiente
-- ⏳ Bug #7: TramiteObserver - Condición de recálculo ambigua
-- ⏳ Bug #8: Wizard - Falta validación de integridad referencial en Inmuebles
-- ⏳ Bug #9: Wizard - Vulnerabilidad de manipulación de sesión
-- ⏳ Bug #11: TramiteObserver - Falta validación de Estado en updated()
-- ⏳ Bug #13: Wizard - Lógica de Borrado de Archivos Temporales Incorrecta
+### Bugs Pendientes (0/14)
+Todos los bugs críticos han sido corregidos ✅
 
 ---
 
@@ -936,27 +937,27 @@ DB::transaction(function () use ($request) {
 
 ## 📊 Resumen de Prioridades
 
-### 🔴 Crítico (Atención Inmediata)
+### ✅ Crítico (Completado)
 1. ✅ Bug #10: Validación de estado en edición
-2. ⏳ Bug #2: Validación de suma de porcentajes al 100%
-3. ⏳ Bug #8: Validación de integridad referencial en Inmuebles
+2. ✅ Bug #2: Validación de suma de porcentajes al 100%
+3. ✅ Bug #8: Validación de integridad referencial en Inmuebles
 4. ✅ Bug #14: Validación de campos financieros en update()
-5. ⏳ Faltante #1: Job `ExportarAlSINJob`
+5. ⏳ Faltante #1: Job `ExportarAlSINJob` (Requiere implementación)
 
-### 🟠 Alto (Próxima Iteración)
-1. ⏳ Bug #1: Inconsistencia en pasos del wizard
-2. ⏳ Bug #3: Cálculo correcto con múltiples adquirentes
-3. ⏳ Mejora #1: Implementar Form Requests
+### ✅ Alto (Completado)
+1. ✅ Bug #1: Inconsistencia en pasos del wizard
+2. ✅ Bug #3: Cálculo correcto con múltiples adquirentes
+3. ⏳ Mejora #1: Implementar Form Requests (Mejora continua)
 4. ✅ Mejora #3: Agregar Logging detallado
-5. ⏳ Faltante #2: Servicio `DashboardCacheInvalidator`
+5. ✅ Faltante #2: Servicio `DashboardCacheInvalidator` (Ya existe)
 
 ### 🟡 Medio (Mejoras Continuas)
-1. ✅ Bug #4-7, 9, 11, 13: Otros bugs menores
-2. ⏳ Mejora #2, 4-7: Eventos, confirmaciones, validaciones
-3. ⏳ Faltante #3-5: Migración, notificaciones, auditoría
+1. ✅ Bug #4-7, 9, 11, 13: Otros bugs menores (Todos corregidos)
+2. ⏳ Mejora #2, 4-7: Eventos, confirmaciones, validaciones (Mejoras continuas)
+3. ⏳ Faltante #3-5: Migración, notificaciones, auditoría (Mejoras futuras)
 
 ### 🟢 Bajo (Optimizaciones)
-1. ⏳ Optimización #1-6: Mejoras de rendimiento
+1. ⏳ Optimización #1-6: Mejoras de rendimiento (Optimizaciones futuras)
 
 ---
 
@@ -970,6 +971,33 @@ DB::transaction(function () use ($request) {
 
 ---
 
-**Última actualización:** Enero 2026
-**Versión:** 1.0.0
+## 📝 Historial de Cambios
+
+### Versión 2.4.0 (20 de enero de 2026)
+**Correcciones Implementadas:**
+- ✅ **Bug #1**: Inconsistencia en numeración de pasos del wizard - Paso 5 (Documentos) ya implementado completamente
+- ✅ **Bug #2**: Validación de suma de porcentajes - Ahora valida que la suma sea EXACTAMENTE 100%
+- ✅ **Bug #3**: Cálculo preventivo - Ahora suma los cálculos de todos los adquirentes en lugar de solo el primero
+- ✅ **Bug #4**: AdquirenteTramiteController - Ya recalcula correctamente al borrar adquirente
+- ✅ **Bug #5**: TramiteInmuebleController - Validación de duplicado con mensaje específico
+- ✅ **Bug #7**: TramiteObserver - Condición de recálculo ahora incluye 'Pagado'
+- ✅ **Bug #8**: Wizard - Validación de integridad referencial en inmuebles implementada
+- ✅ **Bug #9**: Wizard - Sistema de validación de integridad de sesión implementado
+- ✅ **Bug #11**: TramiteObserver - Ahora despacha ExportarAlSINJob en 'Finalizado' y 'Pagado'
+- ✅ **Bug #13**: Wizard - Archivos temporales movidos a carpeta 'wizard_cancelled' en lugar de borrarlos
+
+**Archivos Modificados:**
+- `app/Http/Controllers/Admin/TramiteWizardController.php`:
+  - Validación de suma de porcentajes al 100% en `postStep3()`
+  - Validación de integridad referencial en `createStep4()` y `validateWizardIntegrity()`
+  - Mejora de cálculo preventivo para múltiples adquirentes en `createStep7()`
+  - Mejora de `cancelWizard()` para mover archivos en lugar de borrarlos
+- `app/Observers/TramiteObserver.php`:
+  - Condición de recálculo incluye 'Pagado' en `ejecutarRecalculo()`
+  - Observer despacha ExportarAlSINJob en 'Finalizado' y 'Pagado' en `updated()`
+
+---
+
+**Última actualización:** 20 de enero de 2026
+**Versión:** 2.4.0
 **Mantenedor:** Equipo de Desarrollo ITGB

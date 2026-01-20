@@ -13,6 +13,17 @@ class Provincia extends Model
 
     protected $fillable = ['nombre', 'departamento_id'];
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::deleting(function ($provincia) {
+            if ($provincia->municipios()->exists()) {
+                throw new \Exception('No se puede eliminar la provincia: tiene municipios asociados.');
+            }
+        });
+    }
+
     public function departamento()
     {
         return $this->belongsTo(Departamento::class);

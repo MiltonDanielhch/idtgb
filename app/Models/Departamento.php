@@ -23,6 +23,21 @@ class Departamento extends Model
     const CODIGO_CHUQUISACA = 'CH';
     const CODIGO_PANDO = 'PA';
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::deleting(function ($departamento) {
+            if ($departamento->provincias()->exists()) {
+                throw new \Exception('No se puede eliminar el departamento: tiene provincias asociadas.');
+            }
+
+            if ($departamento->tasas()->exists()) {
+                throw new \Exception('No se puede eliminar el departamento: tiene tasas asociadas.');
+            }
+        });
+    }
+
     public function provincias()
     {
         return $this->hasMany(Provincia::class);

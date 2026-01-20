@@ -9,7 +9,7 @@ class ProvinciaSeeder extends Seeder
 {
     public function run(): void
     {
-        $beni = Departamento::where('codigo', 'BE')->firstOrFail();
+        $beni = Departamento::where('codigo', Departamento::CODIGO_BENI)->firstOrFail();
 
         $provincias = [
             'Cercado',

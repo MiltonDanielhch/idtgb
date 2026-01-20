@@ -6,6 +6,7 @@ use App\Models\Person;
 use App\Models\Municipio;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class PeopleBeniSeeder extends Seeder
 {
@@ -16,6 +17,17 @@ class PeopleBeniSeeder extends Seeder
         $municipioRiberalta = Municipio::where('nombre', 'Riberalta')->first();
         $municipioSanBorja = Municipio::where('nombre', 'San Borja')->first();
 
+        // Validación de integridad referencial
+        if (!$municipioTrinidad) {
+            Log::warning('PeopleBeniSeeder: Municipio "Trinidad" no encontrado en base de datos.');
+        }
+        if (!$municipioRiberalta) {
+            Log::warning('PeopleBeniSeeder: Municipio "Riberalta" no encontrado en base de datos.');
+        }
+        if (!$municipioSanBorja) {
+            Log::warning('PeopleBeniSeeder: Municipio "San Borja" no encontrado en base de datos.');
+        }
+
         // Lista de IDs válidos para distribución aleatoria de personas naturales
         $municipioIds = array_filter([
             $municipioTrinidad?->id,
@@ -25,6 +37,11 @@ class PeopleBeniSeeder extends Seeder
 
         // Asignación por defecto a Trinidad si no se encuentra ningún municipio (evitar errores)
         $defaultMunicipioId = $municipioTrinidad?->id ?? null;
+
+        if (empty($municipioIds)) {
+            Log::error('PeopleBeniSeeder: No se encontraron municipios válidos. No se crearán personas.');
+            return;
+        }
 
 
         // === PERSONAS NATURALES DEL BENI ===
@@ -61,6 +78,10 @@ class PeopleBeniSeeder extends Seeder
             // Asigna el ID del municipio correspondiente
             $municipioModel = Municipio::where('nombre', $nombreMunicipio)->first();
             $municipioId = $municipioModel?->id ?? $defaultMunicipioId;
+
+            if (!$municipioModel && $defaultMunicipioId) {
+                Log::warning("PeopleBeniSeeder: Municipio '{$nombreMunicipio}' no encontrado, usando fallback Trinidad", ['persona' => $n[0]]);
+            }
 
             Person::create([
                 'person_type'       => 'Natural',
@@ -132,6 +153,10 @@ class PeopleBeniSeeder extends Seeder
             // Asigna el ID del municipio correspondiente para las personas jurídicas
             $municipioModel = Municipio::where('nombre', $pj['municipio'])->first();
             $municipioId = $municipioModel?->id ?? $defaultMunicipioId;
+
+            if (!$municipioModel && $defaultMunicipioId) {
+                Log::warning("PeopleBeniSeeder: Municipio '{$pj['municipio']}' no encontrado, usando fallback Trinidad", ['persona' => $pj['legal_name']]);
+            }
 
             Person::create([
                 'person_type'       => 'Jurídica',

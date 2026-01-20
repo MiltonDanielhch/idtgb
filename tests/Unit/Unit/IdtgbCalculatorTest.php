@@ -31,7 +31,7 @@ class IdtgbCalculatorTest extends TestCase
         $this->seed(IdtgbMaestrosSeeder::class);
 
         $this->calculator = new IdtgbCalculator();
-        $this->departamento = Departamento::where('codigo', 'BE')->firstOrFail();
+        $this->departamento = Departamento::where('codigo', Departamento::CODIGO_BENI)->firstOrFail();
         $this->tipoTransmisionDonacion = TipoTransmision::where('nombre', 'Donación')->firstOrFail();
         $this->parentescoHijo = Parentesco::where('nombre', 'Hijo/a')->firstOrFail();
         $this->parentescoTioSobrino = Parentesco::where('nombre', 'Tío/a o Sobrino/a')->firstOrFail();
