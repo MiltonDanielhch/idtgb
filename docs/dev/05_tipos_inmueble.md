@@ -14,6 +14,7 @@
 10. [Ejemplos de Uso](#ejemplos-de-uso)
 11. [Consideraciones Importantes](#consideraciones-importantes)
 12. [Guía para Desarrolladores](#guía-para-desarrolladores)
+13. [Análisis de Calidad y Mejoras](#análisis-de-calidad-y-mejoras)
 
 ---
 
@@ -38,9 +39,10 @@ La clasificación del tipo de inmueble es fundamental para:
 
 ## 🗄️ Base de Datos
 
-### Migración: `create_tipos_inmueble_table.php`
-
-**Ubicación:** `database/migrations/2025_09_22_122733_create_tipos_inmueble_table.php`
+### Migraciones
+1. `create_tipos_inmueble_table.php` - Creación de tabla
+2. `add_soft_deletes_to_tipos_inmueble_table.php` - Soft Deletes
+3. `add_audit_fields_to_tipos_inmueble_table.php` - Campos de auditoría
 
 **Estructura de la tabla:**
 
@@ -48,11 +50,11 @@ La clasificación del tipo de inmueble es fundamental para:
 |-------|------|------------|-------------|
 | `id` | BIGINT | PK, AUTO_INCREMENT | Identificador único |
 | `nombre` | VARCHAR(50) | UNIQUE, NOT NULL | Nombre del tipo de inmueble (ej: "Urbano", "Rústico") |
+| `created_by` | BIGINT | FK, NULLABLE | Usuario que creó el registro |
+| `updated_by` | BIGINT | FK, NULLABLE | Usuario que actualizó el registro |
 | `created_at` | TIMESTAMP | NULLABLE | Fecha de creación |
 | `updated_at` | TIMESTAMP | NULLABLE | Fecha de actualización |
 | `deleted_at` | TIMESTAMP | NULLABLE | Fecha de eliminación (Soft Deletes) |
-
-**Migración de Soft Deletes:** `add_soft_deletes_to_tipos_inmueble_table.php`
 
 ---
 
@@ -68,14 +70,28 @@ La clasificación del tipo de inmueble es fundamental para:
 
 **Atributos:**
 - `$table = 'tipos_inmueble'`
-- `$fillable = ['nombre']`
+- `$fillable = ['nombre', 'created_by', 'updated_by']`
+- `$hidden = ['deleted_at']`
+
+**Auto-auditoría:**
+- `created_by` se establece automáticamente al crear
+- `updated_by` se establece automáticamente al actualizar
 
 **Relaciones:**
 ```php
-// app/Models/TipoInmueble.php
 public function inmuebles()
 {
     return $this->hasMany(Inmueble::class);
+}
+
+public function createdBy()
+{
+    return $this->belongsTo(User::class, 'created_by');
+}
+
+public function updatedBy()
+{
+    return $this->belongsTo(User::class, 'updated_by');
 }
 ```
 
@@ -92,13 +108,13 @@ public function inmuebles()
 ### Métodos del Controlador
 
 - **`index()`**: Muestra el listado principal con autorización `viewAny`.
-- **`list()`**: Retorna la tabla de datos vía AJAX con conteo de inmuebles asociados (`withCount('inmuebles')`).
+- **`list()`**: Retorna la tabla de datos vía AJAX con conteo de inmuebles asociados (`withCount('inmuebles')`) y carga de creador (`with(['createdBy'])`).
 - **`create()`**: Muestra el formulario de creación con autorización `create`.
-- **`store(StoreTipoInmuebleRequest $request)`**: Guarda un nuevo registro usando validación especializada.
-- **`show(TipoInmueble $tipoInmueble)`**: Muestra la vista de detalle con autorización `view`.
+- **`store(StoreTipoInmuebleRequest $request)`**: Guarda un nuevo registro usando validación especializada y transacción de DB.
+- **`show(TipoInmueble $tipoInmueble)`**: Muestra la vista de detalle con autorización `view`, carga relaciones de auditoría.
 - **`edit(TipoInmueble $tipoInmueble)`**: Muestra el formulario de edición con autorización `update`.
-- **`update(UpdateTipoInmuebleRequest $request, TipoInmueble $tipoInmueble)`**: Actualiza un registro existente.
-- **`destroy(TipoInmueble $tipoInmueble)`**: Elimina un registro (soft delete), verificando primero que no esté en uso por ningún inmueble.
+- **`update(UpdateTipoInmuebleRequest $request, TipoInmueble $tipoInmueble)`**: Actualiza un registro existente usando transacción de DB.
+- **`destroy(TipoInmueble $tipoInmueble)`**: Elimina un registro (soft delete), verificando primero que no esté en uso por ningún inmueble, usando transacción de DB y Log.
 
 ---
 
@@ -117,6 +133,8 @@ public function inmuebles()
 | `create()` | `add_tipos-inmueble` | Permite mostrar el formulario y crear un tipo de inmueble. |
 | `update()` | `edit_tipos-inmueble` | Permite mostrar el formulario y actualizar un tipo de inmueble. |
 | `delete()` | `delete_tipos-inmueble` | Permite eliminar un tipo de inmueble. |
+| `restore()` | `browse_admin` | Permite restaurar un tipo de inmueble eliminado. |
+| `forceDelete()` | `browse_admin` | Permite eliminar permanentemente un tipo de inmueble. |
 | `before()` | `browse_admin` | Otorga todos los permisos al rol de administrador. |
 
 ---
@@ -204,7 +222,7 @@ Route::get('tipos-inmueble/ajax/list', [TipoInmuebleController::class, 'list'])
 
 ### 2. `list.blade.php`
 - Plantilla parcial que renderiza la tabla de tipos de inmueble.
-- Muestra: ID, Nombre, Conteo de inmuebles (con badge), Fecha de creación.
+- Muestra: ID, Nombre, Conteo de inmuebles (con badge), Creado por, Fecha de creación.
 - Contiene los botones de acción (Ver, Editar, Borrar) para cada fila, protegidos por directivas `@can`.
 - El botón de borrar abre el modal de confirmación en lugar de ejecutar la acción inmediatamente.
 - Incluye la lógica de paginación de Laravel, adaptada para funcionar con AJAX.
@@ -215,7 +233,8 @@ Route::get('tipos-inmueble/ajax/list', [TipoInmuebleController::class, 'list'])
 - Muestra los errores de validación retornados por los `FormRequest`.
 
 ### 4. `read.blade.php`
-- Vista de solo lectura que muestra todos los detalles de un tipo de inmueble en una tabla.
+- Vista de solo lectura que muestra todos los detalles de un tipo de inmueble.
+- Muestra información de auditoría: creado por, actualizado por.
 
 ---
 
@@ -296,6 +315,8 @@ $tipo->restore();
 - **Dependencias:** El sistema protege la integridad de los datos al no permitir la eliminación de un tipo si está siendo utilizado por al menos un inmueble.
 - **Soft Deletes:** Los registros eliminados no se borran permanentemente, se marcan con `deleted_at` y pueden ser restaurados.
 - **Autorización:** Todo el módulo está protegido por Policies y FormRequests, siguiendo las mejores prácticas de Laravel.
+- **Auditoría:** Los campos `created_by` y `updated_by` se registran automáticamente en cada operación.
+- **Transacciones:** Las operaciones de creación, actualización y eliminación usan transacciones de base de datos.
 
 ---
 
@@ -331,5 +352,77 @@ El método `list()` del controlador carga el conteo usando `withCount('inmuebles
 
 ---
 
-**Última actualización:** Enero 2026
-**Versión:** 1.0.0
+## 🚨 Análisis de Calidad y Mejoras
+
+### Estado Actual - v2.0.0 (21 de enero de 2026) ✅
+
+Todas las mejores prácticas han sido implementadas exitosamente. El módulo de Tipos de Inmueble ahora cuenta con:
+
+- ✅ Soft Deletes implementados
+- ✅ Policy con permisos completos (incluyendo `restore` y `forceDelete`)
+- ✅ Validación centralizada con Form Requests
+- ✅ `withCount('inmuebles')` y carga de auditoría en listados
+- ✅ Verificación de dependencias antes de eliminar
+- ✅ Autorización en todos los métodos del controlador
+- ✅ Campos de auditoría `created_by` y `updated_by`
+- ✅ Auto-auditoría en eventos del modelo
+- ✅ Transacciones de DB en todas las operaciones
+- ✅ Manejo de errores con Log
+- ✅ Modal de confirmación de eliminación
+
+### 🐛 Bugs Corregidos (0/0)
+
+No se han identificado bugs en el módulo.
+
+### 🚀 Mejoras Implementadas ✅
+
+| # | Mejora | Descripción |
+|---|--------|-------------|
+| 1 | Soft Deletes | Trait agregado al modelo, permite restaurar registros |
+| 2 | Policy completa | `TipoInmueblePolicy` con permisos `browse`, `read`, `add`, `edit`, `delete`, `restore`, `forceDelete` |
+| 3 | Validación centralizada | `StoreTipoInmuebleRequest` y `UpdateTipoInmuebleRequest` |
+| 4 | withCount optimizado | `withCount('inmuebles')` en listados |
+| 5 | Carga de auditoría | `with(['createdBy'])` en listados, `load(['createdBy', 'updatedBy'])` en show |
+| 6 | Protección contra eliminación | Verifica dependencias antes de eliminar |
+| 7 | Modal de confirmación | UI mejorada para evitar eliminaciones accidentales |
+| 8 | Campos de auditoría | `created_by`, `updated_by` agregados a tabla y modelo |
+| 9 | Auto-auditoría | Eventos `creating` y `updating` en modelo `boot()` |
+| 10 | Transacciones de DB | `DB::beginTransaction()` en `store()`, `update()`, `destroy()` |
+| 11 | Manejo de errores con Log | Logging en `destroy()` y manejo de excepciones en `store()`, `update()` |
+| 12 | Relaciones de auditoría | Métodos `createdBy()` y `updatedBy()` en modelo |
+
+### 📝 Historial de Cambios
+
+### v2.0.0 (21 de enero de 2026)
+
+**Mejoras Implementadas:**
+- ✅ Soft Deletes con migración `2026_01_18_020617_add_soft_deletes_to_tipos_inmueble_table.php`
+- ✅ Auditoría con migración `2026_01_21_213421_add_audit_fields_to_tipos_inmueble_table.php`
+- ✅ Policy `TipoInmueblePolicy` con permisos completos (incluyendo `restore` y `forceDelete`)
+- ✅ Form Requests `StoreTipoInmuebleRequest` y `UpdateTipoInmuebleRequest`
+- ✅ Eventos del modelo en `boot()` para auto-auditoría
+- ✅ Método `destroy()` con verificación de dependencias, transacciones y logging
+- ✅ Método `store()` con transacciones y manejo de errores
+- ✅ Método `update()` con transacciones y manejo de errores
+- ✅ Vista `list.blade.php` con `withCount()`, carga de `createdBy` y columna "Creado por"
+- ✅ Vista `read.blade.php` con sección de auditoría (creado por, actualizado por)
+- ✅ Modal de confirmación de eliminación en `browse.blade.php`
+
+**Archivos Modificados/Creados:**
+- `app/Models/TipoInmueble.php` - Agregado trait `SoftDeletes`, campos `created_by`, `updated_by` a fillable, relaciones `createdBy`, `updatedBy`, eventos en `boot()`, `$hidden`
+- `app/Http/Controllers/TipoInmuebleController.php` - Actualizado con `authorize()` en todos los métodos, transacciones de DB, manejo de errores con Log, carga de relaciones
+- `app/Http/Requests/StoreTipoInmuebleRequest.php` - Con validación y autorización
+- `app/Http/Requests/UpdateTipoInmuebleRequest.php` - Con validación con `Rule::unique()->ignore()`
+- `app/Policies/TipoInmueblePolicy.php` - Agregados métodos `restore()` y `forceDelete()`
+- `resources/views/admin/tipos-inmueble/read.blade.php` - Actualizado con sección de auditoría
+- `resources/views/admin/tipos-inmueble/list.blade.php` - Actualizado con columna "Creado por"
+- `resources/views/admin/tipos-inmueble/browse.blade.php` - Modal de confirmación
+- Migraciones: `2026_01_18_020617_add_soft_deletes_to_tipos_inmueble_table.php`, `2026_01_21_213421_add_audit_fields_to_tipos_inmueble_table.php`
+
+**Beneficios:**
+- Auditoría completa de cambios
+- Prevención de eliminación de registros en uso
+- Código más seguro y mantenible
+- Soft deletes para recuperación de datos
+- Transacciones garantizan integridad
+- Logging facilita depuración

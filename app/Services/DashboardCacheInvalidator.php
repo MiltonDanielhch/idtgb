@@ -11,6 +11,30 @@ class DashboardCacheInvalidator
     /**
      * Lista de sufijos de cache que se usan en el dashboard.
      */
+    
+    /**
+     * Borra todas las claves de cache del dashboard para todos los rangos.
+     * Este método se usa cuando se invalida toda la caché del dashboard.
+     */
+    public function clearAll(): void
+    {
+        $now = Carbon::now();
+        $ranges = ['today', 'week', 'month', 'year'];
+        
+        foreach ($ranges as $range) {
+            $cacheKey = $this->buildCacheKey($range, $now);
+            
+            foreach ($this->suffixes as $suffix) {
+                cache()->forget($cacheKey . $suffix);
+            }
+        }
+        
+        $this->clearAnnualComparisons();
+    }
+    
+    /**
+     * Lista de sufijos de cache que se usan en el dashboard.
+     */
     private array $suffixes = [
         ':recaudadoPeriodo',
         ':tramitesPeriodo',

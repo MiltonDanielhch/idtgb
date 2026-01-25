@@ -9,6 +9,7 @@ use App\Models\Tramite;
 use App\Models\Pago;
 use App\Observers\TramiteObserver;
 use App\Observers\PagoObserver;
+use App\Services\DashboardCacheInvalidator;
 use Carbon\Carbon;
 
 class AppServiceProvider extends ServiceProvider
@@ -18,7 +19,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(DashboardCacheInvalidator::class);
     }
 
     /**

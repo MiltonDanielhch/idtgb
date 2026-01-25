@@ -5,6 +5,7 @@
                 <th>ID</th>
                 <th>Nombre</th>
                 <th>Inmuebles</th>
+                <th>Creado por</th>
                 <th>Creado en</th>
                 <th class="actions text-right">Acciones</th>
             </tr>
@@ -19,6 +20,13 @@
                             <span class="badge badge-info">{{ $item->inmuebles_count }}</span>
                         @else
                             <span class="badge badge-secondary">0</span>
+                        @endif
+                    </td>
+                    <td>
+                        @if($item->createdBy)
+                            {{ $item->createdBy->name ?? $item->createdBy->email }}
+                        @else
+                            <span class="text-muted">-</span>
                         @endif
                     </td>
                     <td>{{ \Carbon\Carbon::parse($item->created_at)->format('d/m/Y H:i') }}</td>
@@ -48,7 +56,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="5" class="text-center">No se encontraron registros.</td>
+                    <td colspan="6" class="text-center">No se encontraron registros.</td>
                 </tr>
             @endforelse
         </tbody>

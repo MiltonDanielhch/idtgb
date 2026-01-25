@@ -26,7 +26,13 @@
                                     <p><strong>ID:</strong> {{ $tipoInmueble->id }}</p>
                                     <p><strong>Nombre:</strong> {{ $tipoInmueble->nombre }}</p>
                                     <p><strong>Creado:</strong> {{ $tipoInmueble->created_at->format('d/m/Y H:i') }} ({{ $tipoInmueble->created_at->diffForHumans() }})</p>
+                                    @if($tipoInmueble->createdBy)
+                                        <p><strong>Creado por:</strong> {{ $tipoInmueble->createdBy->name ?? $tipoInmueble->createdBy->email }}</p>
+                                    @endif
                                     <p><strong>Actualizado:</strong> {{ $tipoInmueble->updated_at->format('d/m/Y H:i') }} ({{ $tipoInmueble->updated_at->diffForHumans() }})</p>
+                                    @if($tipoInmueble->updatedBy)
+                                        <p><strong>Actualizado por:</strong> {{ $tipoInmueble->updatedBy->name ?? $tipoInmueble->updatedBy->email }}</p>
+                                    @endif
                                 </div>
                             </div>
                         </div>

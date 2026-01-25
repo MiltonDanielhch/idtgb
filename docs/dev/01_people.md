@@ -1,24 +1,5 @@
 # Documentación Técnica - Módulo de Personas
 
-## ✅ Estado de Correcciones - Enero 2026
-
-### Bugs Corregidos (5/5) ✅
-- ✅ **Bug #1**: Búsqueda optimizada con scope `scopeSearch()` - controlador ahora usa el scope optimizado
-- ✅ **Bug #2**: Manejo de errores mejorado en `store()` - ahora usa Log para errores y muestra mensaje genérico al usuario
-- ✅ **Bug #3**: Validación de unicidad compuesta (CI + complemento) - implementada usando `Rule::unique()` con cláusula `where`
-- ✅ **Bug #4**: Protección contra eliminación de personas con dependencias - implementada en `destroy()`
-- ✅ **Bug #5**: Inconsistencia en borrado de imágenes - implementada con checkbox "Eliminar imagen actual" en formulario de edición
-
-### Mejoras Implementadas
-- ✅ Agregado scope `scopeSearch()` al modelo `Person`
-- ✅ Mejorado manejo de errores con Log en métodos `store()` y `update()`
-- ✅ Importación de `Log` y `Rule` agregada al controlador y requests
-- ✅ Validación de unicidad compuesta para CI + complemento en `StorePersonRequest` y `UpdatePersonRequest`
-- ✅ Lógica para eliminación de imágenes en `PersonController@update()` con checkbox `remove_image`
-- ✅ Checkbox "Eliminar imagen actual" disponible en formulario de edición (existente en vista)
-
----
-
 ## 📋 Tabla de Contenidos
 
 1. [Introducción](#introducción)
@@ -137,6 +118,9 @@ public function registerUser() { /* ... */ }
 public function deleteUser() { /* ... */ }
 ```
 
+**Scopes:**
+-   `scopeSearch($query, $search)`: Centraliza la lógica de búsqueda optimizada por nombre completo, CI, NIT, teléfono, etc.
+
 ---
 
 ## 🎮 Controlador
@@ -148,20 +132,22 @@ public function deleteUser() { /* ... */ }
 
 **Métodos Principales:**
 -   `index()`: Muestra la vista principal del listado (`browse.blade.php`).
--   `list()`: Endpoint para AJAX que retorna la tabla de personas (`list.blade.php`). Incluye una lógica de búsqueda compleja por nombre completo, CI, NIT, teléfono, etc.
+-   `list()`: Endpoint para AJAX que retorna la tabla de personas (`list.blade.php`). Utiliza el scope `scopeSearch()` para búsquedas optimizadas.
 -   `show(Person $person)`: Muestra la vista de detalle (`read.blade.php`).
 -   `create()`: Muestra el formulario de alta (`edit-add.blade.php`).
--   `store(StorePersonRequest $request)`: Valida y guarda una nueva persona. Gestiona la subida de imagen.
+-   `store(StorePersonRequest $request)`: Valida y guarda una nueva persona. Gestiona la subida de imagen. Maneja errores con Log.
 -   `edit(Person $person)`: Muestra el formulario de edición con los datos cargados.
--   `update(UpdatePersonRequest $request, Person $person)`: Valida y actualiza una persona existente. Utiliza transacciones de BD para seguridad.
--   `destroy(Person $person)`: Realiza el borrado lógico (soft delete) de la persona.
+-   `update(UpdatePersonRequest $request, Person $person)`: Valida y actualiza una persona existente. Maneja la eliminación de imágenes mediante checkbox `remove_image`. Usa transacciones de BD.
+-   `destroy(Person $person)`: Realiza el borrado lógico (soft delete) de la persona. Verifica que no tenga dependencias (trámites asociados).
 -   `storeImage()`: Método privado para manejar la subida y eliminación de la imagen de perfil en `storage`.
 
 **Lógica Destacada:**
 -   **Autorización:** Todas las acciones están protegidas mediante `Policies` (`$this->authorize(...)`).
 -   **Validación:** Delega la validación a los Form Requests `StorePersonRequest` y `UpdatePersonRequest`.
--   **Rendimiento:** Carga relaciones de forma anticipada (`with()`, `load()`) para evitar el problema N+1.
+-   **Rendimiento:** Carga relaciones de forma anticipada (`with()`, `load()`) para evitar el problema N+1. Usa scope `scopeSearch()` para búsquedas optimizadas.
 -   **Seguridad:** El método `update` está envuelto en una transacción de base de datos.
+-   **Manejo de Errores:** En `store()` usa Log para registrar errores y muestra mensajes genéricos al usuario.
+-   **Protección de Dependencias:** En `destroy()` verifica que no existan trámites asociados antes de eliminar.
 
 ---
 
@@ -219,8 +205,27 @@ Estos Form Requests centralizan la lógica de **autorización** y **validación*
 -   **Reglas Condicionales:** La lógica más importante reside aquí. Las reglas de validación cambian dinámicamente según el `person_type` enviado:
     -   Si es **`Jurídica`**, el `nit` y `legal_name` son obligatorios.
     -   Si es **`Natural`**, el `ci`, `first_name` y `paternal_surname` son obligatorios.
--   **Unicidad en Actualización:** `UpdatePersonRequest` excluye el ID de la persona actual al validar la unicidad de `ci` y `nit`, permitiendo guardar sin cambios en esos campos.
+-   **Unicidad Compuesta (CI + Complemento):** Implementada usando `Rule::unique()` con cláusula `where` para verificar la unicidad de la tupla `(ci, ci_complemento)`. En `UpdatePersonRequest` se excluye el ID de la persona actual.
 -   **Mensajes y Atributos:** Se definen mensajes y nombres de atributos personalizados para una experiencia de usuario clara.
+
+**Validación de Unicidad Compuesta:**
+```php
+// En StorePersonRequest.php
+$ciRule = [
+    Rule::unique('people')->where(function ($query) {
+        return $query->where('ci_complemento', $this->ci_complemento);
+    })
+];
+
+// En UpdatePersonRequest.php
+$ciRule = [
+    Rule::unique('people')
+        ->ignore($personId)
+        ->where(function ($query) {
+            return $query->where('ci_complemento', $this->ci_complemento);
+        })
+];
+```
 
 ---
 
@@ -230,7 +235,7 @@ Estos Form Requests centralizan la lógica de **autorización** y **validación*
 
 -   **`browse.blade.php`**: La vista principal que contiene los controles de búsqueda, paginación y el botón "Añadir Nuevo". Carga el listado vía AJAX.
 -   **`list.blade.php`**: Plantilla parcial que renderiza la tabla de personas con sus datos y botones de acción.
--   **`edit-add.blade.php`**: Formulario unificado para crear y editar. Usa JavaScript para cambiar dinámicamente los campos requeridos según se elija "Natural" o "Jurídica".
+-   **`edit-add.blade.php`**: Formulario unificado para crear y editar. Usa JavaScript para cambiar dinámicamente los campos requeridos según se elija "Natural" o "Jurídica". Incluye checkbox "Eliminar imagen actual" para edición.
 -   **`read.blade.php`**: Vista de solo lectura que muestra toda la información detallada de la persona, incluyendo su imagen y ubicación completa.
 
 ---
@@ -263,185 +268,56 @@ Para añadir un nuevo campo (ej. `profession`):
 -   **Trait `RegistersUserEvents`:** Este trait maneja la auditoría de forma automática. No es necesario asignar `registerUser_id` manualmente en el controlador.
 -   **Accesors para Display:** Utilizar los accesors `display_name` y `display_document` en las vistas para asegurar que se muestre la información correcta según el tipo de persona.
 -   **Búsqueda AJAX:** El `TramiteWizardController` y el `AjaxController` contienen endpoints para buscar personas de forma dinámica. Estos son los recomendados para reutilizar en nuevas funcionalidades.
+-   **Scope de Búsqueda:** Usar el scope `Person::search($search)` para búsquedas optimizadas en lugar de construir la consulta manualmente.
 
 ---
 
 ## 🚨 Análisis de Calidad y Mejoras
 
-A continuación se detallan posibles bugs, inconsistencias y oportunidades de mejora detectadas en el análisis del código del módulo de Personas.
+### Estado Actual - v2.0.0 (20 de enero de 2026) ✅
 
-### 🐛 Bugs Potenciales y Riesgos de Seguridad (Todos Corregidos) ✅
+Todos los bugs identificados en el análisis original han sido corregidos exitosamente. El módulo de Personas ahora cuenta con:
 
-1.  ✅ **Búsqueda Ineficiente y Propensa a Errores SQL** (CORREGIDO)
-    *   **Estado**: ✅ CORREGIDO
-    *   **Ubicación**: `app/Http/Controllers/PersonController.php`, método `list()`.
-    *   **Problema Original**: La consulta de búsqueda utilizaba `orWhere` repetidamente, dificultando el uso de índices y haciéndola lenta.
-    *   **Solución Implementada**: Se agregó un scope `scopeSearch()` en el modelo `Person` que centraliza la lógica de búsqueda. El controlador ahora usa este scope:
-        ```php
-        $data = Person::query()
-            ->with(['municipio.provincia.departamento'])
-            ->search($search)
-            ->whereNull('deleted_at')
-            ->orderByDesc('id')
-            ->paginate($paginate);
-        ```
-    *   **Ubicación del Scope**: `app/Models/Person.php`, método `scopeSearch()`.
+- ✅ Búsqueda optimizada con scope `scopeSearch()` en el modelo
+- ✅ Manejo de errores mejorado con Log en `store()` y `update()`
+- ✅ Validación de unicidad compuesta (CI + complemento) implementada
+- ✅ Protección contra eliminación de personas con dependencias
+- ✅ Eliminación de imágenes con checkbox `remove_image`
 
-2.  ✅ **Manejo de Errores Débil en `store()`** (CORREGIDO)
-    *   **Estado**: ✅ CORREGIDO
-    *   **Ubicación**: `app/Http/Controllers/PersonController.php`, método `store()`.
-    *   **Problema Original**: El bloque `catch` mostraba el mensaje del error directamente al usuario.
-    *   **Solución Implementada**: Se modificó el bloque `catch` para registrar el error detallado en el log y mostrar un mensaje genérico al usuario:
-        ```php
-        catch (\Throwable $e) {
-            \Log::error('Error al crear persona: ' . $e->getMessage());
-            return back()->withInput()->with(['message' => 'Ocurrió un error inesperado al guardar la persona.', 'alert-type' => 'error']);
-        }
-        ```
+### 🐛 Bugs Corregidos (5/5) ✅
 
-3.  ✅ **Validación de Unicidad Compuesta Inexistente (CI + Complemento)** (CORREGIDO)
-    *   **Estado**: ✅ CORREGIDO
-    *   **Ubicación**: `app/Http/Requests/StorePersonRequest.php` y `UpdatePersonRequest.php`.
-    *   **Problema Original**: La regla de validación `unique:people` se aplicaba por separado al campo `ci` sin considerar el `ci_complemento`.
-    *   **Solución Implementada**: Se implementó una regla de validación personalizada que verifica la unicidad de la tupla `(ci, ci_complemento)` usando `Rule::unique()` con cláusula `where`:
-        ```php
-        // En StorePersonRequest.php
-        $ciRule = [
-            Rule::unique('people')->where(function ($query) {
-                return $query->where('ci_complemento', $this->ci_complemento);
-            })
-        ];
-        
-        // En UpdatePersonRequest.php
-        $ciRule = [
-            Rule::unique('people')
-                ->ignore($personId)
-                ->where(function ($query) {
-                    return $query->where('ci_complemento', $this->ci_complemento);
-                })
-        ];
-        ```
-    *   **Impacto**: Ahora permite registrar personas con el mismo CI pero diferentes complementos correctamente.
+| # | Bug | Estado | Ubicación |
+|---|-----|--------|-----------|
+| 1 | Búsqueda ineficiente y propensa a errores SQL | ✅ Corregido | `PersonController.php:list()`, `Person.php:scopeSearch()` |
+| 2 | Manejo de errores débil en `store()` | ✅ Corregido | `PersonController.php:store()` |
+| 3 | Validación de unicidad compuesta (CI + complemento) | ✅ Corregido | `StorePersonRequest.php`, `UpdatePersonRequest.php` |
+| 4 | Protección contra eliminación con dependencias | ✅ Corregido | `PersonController.php:destroy()` |
+| 5 | Inconsistencia en borrado de imágenes | ✅ Corregido | `PersonController.php:update()`, `edit-add.blade.php` |
 
-4.  ✅ **Inconsistencia en Borrado de Imágenes** (CORREGIDO)
-    *   **Estado**: ✅ CORREGIDO
-    *   **Ubicación**: `app/Http/Controllers/PersonController.php`, método `update()` y vista `edit-add.blade.php`.
-    *   **Problema Original**: No había opción para quitar la imagen actual sin subir una nueva.
-    *   **Solución Implementada**: 
-        *   Ya existe un checkbox "Eliminar imagen actual" en el formulario de edición (línea 190 de `edit-add.blade.php`).
-        *   Se actualizó el método `update()` para manejar la eliminación de imágenes:
-            ```php
-            $data = $request->except('image', 'remove_image');
-            
-            if ($request->hasFile('image')) {
-                $data['image'] = $this->storeImage($request->file('image'), $person->image);
-            } elseif ($request->boolean('remove_image')) {
-                if ($person->image) {
-                    Storage::disk('public')->delete($person->image);
-                }
-                $data['image'] = null;
-            }
-            ```
+### 🚀 Mejoras Implementadas ✅
 
-5.  ✅ **Falta de Protección contra Eliminación de Personas con Dependencias** (CORREGIDO)
-    *   **Estado**: ✅ CORREGIDO
-    *   **Ubicación**: `app/Http/Controllers/PersonController.php`, método `destroy()`.
-    *   **Problema Original**: El método `destroy` eliminaba sin verificar dependencias.
-    *   **Solución Implementada**: Antes de ejecutar `$person->delete()`, se verifica si hay relaciones:
-        ```php
-        if ($person->adquirentesTramite()->exists() || $person->disponentesTramite()->exists()) {
-            return redirect()->route('admin.people.index')
-                ->with(['message' => 'No se puede eliminar: la persona está asociada a uno o más trámites.', 'alert-type' => 'error']);
-        }
-        $person->delete();
-        ```
+- ✅ **Scope `scopeSearch()`**: Centraliza la lógica de búsqueda en el modelo `Person`, haciéndola reutilizable y optimizada.
+- ✅ **Manejo de Errores con Log**: Los métodos `store()` y `update()` registran errores detallados en Log y muestran mensajes genéricos al usuario.
+- ✅ **Validación de Unicidad Compuesta**: Permite registrar personas con el mismo CI pero diferentes complementos correctamente.
+- ✅ **Protección de Integridad Referencial**: Verifica que no existan trámites asociados antes de eliminar una persona.
+- ✅ **Eliminación de Imágenes**: El método `update()` maneja correctamente el checkbox `remove_image` para eliminar imágenes existentes.
 
-### 🚀 Oportunidades de Mejora y Optimización
+### 📝 Historial de Cambios
 
-1.  **Refactorizar la Lógica de Búsqueda a un `scope` del Modelo**
-    *   **Ubicación**: `app/Http/Controllers/PersonController.php`, método `list()`.
-    *   **Mejora**: Mover la lógica de búsqueda compleja a un *query scope* en el modelo `Person` para que sea reutilizable y mantenga el controlador más limpio.
-    *   **Implementación Sugerida**:
-        ```php
-        // En app/Models/Person.php
-        public function scopeSearch($query, $search)
-        {
-            if (!$search) {
-                return $query;
-            }
-            // ... lógica de búsqueda ...
-            return $query;
-        }
+### v2.0.0 (20 de enero de 2026)
+**Correcciones Completadas (5/5):**
+- ✅ Bug #1: Búsqueda optimizada - controlador ahora usa scope `scopeSearch()`
+- ✅ Bug #2: Manejo de errores mejorado en `store()` con Log y mensaje genérico
+- ✅ Bug #3: Validación de unicidad compuesta (CI + complemento) implementada
+- ✅ Bug #4: Protección contra eliminación de dependencias implementada en `destroy()`
+- ✅ Bug #5: Inconsistencia en borrado de imágenes resuelta con checkbox `remove_image`
 
-        // En PersonController.php
-        $data = Person::search($search)
-            ->with(['municipio.provincia.departamento'])
-            ->orderByDesc('id')
-            ->paginate($paginate);
-        ```
-
-2.  **Centralizar la Lógica de Subida de Imágenes en un Trait o Servicio**
-    *   **Ubicación**: `app/Http/Controllers/PersonController.php`, método `storeImage()`.
-    *   **Mejora**: Si otros controladores también necesitan subir imágenes (ej. `DocumentoController`), esta lógica podría moverse a un Trait (`HandlesUploads`) o a un Servicio (`ImageUploadService`) para evitar duplicación de código.
-    *   **Impacto**: Código más mantenible y DRY (Don't Repeat Yourself).
-
-3.  **Mejorar la Experiencia de Usuario en Formularios**
-    *   **Ubicación**: `resources/views/admin/people/edit-add.blade.php`.
-    *   **Mejora**: Actualmente, los selects de `tipo_doc` y `person_type` son independientes. Podrían vincularse con JavaScript: si el usuario selecciona `person_type = 'Jurídica'`, el `tipo_doc` debería cambiar automáticamente a `NIT`.
-    *   **Impacto**: Menos clics y menor probabilidad de error para el usuario.
-
-4.  **Optimización de Carga de Municipios en `create()` y `edit()`**
-    *   **Ubicación**: `app/Http/Controllers/PersonController.php`, métodos `create()` y `edit()`.
-    *   **Problema**: `Municipio::with('provincia.departamento')->get()` carga todos los municipios con sus relaciones en memoria, lo cual es ineficiente.
-    *   **Mejora**: Implementar un selector de municipios con carga asíncrona (AJAX) o, como mínimo, optimizar la consulta para seleccionar solo los campos necesarios (`id`, `nombre`, etc.).
-    *   **Implementación Sugerida**:
-        ```php
-        // Carga optimizada para select
-        $municipios = Municipio::select('id', 'nombre')->orderBy('nombre')->get();
-
-        // O mejor aún, un endpoint AJAX para un Select2 dinámico
-        ```
-
-### 📋 Funcionalidades Faltantes
-
-1.  **Historial de Cambios (Auditoría Detallada)**
-    *   **Problema**: El trait `RegistersUserEvents` solo guarda quién creó y eliminó el registro. No hay un historial de qué campos se cambiaron, cuál era el valor anterior y cuál es el nuevo.
-    *   **Necesidad**: Para auditorías y trazabilidad, es crucial saber quién cambió (por ejemplo) un número de CI o un NIT, y cuándo lo hizo.
-    *   **Solución Sugerida**: Implementar un paquete como `owen-it/laravel-auditing` o crear una tabla `people_history` que se pueble mediante un `Observer` en el modelo `Person`.
-
-2.  **Funcionalidad para Fusionar Personas Duplicadas**
-    *   **Problema**: A pesar de las validaciones, es posible que se creen registros duplicados (ej. "Juan Perez" y "Juan Perez Gonzales").
-    *   **Necesidad**: Una herramienta administrativa para seleccionar dos o más personas duplicadas, elegir una como "maestra" y migrar todas las relaciones (trámites, avalúos, etc.) de los duplicados a la maestra antes de eliminarlos.
-    *   **Impacto**: Mejora drásticamente la calidad y consistencia de los datos.
-
-3.  **Exportación de Datos**
-    *   **Problema**: No hay funcionalidad para exportar la lista de personas a formatos como CSV, Excel o PDF.
-    *   **Necesidad**: Los administradores a menudo necesitan exportar datos para análisis externo o reportes.
-    *   **Solución Sugerida**: Añadir botones de exportación en la vista `browse.blade.php` y crear los métodos correspondientes en `PersonController` utilizando un paquete como `maatwebsite/excel`.
-
-4.  **API Endpoints para Integración Externa**
-    *   **Problema**: El módulo solo es accesible a través de la interfaz web.
-    *   **Necesidad**: Si otros sistemas (ej. un CRM) necesitaran consultar o registrar personas, se requerirían endpoints de API RESTful seguros.
-    *   **Solución Sugerida**: Crear un `Api/PersonController` con métodos `index`, `show`, `store` protegidos por Laravel Sanctum o Passport.
-
----
-
-## 📝 Historial de Cambios
-
-### Versión 2.0.0 (20 de enero de 2026)
-**Correcciones:**
-- ✅ Corregido Bug #1: Búsqueda optimizada - controlador usa scope `scopeSearch()`
-- ✅ Corregido Bug #2: Manejo de errores mejorado en `store()` con Log y mensaje genérico
-- ✅ Corregido Bug #3: Validación de unicidad compuesta (CI + complemento) implementada
-- ✅ Corregido Bug #4: Inconsistencia en borrado de imágenes resuelta con checkbox `remove_image`
-- ✅ Corregido Bug #5: Protección contra eliminación con dependencias implementada en `destroy()`
-
-**Cambios en código:**
+**Cambios en Código:**
+- `app/Models/Person.php`: Agregado scope `scopeSearch()` para búsquedas optimizadas
 - `app/Http/Requests/StorePersonRequest.php`: Agregado `use Illuminate\Validation\Rule;` y validación de unicidad compuesta
 - `app/Http/Requests/UpdatePersonRequest.php`: Agregado `use Illuminate\Validation\Rule;` y validación de unicidad compuesta con `ignore($personId)`
-- `app/Http/Controllers/PersonController.php`: Actualizado método `update()` para manejar eliminación de imágenes con checkbox `remove_image`
-
-**Cambios en documentación:**
-- Actualizada sección de estado de correcciones a "Todos Corregidos (5/5) ✅"
-- Actualizado análisis de calidad con estado final de cada bug corregido
-- Agregado historial de cambios al final del documento
+- `app/Http/Controllers/PersonController.php`: 
+  - Actualizado método `list()` para usar scope `search()`
+  - Mejorado manejo de errores en `store()` con Log
+  - Actualizado método `update()` para manejar eliminación de imágenes con checkbox `remove_image`
+  - Agregada verificación de dependencias en `destroy()`

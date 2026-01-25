@@ -6,6 +6,8 @@ use App\Models\TipoInmueble;
 use App\Http\Requests\StoreTipoInmuebleRequest;
 use App\Http\Requests\UpdateTipoInmuebleRequest;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class TipoInmuebleController extends Controller
 {
@@ -26,7 +28,7 @@ class TipoInmuebleController extends Controller
         $search = request('search');
         $paginate = request('paginate', 10);
 
-        $data = TipoInmueble::withCount('inmuebles')
+        $data = TipoInmueble::with(['createdBy'])->withCount('inmuebles')
             ->when($search, fn($q) => $q->where('nombre', 'like', "%{$search}%"))
             ->orderByDesc('id')
             ->paginate($paginate);
@@ -42,15 +44,23 @@ class TipoInmuebleController extends Controller
 
     public function store(StoreTipoInmuebleRequest $request)
     {
-        TipoInmueble::create($request->validated());
-
-        return redirect()->route('admin.tipos-inmueble.index')
-            ->with(['message' => 'Tipo de Inmueble creado exitosamente.', 'alert-type' => 'success']);
+        DB::beginTransaction();
+        try {
+            TipoInmueble::create($request->validated());
+            DB::commit();
+            return redirect()->route('admin.tipos-inmueble.index')
+                ->with(['message' => 'Tipo de Inmueble creado exitosamente.', 'alert-type' => 'success']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error al crear TipoInmueble: ' . $e->getMessage());
+            return back()->with(['message' => 'Error al crear el tipo de inmueble.', 'alert-type' => 'error']);
+        }
     }
 
     public function show(TipoInmueble $tipoInmueble)
     {
         $this->authorize('view', $tipoInmueble);
+        $tipoInmueble->load(['createdBy', 'updatedBy', 'inmuebles']);
         return view('admin.tipos-inmueble.read', compact('tipoInmueble'));
     }
 
@@ -62,10 +72,17 @@ class TipoInmuebleController extends Controller
 
     public function update(UpdateTipoInmuebleRequest $request, TipoInmueble $tipoInmueble)
     {
-        $tipoInmueble->update($request->validated());
-
-        return redirect()->route('admin.tipos-inmueble.index')
-            ->with(['message' => 'Tipo de Inmueble actualizado exitosamente.', 'alert-type' => 'success']);
+        DB::beginTransaction();
+        try {
+            $tipoInmueble->update($request->validated());
+            DB::commit();
+            return redirect()->route('admin.tipos-inmueble.index')
+                ->with(['message' => 'Tipo de Inmueble actualizado exitosamente.', 'alert-type' => 'success']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error al actualizar TipoInmueble ID ' . $tipoInmueble->id . ': ' . $e->getMessage());
+            return back()->with(['message' => 'Error al actualizar el tipo de inmueble.', 'alert-type' => 'error']);
+        }
     }
 
     public function destroy(TipoInmueble $tipoInmueble)
@@ -73,16 +90,24 @@ class TipoInmuebleController extends Controller
         $this->authorize('delete', $tipoInmueble);
 
         if ($tipoInmueble->inmuebles()->exists()) {
+            Log::warning('Intento de eliminar TipoInmueble ID ' . $tipoInmueble->id . ' con inmuebles asociados');
             return back()->with([
                 'message' => 'No se puede eliminar. El tipo de inmueble está siendo utilizado.',
                 'alert-type' => 'error'
             ]);
         }
 
-        $tipoInmueble->delete();
-
-        return redirect()->route('admin.tipos-inmueble.index')
-            ->with(['message' => 'Tipo de Inmueble eliminado.', 'alert-type' => 'success']);
+        DB::beginTransaction();
+        try {
+            $tipoInmueble->delete();
+            DB::commit();
+            return redirect()->route('admin.tipos-inmueble.index')
+                ->with(['message' => 'Tipo de Inmueble eliminado.', 'alert-type' => 'success']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error al eliminar TipoInmueble ID ' . $tipoInmueble->id . ': ' . $e->getMessage());
+            return back()->with(['message' => 'Error al eliminar el tipo de inmueble.', 'alert-type' => 'error']);
+        }
     }
 }
 

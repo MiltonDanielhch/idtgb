@@ -129,8 +129,16 @@ class TramiteController extends Controller
     {
         $this->authorize('view', $tramite);
 
-        // Cargar relaciones para que estén disponibles en el PDF
-        $tramite->load(['inmuebles', 'tipoTransmision', 'adquirentes.person', 'disponentes.person', 'exenciones']);
+        // SOLUCIÓN DEFINITIVA: Cargar TODAS las relaciones anidadas necesarias para
+        // el PDF de una sola vez para eliminar el problema N+1 de raíz.
+        $tramite->load([
+            'tipoTransmision',
+            'adquirentes.parentesco',
+            'adquirentes.person.municipio.provincia.departamento',
+            'disponentes.person.municipio.provincia.departamento',
+            'exenciones',
+            'inmuebles.municipio.provincia.departamento'
+        ]);
 
         // Genera el hash de validación si no existe
         $hash = $tramite->hash_validacion ?: $tramite->generateHashValidacion();

@@ -32,32 +32,32 @@ class TramiteObserver
     }
 
     /**
-     * Se ejecuta después de que el trámite ha sido actualizado en la BD.
-     */
+      * Se ejecuta después de que el trámite ha sido actualizado en la BD.
+      */
     public function updated(Tramite $tramite): void
     {
         // 1. Recalcular montos si el estado es Borrador (para mantener la boleta al día)
         $this->ejecutarRecalculo($tramite);
-
+        
         // 2. Exportación al SIN si el trámite se finaliza o paga con éxito
         if ($tramite->isDirty('estado')) {
             if (in_array($tramite->estado, ['Finalizado', 'Pagado'])) {
                 dispatch(new ExportarAlSINJob($tramite));
             }
         }
-
+        
         // 3. Invalida el caché del Dashboard para que los contadores se actualicen
-        $this->limpiarCache();
+        $this->limpiarCache($tramite);
     }
 
     public function created(Tramite $tramite): void
     {
-        $this->limpiarCache();
+        $this->limpiarCache($tramite);
     }
 
     public function deleted(Tramite $tramite): void
     {
-        $this->limpiarCache();
+        $this->limpiarCache($tramite);
     }
 
     /**
@@ -77,12 +77,12 @@ class TramiteObserver
     }
 
     /**
-     * Limpia la caché del sistema para refrescar reportes.
-     */
-    private function limpiarCache(): void
+      * Limpia la caché del sistema para refrescar reportes.
+      */
+    private function limpiarCache(Tramite $tramite): void
     {
         if (app()->bound(DashboardCacheInvalidator::class)) {
-            app(DashboardCacheInvalidator::class)->clearAll();
+            app(DashboardCacheInvalidator::class)->clearForTramite($tramite);
         }
     }
 }

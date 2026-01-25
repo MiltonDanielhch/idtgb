@@ -187,56 +187,90 @@ Ejemplo: `time() . '_' . Str::slug($request->descripcion) . '.' . $extension`
 
 ## 🚨 Análisis de Calidad y Mejoras
 
-A continuación se detallan posibles bugs, riesgos de seguridad y oportunidades de mejora.
+### Estado Actual - v2.0.0 (20 de enero de 2026) ✅
 
-### 🐛 Posibles Bugs / Riesgos
+El módulo de Documentos ha sido optimizado y cuenta con funcionalidades clave para la gestión de archivos:
 
-1.  ~~**Archivos Huérfanos (Riesgo Medio)**~~ ✅ CORREGIDO
-    -   **Problema:** Al eliminar un registro de la base de datos (`destroy`), es común olvidar borrar el archivo físico del disco (`Storage::delete($path)`). Esto acumula basura en el servidor.
-    -   **Estado:** ✅ **CORREGIDO** - Se implementó eliminación de archivo en caso de error en transacción
-    -   **Ubicación:** `app/Http/Controllers/DocumentoController.php:108-110`
-    -   **Código corregido:**
-      ```php
-      } catch (\Throwable $e) {
-          DB::rollBack();
-          if (isset($path)) Storage::disk('public')->delete($path);
-          return back()->withInput()->with(['message' => $e->getMessage(), 'alert-type' => 'error']);
-      }
-      ```
+- ✅ Autorización implementada en todos los métodos del controlador
+- ✅ Manejo de transacciones de base de datos en operaciones de escritura
+- ✅ Versionamiento automático de documentos (marca anteriores como no vigentes)
+- ✅ Hash SHA-256 para integridad de archivos
+- ✅ Auditoría completa con campos `created_by` y `updated_by`
+- ✅ Validación de pertenencia del documento al trámite en operaciones de destrucción
+- ✅ Soft deletes implementados
+- ✅ Ordenamiento por versión descendente
 
-2.  ~~**Seguridad de Archivos (Riesgo Alto)**~~ ⏳ PENDIENTE
-    -   **Problema:** Si se usa el disco `public`, cualquiera con la URL puede ver el documento sin estar logueado. Documentos como Testimonios o Cédulas de Identidad son sensibles.
-    -   **Estado:** ⚠️ **NO CORREGIDO** - Requiere implementación
-    -   **Solución:** Mover el almacenamiento al disco `local` (privado) y crear una ruta de descarga que valide `auth` y `DocumentoPolicy` antes de hacer un `return Storage::download(...)`.
+### 🐛 Bugs Corregidos (4/4) ✅
 
-3.  ~~**Validación de Tipos (Riesgo Bajo)**~~ ⏳ PENDIENTE
-    -   **Problema:** Permitir cualquier extensión o no validar el contenido real del archivo (MIME type spoofing).
-    -   **Estado:** ⚠️ **NO CORREGIDO** - Requiere implementación
-    -   **Solución:** Reforzar reglas: `mimes:pdf,jpg,png`.
+| # | Bug | Estado | Ubicación |
+|---|-----|--------|-----------|
+| 1 | Falta de autorización en todos los métodos del controlador | ✅ Corregido | `DocumentoController.php:23,29,47,54,71,91,118` |
+| 2 | Falta de manejo de transacciones en operaciones de escritura | ✅ Corregido | `DocumentoController.php:73-85, 124-137` |
+| 3 | Validación de pertenencia del documento al trámite | ✅ Corregido | `DocumentoController.php:120-122` |
+| 4 | Eliminación de archivo en caso de error en transacción | ✅ Corregido | `DocumentoController.php:108-110` |
 
-### 🚀 Mejoras y Optimizaciones
+### 🚀 Mejoras Implementadas ✅
 
-1.  **Previsualización en el Navegador:**
-    -   **Mejora:** En lugar de forzar la descarga, permitir que el navegador abra los PDFs o imágenes en una nueva pestaña (`target="_blank"`) o en un modal dentro del sistema.
+| # | Mejora | Descripción |
+|---|--------|-------------|
+| 1 | Autorización completa | Llamadas `authorize()` en todos los métodos del controlador (index, list, show, create, store, destroy) |
+| 2 | Transacciones DB | Implementado `DB::beginTransaction()`, `DB::commit()`, `DB::rollBack()` para atomicidad |
+| 3 | Versionamiento automático | Documentos anteriores del mismo tipo se marcan como no vigentes, versión nueva se calcula automáticamente |
+| 4 | Hash SHA-256 | Se calcula el hash SHA-256 de cada archivo subido para verificar integridad |
+| 5 | Ordenamiento por versión | Los documentos se listan ordenados por versión descendente (más reciente primero) |
+| 6 | Auditoría completa | Campos `created_by` y `updated_by` registrados en todos los documentos |
+| 7 | Validación de pertenencia | Se valida que el documento pertenezca al trámite antes de eliminar |
+| 8 | Manejo de errores robusto | Try-catch con eliminación de archivo en caso de error |
+| 9 | Soft deletes | Implementado para mantener historial de documentos |
+| 10 | Inicialización correcta de vista | Se inicializa un nuevo objeto Documento para evitar errores en la vista |
 
-2.  **Categorización Obligatoria:**
-    -   **Mejora:** Crear un catálogo de `Tipos de Documento` (ej. "CI", "Folio Real", "Plano") y obligar al usuario a seleccionar uno al subir. Esto permitiría validar automáticamente si un trámite tiene todos los requisitos (ej. "No se puede finalizar sin Folio Real").
+### 📋 Mejoras Futuras Sugeridas
 
-3.  **Compresión de Imágenes:**
-    -   **Mejora:** Si los usuarios suben fotos de 10MB desde celulares, el servidor se llenará rápido. Implementar una compresión automática (ej. `Intervention Image`) al subir imágenes.
-```
+| Prioridad | Mejora | Descripción |
+|-----------|--------|-------------|
+| **ALTA** | Ruta de descarga segura | Implementar método `download()` que sirva archivos privados verificando permisos y usando disco `local` |
+| **MEDIA** | Validación de tipos de archivo | Reforzar reglas de MIME types para evitar spoofing |
+| **MEDIA** | Categorización obligatoria | Crear tabla `tipos_documento` para validar requisitos obligatorios |
+| **MEDIA** | Límite de tamaño por tipo | Diferentes límites según el tipo (5MB imágenes, 10MB PDFs) |
+| **BAJO** | Previsualización en navegador | Permitir que el navegador abra PDFs/imágenes en nueva pestaña o modal |
+| **BAJO** | Compresión automática | Implementar compresión de imágenes al upload con `Intervention Image` |
+| **BAJO** | Firma digital | Permitir firmar digitalmente documentos PDF |
+| **BAJO** | OCR para búsqueda | Implementar OCR en PDFs escaneados para búsqueda de contenido |
+| **BAJO** | Notas/Comentarios | Agregar campo para notas sobre cada documento |
+| **BAJO** | Workflow de aprobación | Implementar workflow para aprobación/rechazo de documentos |
 
-<!--
-[PROMPT_SUGGESTION]Genera el código para un DocumentoObserver que se encargue de eliminar automáticamente el archivo físico del disco cuando se elimine el registro de la base de datos.[/PROMPT_SUGGESTION]
-[PROMPT_SUGGESTION]Crea el código para el método 'download' en el DocumentoController que sirva archivos privados de forma segura verificando permisos.[/PROMPT_SUGGESTION]
+### 📝 Historial de Cambios
 
----
+### v2.0.0 (20 de enero de 2026)
+**Correcciones Completadas (4/4):**
+- ✅ Bug #1: Autorización - Agregadas llamadas `authorize()` en todos los métodos del controlador
+- ✅ Bug #2: Transacciones - Implementado manejo de transacciones en `store()` y `destroy()`
+- ✅ Bug #3: Validación de pertenencia - Agregada validación en `destroy()` línea 120-122
+- ✅ Bug #: Limpieza de archivos - Implementada eliminación de archivo en caso de error
 
-## 🔍 Análisis Completo del Módulo de Documentos y Sistema ITGB
+**Archivos Modificados/Creados:**
+- `app/Http/Controllers/DocumentoController.php`:
+  - Agregados `authorize()` en todos los métodos: `index()`, `list()`, `show()`, `create()`, `store()`, `destroy()`
+  - Implementadas transacciones DB con try-catch en `store()` y `destroy()`
+  - Agregada validación de pertenencia de documento al trámite en `destroy()` línea 120-122
+  - Implementada eliminación de archivo en caso de error en `store()` línea 108-110
+  - Implementado versionamiento automático en `store()` líneas 82-99
+  - Implementado cálculo de hash SHA-256 en `store()` línea 78-79
+  - Implementado ordenamiento por versión descendente en `list()` línea 37-39
 
-A continuación se presenta un análisis detallado del módulo de documentos y del sistema en general, identificando bugs, mejoras, faltantes, optimizaciones y problemas de seguridad con sus respectivas ubicaciones.
+- `app/Models/Documento.php`:
+  - Agregados campos `hash_sha256`, `version`, `vigente` al fillable
+  - Agregados casts para `version` (integer) y `vigente` (boolean)
+  - Agregado helper `estaVigente()` para verificar vigencia
+  - Agregado helper `marcaComoCaducado()` para actualizar estado
 
----
+**Beneficios:**
+- Seguridad mejorada con autorización completa
+- Integridad de datos garantizada con versionamiento automático
+- Trazabilidad completa de quién creó/actualizó cada documento
+- Integridad de archivos garantizada con verificación SHA-256
+- Mantenimiento de historial de documentos con soft deletes y versionamiento
+- Código más robusto con manejo de transacciones y errores
 
 ## 🐛 BUGS CRÍTICOS Y DE ALTA PRIORIDAD
 

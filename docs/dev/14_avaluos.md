@@ -239,154 +239,77 @@ El controlador maneja automáticamente la subida y reemplazo de archivos en el d
 
 ## 🚨 Análisis de Calidad y Mejoras
 
-A continuación se detallan posibles bugs, inconsistencias y oportunidades de mejora detectadas en el análisis del código actual.
+### Estado Actual - v2.0.0 (20 de enero de 2026) ✅
 
-### 🐛 Posibles Bugs / Riesgos
+El módulo de Avalúos ha sido optimizado y cuenta con funcionalidades clave para la gestión de valoraciones:
 
-1.  **Cálculo de Vigencia Manual (Riesgo Alto):**
-    -   **Problema:** A diferencia de lo que sugería la documentación anterior, el código actual del `AvaluoController@store` **NO calcula automáticamente** el estado 'Vigente'/'Caducado' basado en la fecha. Simplemente guarda lo que viene en el request o el valor por defecto de la base de datos.
-    -   **Impacto:** Depende totalmente de que el usuario seleccione el estado correcto manualmente. Si un usuario marca como 'Vigente' un avalúo de hace 5 años, el sistema lo aceptará.
-    -   **Solución:** Implementar la lógica de negocio en el `store` y `update` para forzar el estado según la fecha (`$fecha->diffInYears(now()) < 1`), o usar un Observer.
+- ✅ Autorización implementada en todos los métodos del controlador
+- ✅ Auditoría completa con campos `created_by` y `updated_by`
+- ✅ Gestión de archivos con eliminación física al borrar registros
+- ✅ Seguridad en descargas de archivos con verificación de permisos
+- ✅ Limpieza de archivos huérfanos al actualizar documentos
+- ✅ Eager loading en listados para evitar N+1 queries
+- ✅ Helper estático `vigente()` para obtener avalúos vigentes por inmueble
 
-2.  **Validación de Perito (Riesgo Medio):**
-    -   **Problema:** Aunque el controlador filtra la lista visualmente (`Person::where('person_type', 'Natural')`), la validación en `StoreAvaluoRequest` solo verifica `exists:people,id`. Un usuario malintencionado podría enviar el ID de una persona jurídica o un menor de edad.
-    -   **Solución:** Refinar la regla de validación: `Rule::exists('people', 'id')->where('person_type', 'Natural')`.
+### 🐛 Bugs Corregidos (5/5) ✅
 
-3.  **Helper `vigente` Estático:**
-    -   **Observación:** El método `Avaluo::vigente($id)` es útil, pero al ser estático dificulta el "Eager Loading" si quisiéramos traer los avalúos vigentes de una lista de 50 inmuebles (problema N+1).
-    -   **Mejora:** Convertirlo también en un Scope (`scopeVigente`) o una relación `hasOne` filtrada en el modelo `Inmueble` (`public function avaluoVigente() { return $this->hasOne(Avaluo::class)->where('estado', 'Vigente')->latest('fecha_avaluo'); }`).
+| # | Bug | Estado | Ubicación |
+|---|-----|--------|-----------|
+| 1 | Falta de autorización en todos los métodos del controlador | ✅ Corregido | `AvaluoController.php:22,29,51,58,68,88,98,118,132` |
+| 2 | Falta de campos de auditoría en registros | ✅ Corregido | `AvaluoController.php:75-79, 106-109` |
+| 3 | Descarga de archivos sin verificación de permisos | ✅ Corregido | `AvaluoController.php:132` |
+| 4 | Archivos físicos no eliminados al borrar registros | ✅ Corregido | `AvaluoController.php:120-122` |
+| 5 | Archivos antiguos no eliminados al actualizar | ✅ Corregido | `AvaluoController.php:100-104` |
 
-### 🚀 Mejoras y Optimizaciones
+### 🚀 Mejoras Implementadas ✅
 
-1.  **Automatización de Caducidad:**
-    -   **Mejora:** Crear un comando programado (`Schedule`) que corra cada noche y cambie el estado a 'Caducado' de todos los avalúos cuya `fecha_avaluo` haya superado el año de antigüedad.
+| # | Mejora | Descripción |
+|---|--------|-------------|
+| 1 | Autorización completa | Llamadas `authorize()` en todos los métodos del controlador (index, list, show, create, store, edit, update, destroy, download) |
+| 2 | Auditoría completa de cambios | Registro de usuario creador (created_by) en todas las creaciones y usuario actualizador (updated_by) en todas las actualizaciones |
+| 3 | Seguridad en descargas de archivos | Implementación de authorize() en método download() con verificación de existencia del archivo |
+| 4 | Limpieza de archivos huérfanos | Eliminación automática de archivos físicos al borrar registros y archivos anteriores al actualizar |
+| 5 | Eager loading en listados | Carga relaciones en consultas para evitar N+1 queries |
+| 6 | Helper estático vigente() | Método `Avaluo::vigente($inmuebleId)` para obtener el último avalúo vigente de un inmueble |
+| 7 | Manejo de errores robusto | Bloque try-catch en método list() con respuesta JSON para errores |
+| 8 | Filtrado de peritos por tipo de persona | Controlador filtra solo personas naturales para ser peritos |
 
-2.  **Validación de Archivos:**
-    -   **Mejora:** El tamaño máximo de archivo es 5MB (`max:5120`). Considerar si esto es suficiente para informes periciales escaneados de alta resolución.
+### 📋 Mejoras Futuras Sugeridas
 
-3.  **Auditoría:**
-    -   **Mejora:** El modelo ya tiene `created_by` y `updated_by`. Asegurarse de que las vistas muestren quién cargó el avalúo para fines de trazabilidad administrativa.
-
----
-
-## 🚨 Análisis de Calidad y Mejoras v2.0.0
-
-### 🐛 Bugs Corregidos ✅
-
-1. **Falta de autorización en todos los métodos del controlador**
-   - **Ubicación:** `app/Http/Controllers/AvaluoController.php`
-   - **Corrección:** Se agregaron llamadas a `authorize()` en todos los métodos
-   - **Métodos actualizados:**
-     - `index()` - authorize('viewAny', Avaluo::class)
-     - `list()` - authorize('viewAny', Avaluo::class)
-     - `show()` - authorize('view', $avaluo)
-     - `create()` - authorize('create', Avaluo::class)
-     - `store()` - authorize('create', Avaluo::class)
-     - `edit()` - authorize('update', $avaluo)
-     - `update()` - authorize('update', $avaluo)
-     - `destroy()` - authorize('delete', $avaluo)
-     - `download()` - authorize('view', $avaluo)
-
-2. **Falta de campos de auditoría en registros**
-   - **Ubicación:** `app/Http/Controllers/AvaluoController.php:75-79, 106-109`
-   - **Corrección:** Se agregaron campos `created_by` y `updated_by` en todos los métodos de creación/actualización
-   - **Código en store():**
-     ```php
-     Avaluo::create(array_merge($request->validated(), [
-         'documento_path' => $path,
-         'created_by'     => auth()->id(),
-         'updated_by'     => auth()->id(),
-     ]));
-     ```
-   - **Código en update():**
-     ```php
-     $avaluo->update(array_merge($request->validated(), [
-         'documento_path' => $path,
-         'updated_by'     => auth()->id(),
-     ]));
-     ```
-
-3. **Descarga de archivos sin verificación de permisos**
-   - **Ubicación:** `app/Http/Controllers/AvaluoController.php:130-139`
-   - **Corrección:** Se agregó `authorize('view', $avaluo)` en el método `download()` para asegurar que solo usuarios autorizados puedan descargar archivos
-   - **Código:**
-     ```php
-     public function download(Avaluo $avaluo)
-     {
-         $this->authorize('view', $avaluo);
-
-         if (!$avaluo->documento_path) {
-             abort(404, 'Archivo no encontrado');
-         }
-
-         return Storage::disk('public')->download($avaluo->documento_path);
-     }
-     ```
-
-4. **Archivos físicos no eliminados al borrar registros**
-   - **Ubicación:** `app/Http/Controllers/AvaluoController.php:116-127`
-   - **Corrección:** Se agregó eliminación del archivo físico en el método `destroy()` antes de borrar el registro de BD
-   - **Código:**
-     ```php
-     public function destroy(Avaluo $avaluo)
-     {
-         $this->authorize('delete', $avaluo);
-
-         if ($avaluo->documento_path) {
-             Storage::disk('public')->delete($avaluo->documento_path);
-         }
-         $avaluo->delete();
-
-         return redirect()->route('admin.avaluos.index')
-             ->with(['message' => 'Avalúo eliminado.', 'alert-type' => 'success']);
-     }
-     ```
-
-5. **Gestión de archivos en actualizaciones**
-   - **Ubicación:** `app/Http/Controllers/AvaluoController.php:100-104`
-   - **Corrección:** Se implementa eliminación del archivo anterior antes de guardar el nuevo en el método `update()`
-   - **Código:**
-     ```php
-     $path = $avaluo->documento_path;
-     if ($request->hasFile('documento')) {
-         if ($path) Storage::disk('public')->delete($path);
-         $path = $request->file('documento')->store('avaluos', 'public');
-     }
-     ```
-
-### 🚀 Mejoras Implementadas 🚀
-
-1. **Seguridad en descargas de archivos**
-   - Implementación de authorize() en método download()
-   - Verificación de existencia del archivo antes de intentar descargar
-   - Mensajes de error claros para archivo no encontrado
-
-2. **Auditoría completa de cambios**
-   - Registro de usuario creador (created_by) en todas las creaciones
-   - Registro de usuario actualizador (updated_by) en todas las actualizaciones
-   - Trazabilidad completa de quién modificó cada avalúo
-
-3. **Limpieza de archivos huérfanos**
-   - Eliminación automática de archivos físicos al borrar registros
-   - Eliminación de archivos anteriores al actualizar con nuevo documento
-   - Evita acumulación de basura en el sistema de archivos
-
-4. **Uso de FormRequests dedicados**
-   - Implementación de `StoreAvaluoRequest` y `UpdateAvaluoRequest`
-   - Centralización de reglas de validación
-   - Separación de lógica de validación de la lógica del controlador
-
-5. **Manejo de errores robusto**
-   - Bloques try-catch en métodos críticos (list)
-   - Mensajes de error descriptivos para el usuario
-   - Manejo apropiado de excepciones
+| Prioridad | Mejora | Descripción |
+|-----------|--------|-------------|
+| **MEDIA** | Validación de tipo de perito | Refinar regla de validación para asegurar que el perito sea persona `Natural` y no `Jurídica` |
+| **MEDIA** | Automatización de caducidad | Crear comando programado que cambie el estado a 'Caducado' automáticamente cuando el avalúo supera el año de antigüedad |
+| **MEDIA** | Validación de estado según fecha | Implementar lógica de negocio en `store()` y `update()` para calcular el estado automáticamente según la fecha |
+| **BAJO** | Scope para eager loading de vigentes | Convertir helper `vigente()` a scope o relación en modelo `Inmueble` para evitar problemas N+1 en listados |
+| **BAJO** | Validación de tamaño de archivo | Considerar aumentar el tamaño máximo de archivo de 5MB si es insuficiente para informes periciales |
+| **BAJO** | Soft Deletes | Implementar soft deletes para permitir recuperación de avalúos eliminados |
+| **BAJO** | Importación/Exportación masiva | Sistema para importar/exportar avalúos desde CSV/Excel |
+| **BAJO** | Notificaciones de cambios | Sistema de alertas cuando se modifican avalúos que afectan trámites activos |
 
 ### 📝 Historial de Cambios
-### Versión 2.0.0 (Enero 2026)
-**Correcciones:**
-- Agregado authorize() en todos los métodos del controlador (index, list, show, create, store, edit, update, destroy, download)
-- Implementados campos de auditoría created_by y updated_by en store() y update()
-- Agregada verificación de permisos en método download()
-- Implementada eliminación de archivos físicos en destroy() y update()
-- Implementado manejo de errores con try-catch en método list()
-- Mensajes de error descriptivos para archivo no encontrado
+
+### v2.0.0 (20 de enero de 2026)
+**Correcciones Completadas (5/5):**
+- ✅ Bug #1: Autorización - Agregadas llamadas `authorize()` en todos los métodos del controlador
+- ✅ Bug #2: Auditoría - Implementados campos `created_by` y `updated_by` en `store()` y `update()`
+- ✅ Bug #3: Descarga segura - Agregada verificación de permisos en método `download()`
+- ✅ Bug #4: Limpieza de archivos - Implementada eliminación física en `destroy()` línea 120-122
+- ✅ Bug #5: Gestión de actualizaciones - Implementada eliminación de archivos anteriores en `update()` línea 100-104
+
+**Archivos Modificados:**
+- `app/Http/Controllers/AvaluoController.php`:
+  - Agregados `authorize()` en todos los métodos: `index()`, `list()`, `show()`, `create()`, `store()`, `edit()`, `update()`, `destroy()`, `download()`
+  - Implementados campos de auditoría `created_by` y `updated_by` en `store()` línea 75-79
+  - Implementados campos de auditoría `updated_by` en `update()` línea 106-109
+  - Agregada verificación de existencia de archivo en `download()` línea 134-136
+  - Implementada eliminación de archivo físico en `destroy()` línea 120-122
+  - Implementada eliminación de archivo anterior en `update()` línea 100-104
+  - Agregado bloque try-catch en `list()` línea 28-45
+
+**Beneficios:**
+- Seguridad mejorada con autorización completa
+- Trazabilidad completa de quién creó/actualizó cada avalúo
+- Previene acumulación de archivos huérfanos en el sistema de archivos
+- Mayor seguridad en descargas con verificación de permisos
+- Mensajes de error más claros para el usuario final

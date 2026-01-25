@@ -1087,36 +1087,108 @@ Su diseño modular permite fácil extensión para:
 - Nuevas tasas de interés
 - Diferentes departamentos con reglas especiales
 
-**Última actualización:** Enero 2026
+**Última actualización:** 22 de enero de 2026
 
-**Versión:** 1.0.0
+**Versión:** 2.0.0
 
 **Responsable:** Equipo de Desarrollo ITGB
 
 ---
 
-## � Estado Actual y Recomendaciones
+## 🚨 Análisis de Calidad y Mejoras
 
-### Funcionalidades Implementadas (✅ Hecho)
-- **Cálculo de ITGB Base:** Lógica corregida para múltiples adquirentes (uso de porcentajes individuales).
-- **Transacciones:** `calculateAndSave` envuelto en transacción DB para integridad de datos.
-- **Exenciones:** Soporte completo implementado (crédito fiscal).
-- **Caché de Tasas:** Implementado con clave compuesta (incluyendo Tipo Transmisión).
-- **Manejo de Errores UFV:** Fallback seguro a 1.0 y manejo de excepciones.
-- **Tipo de Transmisión:** Ahora se utiliza para filtrar la tasa correcta.
-- **Unicidad de Trámite:** Generación mejorada de `nro_tramite` con `uniqid`.
+### Estado Actual - v2.0.0 (22 de enero de 2026) ✅
 
-### Pendientes Prioritarios
-| # | Tarea | Prioridad | Tiempo estimado |
-|---|-------|-----------|-----------------|
-| 1 | **Agregar tests unitarios** | 🟢 BAJA | 4 horas |
-| 2 | **Implementar histórico de cálculos** | 🟢 BAJA | 3 horas |
+Todos los bugs identificados en el análisis original han sido corregidos exitosamente. El servicio `IdtgbCalculator` ahora cuenta con:
 
-| 4 | **Integración con SIN** | 🟢 BAJA | 5 horas |
+- ✅ Transacciones DB para integridad de datos en `calculateAndSave()`
+- ✅ Soporte completo de exenciones implementado (crédito fiscal)
+- ✅ Caché de tasas con clave compuesta (incluyendo Tipo Transmisión)
+- ✅ Manejo de errores UFV con fallback seguro a 1.0
+- ✅ Validación de inmuebles en trámites antes de calcular
+- ✅ Generación mejorada de `nro_tramite` con `uniqid()`
+- ✅ Búsqueda de tasas considera `tipo_transmision_id`
+- ✅ Corrección de doble reducción por porcentaje de participación
 
-**Resumen de Progreso:**
-- Se han corregido los problemas críticos de integridad de datos (transacciones).
-- Se ha optimizado el rendimiento (caché).
-- Se ha completado la funcionalidad de exenciones.
-- La documentación está sincronizada con el código actual.
+### 🐛 Bugs Corregidos (5/5) ✅
+
+| # | Bug | Estado | Ubicación |
+|---|-----|--------|-----------|
+| 1 | Doble reducción por porcentaje de participación | ✅ Corregido | `IdtgbCalculator.php:calculateAndSave()` línea 68 |
+| 2 | Búsqueda de tasa sin considerar tipo_transmision_id | ✅ Corregido | `IdtgbCalculator.php:tasaVigente()` línea 32 |
+| 3 | Cache key sin incluir tipoId | ✅ Corregido | `IdtgbCalculator.php:tasaVigente()` línea 232 |
+| 4 | Posible división por cero en UFV | ✅ Corregido | `IdtgbCalculator.php:performCalculation()` líneas 165-178 |
+| 5 | Trámites sin inmuebles causan errores | ✅ Corregido | `IdtgbCalculator.php:calculateAndSave()` líneas 31-35 |
+
+### 🚀 Mejoras Implementadas ✅
+
+| # | Mejora | Descripción |
+|---|--------|-------------|
+| 1 | Transacciones DB | `calculateAndSave()` envuelto en `DB::transaction()` para atomicidad |
+| 2 | Soporte completo de exenciones | Implementación de exenciones como crédito fiscal que se resta al impuesto determinado |
+| 3 | Caché de tasas optimizado | Cache key compuesta: `tasa:{dep}:{par}:{tipo}:{fecha}` con TTL de 3600s |
+| 4 | Manejo de errores UFV | Fallback seguro a 1.0 y manejo de excepciones con try-catch |
+| 5 | Validación de inmuebles | Validación que el trámite tenga inmuebles antes de calcular impuesto |
+| 6 | Generación única de nro_tramite | Uso de `uniqid()` con sufijo aleatorio en lugar de `rand()` simple |
+| 7 | Filtrado por tipo_transmision_id | Búsqueda de tasas ahora considera `tipo_transmision_id` para mayor precisión |
+| 8 | Carga de exenciones en calculateAndSave | Se carga la relación `tramiteExenciones` para cálculos completos |
+
+### 📋 Mejoras Futuras Sugeridas
+
+| Prioridad | Mejora | Descripción |
+|-----------|--------|-------------|
+| **ALTO** | Refactorizar uso de métodos Tasa | Reemplazar `tasaVigente()` del servicio por `Tasa::vigente()` o `Tasa::findApplicableRate()` del modelo para centralizar lógica |
+| **MEDIO** | Tests unitarios completos | Agregar tests unitarios para todos los casos límite y escenarios |
+| **MEDIO** | Histórico de cálculos | Implementar histórico de cálculos para auditoría y trazabilidad |
+| **BAJO** | Integración con SIN | Conectar con servicios del SIN para validar datos en tiempo real |
+| **BAJO** | Logging de cálculos | Agregar logging detallado de cada cálculo para depuración |
+| **BAJO** | Métricas de rendimiento | Implementar métricas de rendimiento para optimizar caché |
+
+### 🔍 Observaciones sobre el Modelo Tasa
+
+El modelo `Tasa` cuenta con métodos estáticos que centralizan la lógica de búsqueda de tasas vigentes:
+
+- **`Tasa::vigente()`**: Busca tasas vigentes priorizando específicas sobre genéricas (similar a la lógica actual del servicio)
+- **`Tasa::findApplicableRate()`**: Busca tasas específicas por tipo_transmision_id
+
+**Índice compuesto implementado:** `[departamento_id, parentesco_id, tipo_transmision_id, vigente_desde]` (migración `2026_01_17_234526_add_composite_index_to_tasas_table.php`)
+
+**Oportunidad de mejora:** El servicio `IdtgbCalculator` implementa su propio método `tasaVigente()` privado. Se recomienda refactorizar para reutilizar los métodos del modelo `Tasa`, reduciendo duplicación de código y manteniendo la lógica centralizada en el modelo.
+
+### 📝 Historial de Cambios
+
+### v2.0.0 (22 de enero de 2026)
+**Correcciones Completadas (5/5):**
+- ✅ Bug #1: Doble reducción por porcentaje de participación - Ahora siempre pasa 100% a `performCalculation()`, los porcentajes individuales de adquirentes ya definen la cuota
+- ✅ Bug #2: Búsqueda de tasa sin considerar tipo_transmision_id - Agregado `tipo_transmision_id` en consulta de `tasaVigente()`
+- ✅ Bug #3: Cache key sin incluir tipoId - Cache key actualizada a `tasa:{dep}:{par}:{tipo}:{fecha}`
+- ✅ Bug #4: Posible división por cero en UFV - Agregado try-catch con fallback a 1.0 y validación de división por cero
+- ✅ Bug #5: Trámites sin inmuebles causan errores - Agregada validación que lanza excepción si no hay inmuebles asociados
+
+**Mejoras Implementadas:**
+- ✅ Transacciones DB: `calculateAndSave()` ahora usa `DB::transaction()` para garantizar atomicidad
+- ✅ Soporte completo de exenciones: Implementado cálculo de exenciones como crédito fiscal
+- ✅ Caché de tasas: Implementado con clave compuesta y TTL de 3600 segundos
+- ✅ Manejo de errores UFV: Fallback seguro a 1.0 y manejo de excepciones
+- ✅ Validación de inmuebles: Validación que el trámite tenga inmuebles antes de calcular
+- ✅ Generación única de nro_tramite: Uso de `uniqid()` con sufijo aleatorio en lugar de `rand()`
+- ✅ Filtrado por tipo_transmision_id: Búsqueda de tasas ahora prioriza tasas específicas sobre genéricas
+- ✅ Carga de exenciones: Se carga relación `tramiteExenciones` en `calculateAndSave()`
+
+**Archivos Modificados:**
+- `app/Services/IdtgbCalculator.php` - Todas las correcciones y mejoras implementadas
+
+**Beneficios:**
+- Integridad de datos garantizada con transacciones DB
+- Precisión mejorada en cálculos de tasas con tipo_transmision_id
+- Rendimiento optimizado con caché de tasas
+- Robustez aumentada con manejo de errores UFV
+- Soporte completo de exenciones implementado
+- Identificadores únicos más seguros para trámites
+
+### v1.0.0 (Enero 2026)
+**Versión inicial del servicio IdtgbCalculator**
+- Implementación de cálculos de ITGB según Ley 812
+- Soporte para calculadora pública y trámites oficiales
+- Cálculo de mantenimiento de valor, intereses y multa IDF
 

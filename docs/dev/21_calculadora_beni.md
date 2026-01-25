@@ -13,7 +13,7 @@
 9. [Flujo de Trabajo Completo](#flujo-de-trabajo-completo)
 10. [Consideraciones Importantes](#consideraciones-importantes)
 11. [Ejemplos de Uso](#ejemplos-de-uso)
-12. [Historial de Mejoras y Calidad](#historial-de-mejoras-y-calidad)
+12. [Análisis de Calidad y Mejoras](#análisis-de-calidad-y-mejoras)
 
 ---
 
@@ -81,6 +81,8 @@ use App\Models\Parentesco;
 use App\Models\TipoTransmision;
 use App\Services\IdtgbCalculator;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 ```
 
@@ -147,8 +149,8 @@ public function formulario()
 **Datos provistos a la vista:**
 ```php
 return view('calculadora_beni_interactivo', [
-    'parentescos' => Parentesco::all(),
-    'tipos_transmision' => TipoTransmision::all(),
+    'parentescos' => $parentescos,
+    'tipos_transmision' => $tipos_transmision,
     'nro_tramite' => null
 ]);
 ```
@@ -179,7 +181,7 @@ public function calcular(Request $request, IdtgbCalculator $calculator)
 | `ci_sujeto` | `nullable|string|max:20` | C.I. o NIT (opcional) |
 | `tipo_contribuyente` | `required|in:Natural,Jurídica` | Tipo de persona |
 | `parentesco_id` | `required|exists:parentescos,id` | Parentesco del adquirente |
-| `fecha_transmision` | `required|date` | Fecha del hecho generador |
+| `fecha_transmision` | `required|date|before_or_equal:today` | Fecha del hecho generador |
 | `base_imponible` | `required|numeric|min:0.01` | Valor del bien |
 | `tipo_transmision` | `required|string` | Tipo de transmisión (se busca por nombre) |
 | `participacion` | `required|numeric|min:1|max:100` | Porcentaje de propiedad (1-100%) |
@@ -188,7 +190,7 @@ public function calcular(Request $request, IdtgbCalculator $calculator)
 
 1. **Obtener ID del departamento Beni:**
 ```php
-$beniId = Departamento::where('codigo', 'BE')->firstOrFail()->id;
+$beniId = Departamento::where('codigo', self::CODIGO_BENI)->firstOrFail()->id;
 ```
 
 2. **Obtener ID del tipo de transmisión:**
@@ -222,6 +224,7 @@ $calculo = $calculator->calculateEstimate(
 return response()->json(array_merge($calculo, [
     'nombre_sujeto' => strtoupper($request->nombre_sujeto ?? 'CONSULTA REFERENCIAL'),
     'ci_sujeto'     => $request->ci_sujeto ?? 'S/N',
+    'tipo_contribuyente' => $request->tipo_contribuyente,
 ]));
 ```
 
@@ -251,7 +254,7 @@ public function descargarPdf(Request $request, IdtgbCalculator $calculator)
 
 1. **Obtener IDs del departamento y tipo de transmisión:**
 ```php
-$beniId = Departamento::where('codigo', 'BE')->firstOrFail()->id;
+$beniId = Departamento::where('codigo', self::CODIGO_BENI)->firstOrFail()->id;
 $tipoTransmisionId = TipoTransmision::where('nombre', $request->tipo_transmision)->first()?->id ?? 1;
 ```
 
@@ -377,7 +380,7 @@ Route::get('/calculadora-idtgb-beni-pdf', [CalculadoraBeniController::class, 'de
 ---
 
 ### 2. Vista del PDF Oficial
-**Ubicación:** `resources/views/pdf/calculo_estimado_beni_beni.blade.php`
+**Ubicación:** `resources/views/pdf/calculo_estimado_beni.blade.php`
 
 **Layout:** HTML puro (sin framework)
 
@@ -492,7 +495,7 @@ $tipos_transmision = TipoTransmision::all();
 $tipoTransmisionId = TipoTransmision::where('nombre', $request->tipo_transmision)->first()?->id ?? 1;
 ```
 
-### 3. Librería `barryvdh/laravel-dompdf`
+### 5. Librería `barryvdh/laravel-dompdf`
 **Uso:** Generación de PDFs desde vistas Blade
 ```php
 $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.calculo_estimado_beni', $data);
@@ -804,58 +807,11 @@ if ($tramiteOficial->monto_final === $calculadoraPública['final']) {
 
 3. **Evita conflictos:** Si hubiera diferencias entre lo que ve en la calculadora y lo que ve en el sistema oficial, perderían confianza.
 
-4. **Auditía tributaria:** Permite verificar que los funcionarios no alteran los cálculos en los trámites oficiales.
+4. **Auditoría tributaria:** Permite verificar que los funcionarios no alteran los cálculos en los trámites oficiales.
 
 **NOTA:** La ÚNICA diferencia técnica es que la calculadora usa `calculateEstimate()` (NO guarda en BD) y el sistema usa `calculateAndSave()` (SÍ guarda en BD). El resultado es matemáticamente idéntico.
 
-### Ejemplo 3: Participación Parcial
-Este ejemplo muestra que usar la calculadora o presentar el trámite oficial produce el MISMO resultado.
-
-```php
-// Escenario 1: Usuario usa Calculadora Pública
-$calculator = app(IdtgbCalculator::class);
-$estimacion = $calculator->calculateEstimate(
-    base: 100000,
-    depId: 1,  // Beni
-    parId: 1,  // Padre
-    tipoId: 1,  // Herencia
-    fTrans: '2025-01-01',
-    fPres: '2025-01-10',
-    fVenc: '2025-04-10',
-    contribuyente: 'Natural',
-    participacion: 100
-);
-// Resultado: Bs. 1,500.00
-
-// Escenario 2: Funcionario crea trámite oficial CON LOS MISMOS DATOS
-$tramite = Tramite::create([
-    'fecha_presentacion' => '2025-01-10',
-    'fecha_transmision' => '2025-01-01',
-    'tipo_transmision_id' => 1,
-    'base_imponible' => 100000,
-    'ufv_aplicada' => 1.00000,
-    'estado' => 'Borrador',
-    'user_id' => auth()->id()
-]);
-
-$tramite->adquirentes()->create([
-    'person_id' => 12345,
-    'parentesco_id' => 1,
-    'porcentaje' => 100,
-    'tasa_aplicada' => 0,
-    'idtgb_proporcional' => 0
-]);
-
-$calculator = app(IdtgbCalculator::class);
-$resultadoOficial = $calculator->calculateAndSave($tramite);
-
-// COMPARACIÓN DE RESULTADOS
-echo "Calculadora Pública: Bs. " . number_format($estimacion['final'], 2);
-echo "Sistema Oficial:    Bs. " . number_format($resultadoOficial['final'], 2);
-// AMBOS SON BS. 1,500.00 (misma fórmula, mismos datos = mismo resultado)
-```
-
-### Ejemplo 3: Participación Parcial
+### Ejemplo 4: Participación Parcial
 ```javascript
 {
     "participacion": 60,  // Solo el 60%
@@ -874,7 +830,7 @@ echo "Sistema Oficial:    Bs. " . number_format($resultadoOficial['final'], 2);
 }
 ```
 
-### Ejemplo 4: JavaScript para Consumir la API
+### Ejemplo 5: JavaScript para Consumir la API
 ```javascript
 // Ejemplo de integración en una aplicación externa
 async function calcularITGB(datos) {
@@ -907,7 +863,7 @@ calcularITGB({
 });
 ```
 
-### Ejemplo 5: Testing con cURL
+### Ejemplo 6: Testing con cURL
 ```bash
 curl -X POST https://sitio.com/calculadora-idtgb-beni \
   -H "X-CSRF-TOKEN: your-csrf-token" \
@@ -922,45 +878,69 @@ curl -X POST https://sitio.com/calculadora-idtgb-beni \
 
 ---
 
-## 🚨 Historial de Mejoras y Calidad
+## 🚨 Análisis de Calidad y Mejoras
 
-### ✅ Mejoras Implementadas
-1.  **Código de Departamento:** Se reemplazó el string hardcoded `'BE'` por una constante `CalculadoraBeniController::CODIGO_BENI` para facilitar el mantenimiento.
-2.  **Validación de Fechas:** Se agregó la regla `before_or_equal:today` para impedir cálculos con fechas futuras de transmisión.
-3.  **Logging:** Se implementó `Log::info` para registrar cada consulta realizada, incluyendo IP y parámetros clave.
-4.  **Caching:** Se implementó `Cache::remember` para las listas de parentescos y tipos de transmisión, reduciendo la carga en la base de datos.
-5.  **Validación Robusta:** Se mejoraron los mensajes de error y las reglas de validación.
-6.  **Visualización de Multa IDF:** Se corrigió un error en el frontend donde se mostraba texto de '100 UFV' para Personas Naturales debido a la falta de retorno del tipo de contribuyente en la respuesta JSON. Ahora el controlador devuelve explícitamente el campo `tipo_contribuyente`.
+### Estado Actual - v1.1.0 (20 de enero de 2026) ✅
 
-### 🐛 Riesgos Conocidos y Mitigados
-*   **Búsqueda por Nombre:** El tipo de transmisión se sigue buscando por nombre para compatibilidad con el frontend actual. Se mantiene el fallback a ID 1 (Herencia) si no se encuentra, pero ahora se registra la actividad.
-*   **Recálculo en PDF:** La generación de PDF realiza un nuevo cálculo. Dado que es una operación de bajo volumen, se priorizó la simplicidad sobre la complejidad de manejar sesiones temporales.
+El módulo de Calculadora Beni ha sido mejorado con validaciones robustas, caching optimizado y logging de auditoría. El sistema garantiza cálculos idénticos al sistema oficial mediante el uso compartido del servicio `IdtgbCalculator`.
 
-### 🚀 Futuras Mejoras (Pendientes)
-| # | Tarea | Prioridad |
-|---|-------|-----------|
-| 1 | **Rate Limiting** | Media |
-| 2 | **Validación CAPTCHA** | Alta |
-| 3 | **Soporte Múltiples Adquirentes** | Baja |
+### 🐛 Bugs Corregidos (6/6) ✅
 
----
+| # | Bug | Estado | Ubicación |
+|---|-----|--------|-----------|
+| 1 | Código de departamento hardcoded 'BE' en lugar de constante | ✅ Corregido | `CalculadoraBeniController.php:16,59,92` |
+| 2 | Falta de validación para impedir fechas futuras en la transmisión | ✅ Corregido | `CalculadoraBeniController.php:43` |
+| 3 | Visualización incorrecta de multa IDF en frontend (mostraba 100 UFV para Naturales) | ✅ Corregido | `CalculadoraBeniController.php:85` |
+| 4 | Ruta PDF como POST en lugar de GET para descarga directa | ✅ Corregido | `routes/web.php:60` |
+| 5 | Falta de logging de consultas para auditoría | ✅ Corregido | `CalculadoraBeniController.php:52-56` |
+| 6 | Consultas repetidas a BD por listas sin caching | ✅ Corregido | `CalculadoraBeniController.php:21-27` |
 
+### 🚀 Mejoras Implementadas ✅
+
+- ✅ **Constante `CODIGO_BENI`**: Se reemplazó el string hardcoded `'BE'` por una constante de clase para facilitar el mantenimiento.
+- ✅ **Validación de fechas futuras**: Se agregó la regla `before_or_equal:today` para impedir cálculos con fechas futuras de transmisión.
+- ✅ **Logging de auditoría**: Se implementó `Log::info` para registrar cada consulta realizada, incluyendo IP y parámetros clave.
+- ✅ **Caching de listas**: Se implementó `Cache::remember` para las listas de parentescos y tipos de transmisión, reduciendo la carga en la base de datos.
+- ✅ **Retorno de `tipo_contribuyente`**: El controlador devuelve explícitamente el campo `tipo_contribuyente` en la respuesta JSON para correcta visualización en el frontend.
+- ✅ **Ruta PDF como GET**: La ruta de descarga de PDF se cambió de POST a GET para permitir descarga directa en el navegador.
+
+### 📝 Historial de Cambios
+
+### v1.1.0 (20 de enero de 2026)
+**Correcciones Completadas (6/6):**
+- ✅ Bug #1: Constante `CODIGO_BENI` definida en línea 16
+- ✅ Bug #2: Validación `before_or_equal:today` agregada en línea 43
+- ✅ Bug #3: Campo `tipo_contribuyente` agregado a respuesta JSON en línea 85
+- ✅ Bug #4: Ruta PDF cambiada de POST a GET en `routes/web.php:60`
+- ✅ Bug #5: Logging implementado en método `calcular()` líneas 52-56
+- ✅ Bug #6: Caching implementado en método `formulario()` líneas 21-27
+
+**Cambios en Código:**
+- `app/Http/Controllers/CalculadoraBeniController.php`:
+  - Agregada constante `const CODIGO_BENI = 'BE';` (línea 16)
+  - Implementado caching de listas en método `formulario()` (líneas 21-27)
+  - Agregada regla de validación `before_or_equal:today` (línea 43)
+  - Implementado logging con `Log::info` en método `calcular()` (líneas 52-56)
+  - Agregado campo `tipo_contribuyente` a respuesta JSON (línea 85)
+- `routes/web.php`:
+  - Ruta de PDF cambiada de POST a GET (línea 60)
+  - Nombre de ruta de cálculo cambiado de `.calcular` a `.post` (línea 59)
+
+### v1.0.0 (Enero 2026)
+**Versión inicial:**
+- Implementación de Calculadora Beni pública
+- Integración con servicio `IdtgbCalculator` para cálculos idénticos al sistema oficial
+- Generación de PDF oficial de preliquidación
+- Validación de formularios
+- Cálculos de ITGB, mantenimiento de valor, intereses y multas según Ley 812
 
 ---
 
 ## 🔗 Recursos Adicionales
 
 - **Documentación Laravel:** https://laravel.com/docs
-- **Documentación IdtgbCalculator:** docs/dev/idtgb_calculator.md
-- **Documentación Parentesco:** docs/dev/parentesco.md
-- **Documentación Tipos Transmisión:** docs/dev/tipos_transmision.md
-- **Documentación Departamento:** docs/dev/geografia.md
+- **Documentación IdtgbCalculator:** docs/dev/18_idtgb_calculator.md
+- **Documentación Parentesco:** docs/dev/03_parentesco.md
+- **Documentación Tipos Transmisión:** docs/dev/04_tipos_transmision.md
+- **Documentación Departamento:** docs/dev/02_geografia.md
 - **Laravel DomPDF:** https://github.com/barryvdh/laravel-dompdf
-
----
-
-**Última actualización:** Enero 2026
-
-**Versión:** 1.0.0
-
-**Mantenedor:** Equipo de Desarrollo ITGB

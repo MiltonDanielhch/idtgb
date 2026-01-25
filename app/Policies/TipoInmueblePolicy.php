@@ -35,6 +35,16 @@ class TipoInmueblePolicy
         return $user->hasPermission('delete_tipos-inmueble');
     }
 
+    public function restore(User $user, TipoInmueble $tipoInmueble): bool
+    {
+        return $user->hasPermission('browse_admin');
+    }
+
+    public function forceDelete(User $user, TipoInmueble $tipoInmueble): bool
+    {
+        return $user->hasPermission('browse_admin');
+    }
+
     public function before(User $user, $ability)
     {
         if ($user->hasPermission('browse_admin')) {

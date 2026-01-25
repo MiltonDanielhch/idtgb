@@ -524,34 +524,21 @@ class TramiteWizardController extends Controller
         })->all();
 
         // Invocamos el cálculo (Simulación para el resumen)
-        // Sumar los cálculos de todos los adquirentes
-        $totalLiquidacion = [
-            'idtgb_base' => 0,
-            'mora' => 0,
-            'total' => 0,
-            'ufv' => 1,
-            'fecha_vencimiento' => Carbon::parse($wizardData['step1']['fecha_presentacion'])->addDays(30)->toDateString()
-        ];
+        $fechaVencimiento = Carbon::parse($wizardData['step1']['fecha_presentacion'])->addDays(30);
+        $exencionesData = []; // Para el wizard, las exenciones aún no tienen monto.
 
-        foreach ($adquirentesData as $adquirente) {
-            $liquidacion = $calculator->calculateEstimate(
-                $wizardData['step1']['base_imponible'] * ($adquirente['porcentaje'] / 100),
-                $depId,
-                $adquirente['parentesco_id'],
-                $wizardData['step1']['tipo_transmision_id'],
-                $wizardData['step1']['fecha_transmision'],
-                now()->toDateString(),
-                $totalLiquidacion['fecha_vencimiento']
-            );
-
-            if (is_array($liquidacion)) {
-                $totalLiquidacion['idtgb_base'] += $liquidacion['idtgb_base'] ?? 0;
-                $totalLiquidacion['mora'] += $liquidacion['mora'] ?? 0;
-                $totalLiquidacion['total'] += $liquidacion['total'] ?? 0;
-            }
-        }
-
-        $liquidacion = $totalLiquidacion;
+        $liquidacion = $calculator->performCalculation(
+            $wizardData['step1']['base_imponible'],
+            $depId,
+            $wizardData['step1']['tipo_transmision_id'],
+            now()->toDateString(), // Fecha de "pago" (simulación)
+            $wizardData['step1']['fecha_transmision'],
+            $fechaVencimiento->toDateString(),
+            $adquirentesData,
+            $exencionesData,
+            'Natural', // Asumir 'Natural' para el wizard, o tomar de algún campo si existe.
+            100 // Participación global es 100%, se prorratea por adquirente dentro.
+        );
 
         // 3. Llamar al showSummary pasando la $liquidacion
         return $this->showSummary($request, $wizardData, $liquidacion);

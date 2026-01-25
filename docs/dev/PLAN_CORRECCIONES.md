@@ -190,10 +190,10 @@ Todos los archivos tienen documentación completa y código corregido ✅
 - [x] `12_tramite_exenciones.md` - Actualizar sección de análisis ✅
 - [x] `17_ufvs.md` - Actualizar sección de análisis ✅
 
-### 🔧 FASE 3 - Completar Correcciones de Código Pendientes (1 archivo)
-- [x] `01_people.md` - Completar 3/5 bugs pendientes ✅
+### 🔧 FASE 3 - Completar Correcciones de Código Pendientes (3 archivos)
+- [x] `01_people.md` - Completar 5/5 bugs corregidos (v2.0.0) ✅
 - [x] `07_tramites.md` - Completar 14/14 bugs corregidos (v2.4.0) ✅
-- [ ] `02_geografia.md` - Completar 5/8 bugs pendientes (hardcoded, consultas, validaciones)
+- [x] `02_geografia.md` - Completar 8/8 bugs corregidos (v3.0.0) ✅
 
 ---
 
@@ -204,8 +204,8 @@ Todos los archivos tienen documentación completa y código corregido ✅
 | # | Archivo | Razón | Estado |
 |---|---------|--------|--------|
 | 01 | `01_people.md` | Base de datos de todo el sistema - Todos los 5/5 bugs corregidos | ✅ Completado (v2.0.0) |
-| 02 | `02_geografia.md` | Referencias en todos los formularios | ⏳ Correcciones parciales (3/8) |
-| 07 | `07_tramites.md` | Núcleo del sistema ITGB | ⏳ Correcciones parciales (4/14) |
+| 02 | `02_geografia.md` | Referencias en todos los formularios | ✅ Todos los 8/8 bugs corregidos (v3.0.0) |
+| 07 | `07_tramites.md` | Núcleo del sistema ITGB | ✅ Todos los 14/14 bugs corregidos (v2.4.0) |
 
 ### ✅ CRÍTICA COMPLETADA (4 archivos)
 | # | Archivo | Razón |

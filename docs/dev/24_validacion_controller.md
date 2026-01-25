@@ -1,5 +1,26 @@
 # Documentación Técnica - ValidacionController
 
+## 📋 Tabla de Contenidos
+
+1. [Descripción General](#descripción-general)
+2. [Ubicación](#ubicación)
+3. [Rutas](#rutas)
+4. [Dependencias](#dependencias)
+5. [Métodos](#métodos)
+6. [Hash de Validación](#hash-de-validación)
+7. [Uso del Hash](#uso-del-hash)
+8. [Vista de Validación](#vista-de-validación)
+9. [Seguridad](#seguridad)
+10. [Ejemplo de Uso](#ejemplo-de-uso)
+11. [Relaciones del Modelo Tramite Utilizadas](#relaciones-del-modelo-tramite-utilizadas)
+12. [Estados de Trámite](#estados-de-trámite)
+13. [Políticas de Autorización](#políticas-de-autorización)
+14. [Testing](#testing)
+15. [Referencias Relacionadas](#referencias-relacionadas)
+16. [Análisis de Calidad y Mejoras](#análisis-de-calidad-y-mejoras)
+
+---
+
 ## Descripción General
 
 El `ValidacionController` es un controlador público que permite la verificación de trámites mediante un hash único de validación. Este controlador no requiere autenticación y está diseñado para que ciudadanos externos puedan verificar la autenticidad de los documentos de trámites generados por el sistema.
@@ -65,10 +86,10 @@ public function generateHashValidacion(): string
         return $this->hash_validacion;
     }
 
-    $this->hash_validacion = hash('sha256', 
-        $this->id . '|' . 
-        $this->nro_tramite . '|' . 
-        now()->timestamp . '|' . 
+    $this->hash_validacion = hash('sha256',
+        $this->id . '|' .
+        $this->nro_tramite . '|' .
+        now()->timestamp . '|' .
         Str::random(10)
     );
     $this->save();
@@ -253,11 +274,52 @@ Este controlador **NO** utiliza policies de autorización ya que es una ruta pú
 
 ---
 
-## ⚠️ Bugs Identificados
+## 🚨 Análisis de Calidad y Mejoras
 
-### 1. Campo `tipo_contribuyente` inexistente en Observer
+### Estado Actual - v1.0.0 (11 de octubre de 2025) ⚠️
 
-**Severidad:** ALTA  
+El módulo `ValidacionController` funciona correctamente para la validación pública de trámites mediante hash SHA256. Sin embargo, existen bugs y mejoras pendientes que deben abordarse para mejorar la seguridad, rendimiento y funcionalidad del sistema.
+
+### 🐛 Bugs Conocidos (5/5) ⚠️
+
+| # | Bug | Severidad | Estado | Ubicación |
+|---|-----|-----------|--------|-----------|
+| 1 | Campo `tipo_contribuyente` inexistente en Observer | Alta | ❌ Pendiente | `TramiteObserver.php:25` |
+| 2 | Sin validación de longitud de hash (64 caracteres) | Media | ❌ Pendiente | `ValidacionController.php:15-20` |
+| 3 | Posible error 500 si no existe relación tipoTransmision | Media | ❌ Pendiente | `validacion/show.blade.php:54` |
+| 4 | No se validan trámites en estado específico | Baja | ❌ Pendiente | `ValidacionController.php:17` |
+| 5 | No se usa scope `whereHashValidacion()` para reutilización | Baja | ❌ Pendiente | `ValidacionController.php:17` |
+
+### 🚀 Mejoras Sugeridas (10)
+
+| # | Mejora | Prioridad | Estado | Ubicación |
+|---|--------|-----------|--------|-----------|
+| 1 | Rate limiting para prevenir fuerza bruta | Alta | ⏳ Pendiente | `routes/web.php:62` |
+| 2 | Endpoint API JSON para integración | Media | ⏳ Pendiente | `routes/api.php` (nuevo) |
+| 3 | Logging de intentos de validación | Media | ⏳ Pendiente | `ValidacionController.php` |
+| 4 | Metadatos SEO y Open Graph | Baja | ⏳ Pendiente | `validacion/show.blade.php:1-6` |
+| 5 | Indicador visual de fecha de generación del hash | Baja | ⏳ Pendiente | `Tramite.php` + vista |
+| 6 | Tests automatizados para ValidacionController | Alta | ⏳ Pendiente | `tests/Feature/` (nuevo) |
+| 7 | Notificación al invalidar hash | Media | ⏳ Pendiente | `TramiteObserver.php` |
+| 8 | Historial de cambios de hash | Baja | ⏳ Pendiente | Migración nueva |
+| 9 | Funcionalidad de regeneración manual de hash | Media | ⏳ Pendiente | `TramiteController.php` |
+| 10 | Verificación de firma digital | Baja | ⏳ Pendiente | `Tramite.php` |
+
+### ⚡ Optimizaciones Recomendadas (5)
+
+| # | Optimización | Prioridad | Estado | Ubicación |
+|---|--------------|-----------|--------|-----------|
+| 1 | Eager loading de relaciones | Media | ⏳ Pendiente | `ValidacionController.php:17` |
+| 2 | Verificar índice de hash en producción | Alta | ⏳ Pendiente | Migración nueva |
+| 3 | Caché de trámites validados frecuentemente | Baja | ⏳ Pendiente | `ValidacionController.php` |
+| 4 | Route model binding para hash | Baja | ⏳ Pendiente | `RouteServiceProvider.php` |
+| 5 | Prevenir timing attacks en validación | Baja | ⏳ Pendiente | `ValidacionController.php:17` |
+
+### 📝 Detalle de Bugs Principales
+
+#### Bug #1: Campo `tipo_contribuyente` inexistente en Observer
+
+**Severidad:** ALTA
 **Ubicación:** `app/Observers/TramiteObserver.php:25`
 
 El observer intenta invalidar el hash si cambia el campo `tipo_contribuyente`, pero este campo NO existe en la tabla `tramites` según la migración `database/migrations/2025_09_22_122758_create_tramites_table.php`.
@@ -277,19 +339,15 @@ if ($tramite->isDirty($camposCriticos)) {
 }
 ```
 
-**Impacto:**
-- El observer nunca detecta cambios en un campo inexistente
-- Si se planeaba usar este campo en el futuro, no se está protegiendo correctamente
-
-**Solución:**
+**Solución sugerida:**
 - Si el campo no se usa: Eliminar `'tipo_contribuyente'` del array `$camposCriticos`
 - Si el campo debería existir: Crear una migración para agregar el campo
 
 ---
 
-### 2. Sin validación de longitud de hash en el controlador
+#### Bug #2: Sin validación de longitud de hash en el controlador
 
-**Severidad:** MEDIA  
+**Severidad:** MEDIA
 **Ubicación:** `app/Http/Controllers/ValidacionController.php:15-20`
 
 El controlador no valida que el hash tenga 64 caracteres antes de realizar la consulta a la base de datos.
@@ -303,18 +361,14 @@ public function show(string $hash)
 }
 ```
 
-**Impacto:**
-- Consultas innecesarias a la base de datos con hashes inválidos
-- No se aprovecha el rechazo temprano de hashes malformados
-
-**Solución:**
+**Solución sugerida:**
 ```php
 public function show(string $hash)
 {
     if (strlen($hash) !== 64) {
         abort(404, 'Hash de validación inválido');
     }
-    
+
     $tramite = Tramite::where('hash_validacion', $hash)->firstOrFail();
     return view('validacion.show', compact('tramite'));
 }
@@ -322,9 +376,9 @@ public function show(string $hash)
 
 ---
 
-### 3. Posible error 500 si no existe la relación tipoTransmision
+#### Bug #3: Posible error 500 si no existe la relación tipoTransmision
 
-**Severidad:** MEDIA  
+**Severidad:** MEDIA
 **Ubicación:** `resources/views/validacion/show.blade.php:54`
 
 La vista accede directamente a `$tramite->tipoTransmision->nombre` sin verificar que la relación existe.
@@ -335,11 +389,7 @@ La vista accede directamente a `$tramite->tipoTransmision->nombre` sin verificar
 <dd class="col-sm-8">{{ $tramite->tipoTransmision->nombre }}</dd>
 ```
 
-**Impacto:**
-- Error 500 si la relación no existe o fue eliminada
-- Experiencia de usuario poor para ciudadanos verificando documentos
-
-**Solución:**
+**Solución sugerida:**
 ```php
 <dt class="col-sm-4">Tipo de Transmisión</dt>
 <dd class="col-sm-8">{{ optional($tramite->tipoTransmision)->nombre ?? 'No especificado' }}</dd>
@@ -347,529 +397,55 @@ La vista accede directamente a `$tramite->tipoTransmision->nombre` sin verificar
 
 ---
 
-### 4. No se validan trámites en estado específico
+### 📊 Resumen de Prioridades
 
-**Severidad:** BAJA  
-**Ubicación:** `app/Http/Controllers/ValidacionController.php:15-20`
+#### 🔴 URGENTE (Resolver pronto)
+1. **Bug #1:** Campo `tipo_contribuyente` inexistente en Observer
+2. **Optimización #2:** Verificar índice de hash en producción
+3. **Mejora #6:** Crear tests automatizados
 
-El controlador muestra información de trámites en cualquier estado, incluyendo "Anulado" o "Borrador", lo cual podría no ser el comportamiento deseado.
+#### 🟠 ALTA
+1. **Mejora #1:** Agregar rate limiting
+2. **Mejora #3:** Agregar logging de intentos
+3. **Mejora #7:** Notificación al invalidar hash
 
-**Problema:**
-- Se pueden validar trámites en estado "Borrador" (incompletos)
-- Se pueden validar trámites "Anulados" (ya no válidos)
+#### 🟡 MEDIA
+1. **Bug #2:** Validación de longitud de hash
+2. **Bug #3:** Validar relaciones en vista
+3. **Optimización #1:** Eager loading
+4. **Mejora #2:** Crear endpoint API JSON
+5. **Mejora #9:** Regeneración manual de hash
 
-**Solución:**
-```php
-public function show(string $hash)
-{
-    if (strlen($hash) !== 64) {
-        abort(404, 'Hash de validación inválido');
-    }
-    
-    $tramite = Tramite::where('hash_validacion', $hash)
-        ->whereIn('estado', ['Pagado', 'Finalizado'])
-        ->firstOrFail();
-    
-    return view('validacion.show', compact('tramite'));
-}
-```
+#### 🟢 BAJA
+1. **Bug #4:** Validar trámites en estado específico
+2. **Bug #5:** Usar scope `whereHashValidacion()`
+3. **Mejora #4:** Metadatos SEO/Open Graph
+4. **Mejora #5:** Indicador visual de generación de hash
+5. **Mejora #8:** Historial de cambios de hash
+6. **Mejora #10:** Verificación de firma digital
+7. **Optimización #3-5:** Caché, route model binding, timing attacks
 
----
+### 📝 Historial de Cambios
 
-### 5. No se usa `whereHashValidacion()` como scope
+### v1.0.0 (11 de octubre de 2025)
+**Versión inicial:**
+- Implementación de `ValidacionController` con método `show()`
+- Generación de hash SHA256 en modelo `Tramite`
+- Invalidación automática de hash en `TramiteObserver`
+- Vista de validación con Bootstrap 5.3.2
+- Integración con generación de PDF Formulario A01
 
-**Severidad:** BAJA  
-**Ubicación:** `app/Http/Controllers/ValidacionController.php:17`
-
-El modelo `Tramite` no tiene un scope para búsquedas por hash, lo que reduce la reutilización y legibilidad del código.
-
-**Solución recomendada:**
-```php
-// En Tramite.php
-public function scopeByHash($query, string $hash)
-{
-    return $query->where('hash_validacion', $hash);
-}
-
-// En ValidacionController.php
-$tramite = Tramite::byHash($hash)->firstOrFail();
-```
+**Bugs conocidos identificados:**
+- Campo `tipo_contribuyente` inexistente en observer (línea 25 de TramiteObserver.php)
+- Sin validación de longitud de hash en controlador
+- Posible error 500 si no existe relación tipoTransmision
 
 ---
 
-## 💡 Mejoras Sugeridas
-
-### 1. Agregar rate limiting a la ruta de validación
-
-**Ubicación:** `routes/web.php:62`  
-**Prioridad:** ALTA
-
-La ruta pública `/validar/{hash}` no tiene límite de peticiones, lo que permite fuerza bruta para encontrar hashes válidos.
-
-**Implementación:**
-```php
-// En routes/web.php
-Route::get('/validar/{hash}', [ValidacionController::class, 'show'])
-    ->name('tramite.validar')
-    ->middleware('throttle:60,1'); // 60 solicitudes por minuto por IP
-
-// O agregar en RouteServiceProvider.php
-RateLimiter::for('validacion', function (Request $request) {
-    return Limit::perMinute(30)->by($request->ip());
-});
-
-// En routes/web.php
-Route::get('/validar/{hash}', [ValidacionController::class, 'show'])
-    ->name('tramite.validar')
-    ->middleware('throttle:validacion');
-```
-
----
-
-### 2. Crear endpoint API JSON para validación
-
-**Ubicación:** `routes/api.php` (nuevo)  
-**Prioridad:** MEDIA
-
-Solo existe la vista HTML, sería útil tener una API JSON para integración con otros sistemas o aplicaciones móviles.
-
-**Implementación:**
-```php
-// En routes/api.php
-Route::get('/validar/{hash}', [ValidacionController::class, 'apiShow'])
-    ->name('api.tramite.validar');
-
-// En ValidacionController.php
-public function apiShow(string $hash)
-{
-    if (strlen($hash) !== 64) {
-        return response()->json(['error' => 'Hash inválido'], 404);
-    }
-    
-    $tramite = Tramite::where('hash_validacion', $hash)->firstOrFail();
-    
-    return response()->json([
-        'valido' => true,
-        'tramite' => [
-            'nro_tramite' => $tramite->nro_tramite,
-            'fecha_presentacion' => $tramite->fecha_presentacion->format('Y-m-d'),
-            'tipo_transmision' => $tramite->tipoTransmision->nombre,
-            'adquirente_principal' => optional($tramite->adquirentes->first()?->person)->full_name,
-            'monto_impuesto' => (float) $tramite->total_idtgb,
-            'estado' => $tramite->estado,
-        ]
-    ]);
-}
-```
-
----
-
-### 3. Agregar logging de intentos de validación
-
-**Ubicación:** `app/Http/Controllers/ValidacionController.php:15-20`  
-**Prioridad:** MEDIA
-
-Registrar qué hashes se consultan (exitosos y fallidos) para detectar intentos de ataque o patrones sospechosos.
-
-**Implementación:**
-```php
-use Illuminate\Support\Facades\Log;
-
-public function show(string $hash)
-{
-    if (strlen($hash) !== 64) {
-        Log::warning('Intento de validación con hash inválido', [
-            'hash' => $hash,
-            'ip' => request()->ip(),
-            'user_agent' => request()->userAgent()
-        ]);
-        abort(404, 'Hash de validación inválido');
-    }
-    
-    $tramite = Tramite::where('hash_validacion', $hash)->firstOrFail();
-    
-    Log::info('Trámite validado exitosamente', [
-        'tramite_id' => $tramite->id,
-        'nro_tramite' => $tramite->nro_tramite,
-        'ip' => request()->ip()
-    ]);
-    
-    return view('validacion.show', compact('tramite'));
-}
-```
-
----
-
-### 4. Mejorar la vista con metadatos SEO y Open Graph
-
-**Ubicación:** `resources/views/validacion/show.blade.php:1-6`  
-**Prioridad:** BAJA
-
-Agregar metadatos para mejor apariencia al compartir en redes sociales.
-
-**Implementación:**
-```html
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verificación de Trámite {{ $tramite->nro_tramite }} - G.A.D. BENI</title>
-    
-    <!-- Open Graph -->
-    <meta property="og:title" content="Trámite Validado - {{ $tramite->nro_tramite }}">
-    <meta property="og:description" content="Trámite validado exitosamente en el sistema del G.A.D. Beni">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="{{ request()->url() }}">
-    
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="Trámite Validado - {{ $tramite->nro_tramite }}">
-    
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
-    <!-- ... -->
-</head>
-```
-
----
-
-### 5. Agregar indicador visual cuando el hash fue regenerado
-
-**Ubicación:** `app/Models/Tramite.php` y vista  
-**Prioridad:** BAJA
-
-Mostrar en la vista cuándo fue generada/actualizada la validación para dar contexto al usuario.
-
-**Implementación:**
-```php
-// En Tramite.php
-protected $fillable = [
-    // ...
-    'hash_validacion',
-    'hash_generado_at',
-];
-
-// En generateHashValidacion()
-public function generateHashValidacion(): string
-{
-    if ($this->hash_validacion) {
-        return $this->hash_validacion;
-    }
-
-    $this->hash_validacion = hash('sha256', 
-        $this->id . '|' . 
-        $this->nro_tramite . '|' . 
-        now()->timestamp . '|' . 
-        Str::random(10)
-    );
-    $this->hash_generado_at = now();
-    $this->save();
-
-    return $this->hash_validacion;
-}
-
-// En la vista
-@if($tramite->hash_generado_at)
-    <small class="text-muted">Validación generada: {{ $tramite->hash_generado_at->format('d/m/Y H:i') }}</small>
-@endif
-```
-
----
-
-## ❌ Funcionalidades Faltantes
-
-### 1. No hay tests automatizados
-
-**Ubicación:** `tests/Feature/`  
-**Prioridad:** ALTA
-
-No existe ningún test para `ValidacionController`, lo que pone en riesgo la estabilidad del sistema.
-
-**Tests recomendados:**
-```php
-// tests/Feature/ValidacionControllerTest.php
-class ValidacionControllerTest extends TestCase
-{
-    public function test_valida_tramite_con_hash_correcto()
-    {
-        $tramite = Tramite::factory()->create([
-            'hash_validacion' => hash('sha256', 'test')
-        ]);
-
-        $response = $this->get("/validar/{$tramite->hash_validacion}");
-        $response->assertStatus(200);
-        $response->assertSee($tramite->nro_tramite);
-    }
-
-    public function test_retorna_404_con_hash_inexistente()
-    {
-        $response = $this->get('/validar/' . str_repeat('a', 64));
-        $response->assertStatus(404);
-    }
-
-    public function test_rechaza_hash_con_longitud_incorrecta()
-    {
-        $response = $this->get('/validar/hash_corto');
-        $response->assertStatus(404);
-    }
-
-    public function test_no_valida_tramites_anulados()
-    {
-        $tramite = Tramite::factory()->create([
-            'estado' => 'Anulado',
-            'hash_validacion' => hash('sha256', 'test')
-        ]);
-
-        $response = $this->get("/validar/{$tramite->hash_validacion}");
-        $response->assertStatus(404);
-    }
-}
-```
-
----
-
-### 2. No hay notificación al invalidar hash
-
-**Prioridad:** MEDIA
-
-Cuando se invalida un hash por cambio de datos críticos, no se notifica al funcionario que generó el PDF anterior.
-
-**Solución:**
-```php
-// En TramiteObserver.php
-public function saving(Tramite $tramite): void
-{
-    if ($tramite->exists && !empty($tramite->hash_validacion)) {
-        $camposCriticos = ['base_imponible', 'fecha_transmision', 'tipo_transmision_id'];
-
-        if ($tramite->isDirty($camposCriticos)) {
-            // Notificar al creador del trámite
-            $tramite->creador?->notify(new HashInvalidadoNotification($tramite));
-            
-            $tramite->hash_validacion = null;
-        }
-    }
-}
-
-// Crear notification: app/Notifications/HashInvalidadoNotification.php
-```
-
----
-
-### 3. No hay historial de cambios de hash
-
-**Prioridad:** BAJA
-
-No se registra cuándo y por qué se invalidó un hash, lo cual es útil para auditoría.
-
-**Solución:** Crear una tabla `tramite_hash_historial`:
-```php
-Schema::create('tramite_hash_historial', function (Blueprint $table) {
-    $table->id();
-    $table->foreignId('tramite_id')->constrained();
-    $table->char('hash_anterior', 64)->nullable();
-    $table->json('campos_modificados')->nullable();
-    $table->foreignId('modificado_por')->nullable()->constrained('users');
-    $table->timestamp('fecha_invalidacion');
-    $table->timestamps();
-});
-```
-
----
-
-### 4. No hay funcionalidad de regeneración manual de hash
-
-**Prioridad:** MEDIA
-
-Si el hash se invalida, no hay una forma fácil de regenerarlo desde la interfaz administrativa.
-
-**Solución:** Agregar botón en la vista de detalle del trámite:
-```php
-// En TramiteController.php
-public function regenerarHash(Tramite $tramite)
-{
-    $this->authorize('update', $tramite);
-    
-    $tramite->hash_validacion = null;
-    $hash = $tramite->generateHashValidacion();
-    
-    return back()->with([
-        'message' => "Hash regenerado: {$hash}",
-        'alert-type' => 'success'
-    ]);
-}
-
-// Ruta
-Route::post('tramites/{tramite}/regenerar-hash', [TramiteController::class, 'regenerarHash'])
-    ->name('admin.tramites.regenerar-hash');
-```
-
----
-
-### 5. No hay verificación de firma digital
-
-**Prioridad:** BAJA
-
-El hash de validación no está firmado criptográficamente, por lo que un atacante con acceso a la base de datos podría generar hashes válidos.
-
-**Solución:** Usar firmas digitales con una llave privada:
-```php
-public function generateHashValidacion(): string
-{
-    if ($this->hash_validacion) {
-        return $this->hash_validacion;
-    }
-
-    $data = $this->id . '|' . $this->nro_tramite . '|' . now()->timestamp;
-    $signature = sodium_crypto_sign($data, config('app.signing_key'));
-    $this->hash_validacion = bin2hex($signature);
-    $this->save();
-
-    return $this->hash_validacion;
-}
-```
-
----
-
-## ⚡ Optimizaciones
-
-### 1. Optimizar consulta de base de datos con eager loading
-
-**Ubicación:** `app/Http/Controllers/ValidacionController.php:17`  
-**Prioridad:** MEDIA
-
-El controlador no carga las relaciones necesarias, lo que causa el problema N+1.
-
-**Antes:**
-```php
-$tramite = Tramite::where('hash_validacion', $hash)->firstOrFail();
-```
-
-**Después:**
-```php
-$tramite = Tramite::with(['tipoTransmision', 'adquirentes.person'])
-    ->where('hash_validacion', $hash)
-    ->firstOrFail();
-```
-
----
-
-### 2. Agregar índice para búsquedas de hash
-
-**Ubicación:** Migración nueva  
-**Prioridad:** ALTA
-
-Aunque ya existe índice unique, asegurarse de que esté optimizado:
-
-```php
-// En migración de corrección
-Schema::table('tramites', function (Blueprint $table) {
-    $table->index('hash_validacion');
-});
-```
-
-**Nota:** El índice `unique()` ya crea un índice B-tree, pero es bueno verificar que esté en producción.
-
----
-
-### 3. Implementar caché de trámites validados frecuentemente
-
-**Ubicación:** `app/Http/Controllers/ValidacionController.php:15-20`  
-**Prioridad:** BAJA
-
-Los trámites más validados pueden cachearse para reducir carga de base de datos.
-
-**Implementación:**
-```php
-use Illuminate\Support\Facades\Cache;
-
-public function show(string $hash)
-{
-    if (strlen($hash) !== 64) {
-        abort(404, 'Hash de validación inválido');
-    }
-    
-    $tramite = Cache::remember("tramite:{$hash}", 3600, function() use ($hash) {
-        return Tramite::with(['tipoTransmision', 'adquirentes.person'])
-            ->where('hash_validacion', $hash)
-            ->firstOrFail();
-    });
-    
-    return view('validacion.show', compact('tramite'));
-}
-
-// Invalidar caché al actualizar trámite
-// En TramiteObserver.php
-public function updated(Tramite $tramite): void
-{
-    if ($tramite->hash_validacion) {
-        Cache::forget("tramite:{$tramite->hash_validacion}");
-    }
-}
-```
-
----
-
-### 4. Usar route model binding para hash
-
-**Ubicación:** `app/Http/Controllers/ValidacionController.php`  
-**Prioridad:** BAJA
-
-Usar route model binding para código más limpio:
-
-**Implementación:**
-```php
-// En RouteServiceProvider.php
-public function boot()
-{
-    parent::boot();
-
-    Route::bind('hash', function ($value) {
-        if (strlen($value) !== 64) {
-            abort(404);
-        }
-        return Tramite::where('hash_validacion', $value)->firstOrFail();
-    });
-}
-
-// En ValidacionController.php
-public function show(Tramite $tramite)
-{
-    return view('validacion.show', compact('tramite'));
-}
-```
-
----
-
-### 5. Prevenir timing attacks en validación
-
-**Ubicación:** `app/Http/Controllers/ValidacionController.php:17`  
-**Prioridad:** BAJA
-
-Usar hash_equals para prevenir timing attacks cuando se comparan hashes (aunque en este caso es una búsqueda de base de datos, no una comparación directa).
-
----
-
-## 📊 Resumen de Prioridades
-
-### URGENTE (Resolver pronto):
-1. ❌ Bug: Campo `tipo_contribuyente` inexistente en Observer
-2. ⚡ Optimización: Verificar índice de hash en producción
-3. ❌ Funcionalidad faltante: Crear tests automatizados
-
-### ALTA:
-1. 💡 Mejora: Agregar rate limiting
-2. 💡 Mejora: Agregar logging de intentos
-3. ❌ Funcionalidad faltante: Notificación al invalidar hash
-
-### MEDIA:
-1. ❌ Bug: Validación de longitud de hash
-2. ❌ Bug: Validar relaciones en vista
-3. ⚡ Optimización: Eager loading
-4. 💡 Mejora: Crear endpoint API JSON
-5. ❌ Funcionalidad faltante: Regeneración manual de hash
-
-### BAJA:
-1. 💡 Mejora: Metadatos SEO/Open Graph
-2. ❌ Funcionalidad faltante: Historial de cambios de hash
-3. ❌ Funcionalidad faltante: Verificación de firma digital
-4. ⚡ Optimización: Implementar caché
-5. ⚡ Optimización: Route model binding
+## 📚 Documentación Relacionada
+
+- **Modelo Tramite:** `docs/dev/07_tramites.md`
+- **Controlador Tramite:** `docs/dev/07_tramites.md` (sección de controladores)
+- **Documentos:** `docs/dev/15_documentos.md`
+- **IdtgbCalculator:** `docs/dev/18_idtgb_calculator.md`
+- **Pagos:** `docs/dev/16_pagos.md`

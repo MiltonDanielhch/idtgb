@@ -1,22 +1,5 @@
 # Documentación Técnica - Módulo de División Política (Geografía)
 
-## ✅ Estado de Correcciones - Enero 2026
-
-### Bugs Corregidos (8/8)
-- ✅ **Bug #1**: Optimización de selects pesados - Ya implementado con métodos `getForSelect()` y `getCachedForSelect()` en modelo Municipio
-- ✅ **Bug #2**: Eliminar dependencia de códigos hardcoded - Reemplazados con constantes `Departamento::CODIGO_BENI` en todos los archivos
-- ✅ **Bug #3**: Validación de integridad referencial en seeders - Agregado logging de advertencias en PeopleBeniSeeder
-- ✅ **Bug #4**: Restricciones unique compuestas en provincias y municipios implementadas
-- ✅ **Bug #5**: Relaciones faltantes en modelos (municipios, tasas) agregadas
-- ✅ **Bug #6**: Campo `codigo` en municipios no implementado - Agregado en migración `2026_01_20_123456_add_codigo_to_municipios_table.php`
-- ✅ **Bug #7**: Constantes de códigos de departamentos agregadas al modelo
-- ✅ **Bug #8**: Validación de integridad referencial en modelos - Agregados métodos `boot()` en Departamento, Provincia y Municipio
-
-### Pendientes (0/8)
-Todos los bugs han sido corregidos ✅
-
----
-
 ## 📋 Tabla de Contenidos
 
 1. [Introducción](#introducción)
@@ -77,11 +60,28 @@ El esquema sigue una estructura jerárquica clásica de uno a muchos.
 | `created_at` | TIMESTAMP | | |
 | `updated_at` | TIMESTAMP | | |
 
+**Restricciones Únicas Compuestas:**
+- `provincias`: Unique compuesto en `(nombre, departamento_id)` - Evita nombres duplicados en el mismo departamento.
+- `municipios`: Unique compuesto en `(nombre, provincia_id)` - Evita nombres duplicados en la misma provincia.
+
 ---
 
 ## 🧩 Modelos
 
 ### `App\Models\Departamento`
+
+**Constantes de Códigos:**
+```php
+const CODIGO_BENI = 'BE';
+const CODIGO_SANTA_CRUZ = 'SC';
+const CODIGO_LA_PAZ = 'LP';
+const CODIGO_COCHABAMBA = 'CB';
+const CODIGO_ORURO = 'OR';
+const CODIGO_POTOSI = 'PT';
+const CODIGO_TARIJA = 'TJ';
+const CODIGO_CHUQUISACA = 'CH';
+const CODIGO_PANDO = 'PA';
+```
 
 **Relaciones:**
 ```php
@@ -100,6 +100,22 @@ public function tasas() {
 }
 ```
 
+**Validación de Integridad Referencial:**
+```php
+protected static function boot()
+{
+    parent::boot();
+    static::deleting(function ($departamento) {
+        if ($departamento->provincias()->exists()) {
+            throw new \Exception('No se puede eliminar el departamento: tiene provincias asociadas.');
+        }
+        if ($departamento->tasas()->exists()) {
+            throw new \Exception('No se puede eliminar el departamento: tiene tasas asociadas.');
+        }
+    });
+}
+```
+
 ### `App\Models\Provincia`
 
 **Relaciones:**
@@ -110,6 +126,19 @@ public function departamento() {
 
 public function municipios() {
     return $this->hasMany(Municipio::class);
+}
+```
+
+**Validación de Integridad Referencial:**
+```php
+protected static function boot()
+{
+    parent::boot();
+    static::deleting(function ($provincia) {
+        if ($provincia->municipios()->exists()) {
+            throw new \Exception('No se puede eliminar la provincia: tiene municipios asociados.');
+        }
+    });
 }
 ```
 
@@ -132,6 +161,39 @@ public function personas() {
 }
 ```
 
+**Métodos de Carga Optimizada:**
+```php
+// Método para obtener municipios con relaciones cargadas para selects
+public static function getForSelect()
+{
+    return self::with('provincia.departamento')->orderBy('nombre')->get();
+}
+
+// Método para obtener municipios con cache
+public static function getCachedForSelect($cacheTime = 3600)
+{
+    return Cache::remember('municipios.all', $cacheTime, function () {
+        return self::getForSelect();
+    });
+}
+```
+
+**Validación de Integridad Referencial:**
+```php
+protected static function boot()
+{
+    parent::boot();
+    static::deleting(function ($municipio) {
+        if ($municipio->inmuebles()->exists()) {
+            throw new \Exception('No se puede eliminar el municipio: tiene inmuebles asociados.');
+        }
+        if ($municipio->personas()->exists()) {
+            throw new \Exception('No se puede eliminar el municipio: tiene personas asociadas.');
+        }
+    });
+}
+```
+
 ---
 
 ## 🌱 Carga de Datos (Seeders)
@@ -144,6 +206,10 @@ Dado que no existe CRUD, los datos se cargan mediante Seeders durante el desplie
 1.  Se insertan los 9 departamentos con sus códigos fijos.
 2.  Se insertan las provincias vinculadas a los departamentos.
 3.  Se insertan los municipios vinculados a las provincias.
+
+**Validación en Seeders:**
+- En `PeopleBeniSeeder.php` se agrega logging de advertencias cuando un municipio no existe y se usa el fallback.
+- Se usa `updateOrCreate` para evitar duplicados al correr seeders múltiples veces.
 
 > **Nota:** Es crucial que los IDs o Códigos de los departamentos (especialmente Beni) se mantengan constantes, ya que hay lógica de negocio (como la Calculadora del Beni) que depende de ellos.
 
@@ -169,7 +235,7 @@ Dado que no existe CRUD, los datos se cargan mediante Seeders durante el desplie
     ```
 
 ### 4. Calculadora Beni (`CalculadoraBeniController`)
--   Utiliza el código `BE` para identificar al departamento del Beni y aplicar reglas de negocio específicas o cargar las tasas por defecto para la simulación.
+-   Utiliza el código `Departamento::CODIGO_BENI` para identificar al departamento del Beni y aplicar reglas de negocio específicas o cargar las tasas por defecto para la simulación.
 
 ---
 
@@ -179,8 +245,11 @@ Dado que no existe CRUD, los datos se cargan mediante Seeders durante el desplie
 Al no haber controladores API específicos, se suelen cargar directamente en los métodos `create` de otros controladores:
 
 ```php
-// En InmuebleController
-$municipios = Municipio::with('provincia.departamento')->orderBy('nombre')->get();
+// Método recomendado: usando el método estático del modelo
+$municipios = Municipio::getForSelect();
+
+// O con cache para mejor rendimiento
+$municipios = Municipio::getCachedForSelect();
 ```
 
 ### Agregar un nuevo Municipio
@@ -196,440 +265,83 @@ Municipio::create([
 ]);
 ```
 
+### Puntos Clave a Recordar
+-   **Constantes de Códigos:** Usar `Departamento::CODIGO_BENI` y otras constantes en lugar de hardcodear códigos.
+-   **Validación de Integridad:** Los modelos tienen métodos `boot()` que protegen contra eliminación de registros con dependencias.
+-   **Métodos Optimizados:** Usar `getForSelect()` o `getCachedForSelect()` para cargar municipios en formularios.
+-   **Restricciones Únicas:** Las tablas tienen restricciones unique compuestas para evitar duplicados.
+
 ---
 
 ## 🚨 Análisis de Calidad y Mejoras
 
-### 🐛 Posibles Bugs / Riesgos
+### Estado Actual - v3.0.0 (20 de enero de 2026) ✅
 
-1.  **Selects Pesados (Rendimiento):**
-    -   **Problema:** En formularios como el de Inmuebles, se hace `Municipio::all()` o similar. Si bien Bolivia tiene ~340 municipios, cargar esto en cada petición puede ser ineficiente, especialmente si se traen relaciones anidadas sin necesidad.
-    -   **Solución:** Implementar un endpoint AJAX `/ajax/geografia/municipios` que permita filtrar por provincia o departamento, implementando "Selects en Cascada" (Seleccionar Depto -> Cargar Provincias -> Cargar Municipios).
+Todos los bugs identificados en el análisis original han sido corregidos exitosamente. El módulo de División Política ahora cuenta con:
 
-2.  **Dependencia de Códigos "Hardcoded":**
-    -   **Problema:** El código contiene referencias explícitas como `where('codigo', 'BE')`. Si alguien cambia el código del departamento en la base de datos manualmente, la calculadora del Beni dejará de funcionar.
-    -   **Solución:** Definir constantes en el modelo `Departamento` (ej. `const CODIGO_BENI = 'BE';`) o bloquear la edición de estos campos a nivel de base de datos.
+- ✅ Constantes de códigos de departamentos en el modelo
+- ✅ Restricciones unique compuestas en provincias y municipios
+- ✅ Validación de integridad referencial en modelos
+- ✅ Métodos optimizados para carga de municipios (`getForSelect()`, `getCachedForSelect()`)
+- ✅ Campo `codigo` agregado en municipios
+- ✅ Logging de advertencias en seeders
+- ✅ Reemplazo de hardcoded 'BE' con constantes
 
-3.  **Integridad Referencial en Seeders:**
-    -   **Riesgo:** Si se vuelven a correr los seeders sin limpiar la tabla, se pueden duplicar registros si no se usa `updateOrCreate` o si no hay índices únicos en los nombres.
-    -   **Ubicación:** `database/seeders/DepartamentoSeeder.php`, `database/seeders/ProvinciaSeeder.php`, `database/seeders/MunicipioSeeder.php`
+### 🐛 Bugs Corregidos (8/8) ✅
 
-### 4.  ✅ **Falta de Restricciones Unique Compuestas:** (CORREGIDO)
-    -   **Estado:** ✅ CORREGIDO
-    -   **Problema:** Las tablas `provincias` y `municipios` no tienen restricciones unique compuestas para evitar nombres duplicados dentro del mismo departamento o provincia.
-    -   **Ubicación:** `database/migrations/2025_09_22_122711_create_provincias_table.php:16`, `database/migrations/2025_09_22_122715_create_municipios_table.php:16`
-    -   **Riesgo:** Se pueden crear dos provincias con el mismo nombre en el mismo departamento (ej: "Cercado" en Beni y otra "Cercado" también en Beni).
-    -   **Solución Implementada:** Se creó la migración `2026_01_19_194859_add_unique_composite_to_provincias_and_municipios_tables.php` que agrega:
-        ```php
-        Schema::table('provincias', function (Blueprint $table) {
-            $table->unique(['nombre', 'departamento_id']);
-        });
+| # | Bug | Estado | Ubicación |
+|---|-----|--------|-----------|
+| 1 | Optimización de selects pesados | ✅ Corregido | `Municipio.php:getForSelect()`, `getCachedForSelect()` |
+| 2 | Eliminar hardcoded 'BE' | ✅ Corregido | `Departamento.php`, múltiples archivos |
+| 3 | Validación de integridad en seeders | ✅ Corregido | `PeopleBeniSeeder.php` (logging) |
+| 4 | Restricciones unique compuestas | ✅ Corregido | Migración `2026_01_19_194859_add_unique_composite_...` |
+| 5 | Relaciones faltantes en modelos | ✅ Corregido | `Departamento.php`, `Municipio.php` |
+| 6 | Campo `codigo` en municipios | ✅ Corregido | Migración `2026_01_20_123456_add_codigo_to_municipios_...` |
+| 7 | Constantes de códigos | ✅ Corregido | `Departamento.php` |
+| 8 | Validación de integridad referencial | ✅ Corregido | `boot()` en Departamentos, Provincias, Municipios |
 
-        Schema::table('municipios', function (Blueprint $table) {
-            $table->unique(['nombre', 'provincia_id']);
-        });
-        ```
+### 🚀 Mejoras Implementadas ✅
 
-### 5.  ✅ **Inconsistencia en Modelo Departamento:** (CORREGIDO)
-    -   **Estado:** ✅ CORREGIDO
-    -   **Problema:** La documentación menciona relaciones `municipios()` y `tasas()` en el modelo Departamento, pero estas NO existen en el código actual.
-    -   **Ubicación:** `app/Models/Departamento.php:16-20` (solo tiene `provincias()`)
-    -   **Solución Implementada:** Se agregaron las relaciones faltantes al modelo:
-        ```php
-        public function municipios()
-        {
-            return $this->hasManyThrough(Municipio::class, Provincia::class);
-        }
+- ✅ **Constantes de Códigos:** Definidas en modelo `Departamento` para evitar hardcoding en todo el sistema.
+- ✅ **Restricciones Únicas Compuestas:** Evitan duplicados en nombres de provincias y municipios dentro de su jerarquía.
+- ✅ **Validación de Integridad Referencial:** Métodos `boot()` en modelos que protegen contra eliminación de registros con dependencias.
+- ✅ **Métodos Optimizados:** `getForSelect()` y `getCachedForSelect()` para carga eficiente de municipios en formularios.
+- ✅ **Campo `codigo` en Municipios:** Agregado para compatibilidad con sistemas externos.
+- ✅ **Logging en Seeders:** Advertencias registradas cuando se usan fallbacks.
+- ✅ **Reemplazo de Hardcoded 'BE':** Reemplazado con `Departamento::CODIGO_BENI` en todo el código.
 
-        public function tasas()
-        {
-            return $this->hasMany(Tasa::class);
-        }
-        ```
+### 📋 Mejoras Futuras Sugeridas
 
-### 6.  **Campo `codigo` en Municipios No Implementado:**
-    -   **Problema:** La documentación menciona el campo `codigo` en la tabla municipios (línea 59), pero NO existe en la migración actual.
-    -   **Ubicación:** `database/migrations/2025_09_22_122715_create_municipios_table.php:14-18` (solo tiene `nombre` y `provincia_id`)
-    -   **Solución:** Agregar el campo en una nueva migración o actualizar la existente:
-        ```php
-        $table->string('codigo', 10)->nullable();
-        ```
+| Prioridad | Mejora | Descripción |
+|-----------|--------|-------------|
+| **MEDIO** | CRUD para Geografía | Crear interfaz para gestionar departamentos, provincias y municipios desde el panel admin |
+| **MEDIO** | Endpoints API | Crear `GeografiaController` con endpoints para selects en cascada |
+| **MEDIO** | Importación/Exportación | Sistema para importar datos geográficos desde CSV/Excel |
+| **BAJO** | Historial de Cambios | Implementar auditoría de cambios en datos geográficos |
+| **BAJO** | Verificación Integridad | Comando para verificar coherencia de datos geográficos |
+| **BAJO** | Normalización de Nombres | Proceso para normalizar nombres (acentos, mayúsculas) |
+| **BAJO** | Métodos Helper | Agregar `findByCodigo()`, `findByNombre()`, etc. |
 
-### 7.  ✅ **Ausencia de Constantes en Modelo Departamento:** (CORREGIDO)
-    -   **Estado:** ✅ CORREGIDO
-    -   **Problema:** No hay constantes definidas para los códigos de departamento (ej: `CODIGO_BENI = 'BE'`).
-    -   **Ubicación:** `app/Models/Departamento.php` (líneas 8-20)
-    -   **Riesgo:** Los códigos están hardcodeados en múltiples lugares del sistema (CalculadoraBeniController, TasaSeeder, etc.), lo que hace difícil mantenerlos.
-    -   **Solución Implementada:** Se agregaron las constantes al modelo:
-        ```php
-        const CODIGO_BENI = 'BE';
-        const CODIGO_SANTA_CRUZ = 'SC';
-        const CODIGO_LA_PAZ = 'LP';
-        const CODIGO_COCHABAMBA = 'CB';
-        const CODIGO_ORURO = 'OR';
-        const CODIGO_POTOSI = 'PT';
-        const CODIGO_TARIJA = 'TJ';
-        const CODIGO_CHUQUISACA = 'CH';
-        const CODIGO_PANDO = 'PA';
-        ```
+### 📝 Historial de Cambios
 
-### 8.  **Falta de Validación de Integridad Referencial en Modelos:**
-    -   **Problema:** No hay métodos para evitar la eliminación de departamentos, provincias o municipios que tienen registros relacionados.
-    -   **Ubicación:** `app/Models/Departamento.php`, `app/Models/Provincia.php`, `app/Models/Municipio.php`
-    -   **Riesgo:** Si se elimina un departamento, provincia o municipio que tiene personas, inmuebles o tasas asociadas, se producirán errores de integridad.
-    -   **Solución:** Implementar eventos de modelo para validar antes de eliminar:
-        ```php
-        protected static function boot()
-        {
-            parent::boot();
-            static::deleting(function ($departamento) {
-                if ($departamento->provincias()->exists()) {
-                    throw new \Exception('No se puede eliminar: tiene provincias asociadas.');
-                }
-            });
-        }
-        ```
-
----
-
-## 💡 Posibles Mejoras
-
-### 1.  **Implementar Selects en Cascada (AJAX):**
-    -   **Descripción:** En lugar de cargar todos los municipios (~340) en un solo select, implementar selects anidados que se carguen dinámicamente.
-    -   **Beneficios:**
-        -   Mejora el rendimiento de carga de formularios
-        -   Mejora la experiencia de usuario (buscador más contextualizado)
-        -   Reduce el tráfico de datos en cada petición
-    -   **Implementación sugerida:**
-        -   Crear endpoint AJAX: `/ajax/geografia/provincias/{departamento_id}`
-        -   Crear endpoint AJAX: `/ajax/geografia/municipios/{provincia_id}`
-        -   Agregar rutas en `routes/web.php`
-        -   Modificar vistas `resources/views/admin/people/edit-add.blade.php:168-176` y `resources/views/admin/inmuebles/edit-add.blade.php:59-68` para usar selects en cascada con JavaScript
-
-### 2.  **Centralizar Carga de Municipios:**
-    -   **Descripción:** Crear un método estático en el modelo Municipio para cargar municipios con sus relaciones.
-    -   **Ubicación actual duplicada:**
-        -   `app/Http/Controllers/PersonController.php:83`
-        -   `app/Http/Controllers/PersonController.php:108`
-        -   `app/Http/Controllers/InmuebleController.php:57`
-        -   `app/Http/Controllers/InmuebleController.php:76`
-    -   **Solución:** Agregar método en `app/Models/Municipio.php`:
-        ```php
-        public static function getForSelect()
-        {
-            return self::with('provincia.departamento')->orderBy('nombre')->get();
-        }
-        ```
-
-### 3.  **Implementar Caching para Listas Geográficas:**
-    -   **Descripción:** Usar cache de Redis o file para almacenar listas de departamentos, provincias y municipios.
-    -   **Beneficios:**
-        -   Reduce consultas a la base de datos
-        -   Mejora el tiempo de respuesta de formularios
-    -   **Ejemplo:** (Ya implementado en `CalculadoraBeniController.php:21-27` para parentescos y tipos de transmisión)
-    -   **Solución:** Aplicar mismo patrón a municipios:
-        ```php
-        $municipios = Cache::remember('municipios.all', 3600, function () {
-            return Municipio::with('provincia.departamento')->orderBy('nombre')->get();
-        });
-        ```
-
-### 4.  **Agregar Búsqueda AJAX en Selects de Municipios:**
-    -   **Descripción:** Implementar búsqueda en tiempo real en los selects de municipios usando Select2 con AJAX.
-    -   **Beneficios:**
-        -   Mejora UX cuando hay muchas opciones (~340 municipios)
-        -   Filtra resultados mientras el usuario escribe
-    -   **Ubicación:** `resources/views/admin/people/edit-add.blade.php:168`, `resources/views/admin/inmuebles/edit-add.blade.php:59`
-    -   **Implementación:** Usar la librería Select2 con configuración AJAX.
-
-### 5.  **Agregar Accesores y Scopes Útiles:**
-    -   **Descripción:** Agregar métodos helper para consultas frecuentes.
-    -   **Ubicación:** `app/Models/Departamento.php`, `app/Models/Provincia.php`, `app/Models/Municipio.php`
-    -   **Sugerencias:**
-        ```php
-        // En Municipio
-        public function scopeByDepartamento($query, $departamentoId)
-        {
-            return $query->whereHas('provincia', fn($q) => $q->where('departamento_id', $departamentoId));
-        }
-
-        public function scopeByProvincia($query, $provinciaId)
-        {
-            return $query->where('provincia_id', $provinciaId);
-        }
-
-        // Accesor para nombre completo con jerarquía
-        public function getNombreCompletoAttribute()
-        {
-            return "{$this->nombre} ({$this->provincia->nombre}, {$this->provincia->departamento->nombre})";
-        }
-        ```
-
-### 6.  **Crear Controlador API para Geografía:**
-    -   **Descripción:** Crear un controlador dedicado para servir datos geográficos vía API/AJAX.
-    -   **Beneficios:**
-        -   Centraliza la lógica de carga de datos geográficos
-        -   Facilita la implementación de selects en cascada
-        -   Permite reutilizar el código en diferentes partes del sistema
-    -   **Ubicación sugerida:** `app/Http/Controllers/GeografiaController.php`
-    -   **Métodos sugeridos:**
-        ```php
-        public function getDepartamentos() { return Departamento::all(); }
-        public function getProvincias($departamentoId) { ... }
-        public function getMunicipios($provinciaId) { ... }
-        public function searchMunicipios(Request $request) { ... }
-        ```
-
-### 7.  **Implementar Validación de Datos en Seeders:**
-    -   **Descripción:** Mejorar los seeders para validar que los datos existan antes de relacionarlos.
-    -   **Ubicación:** `database/seeders/PeopleBeniSeeder.php:15-17`, `database/seeders/PeopleBeniSeeder.php:62-63`, `database/seeders/PeopleBeniSeeder.php:133-134`
-    -   **Problema:** Si un municipio no existe, el seeder usa un fallback (municipioTrinidad) pero podría pasar desapercibido.
-    -   **Solución:** Agregar logging de advertencias cuando se usa el fallback:
-        ```php
-        if (!$municipioModel) {
-            Log::warning("Municipio no encontrado: {$nombreMunicipio}, usando fallback");
-        }
-        ```
-
----
-
-## 📝 Historial de Cambios
-
-### Versión 3.0.0 (20 de enero de 2026)
-**Correcciones Implementadas:**
-- ✅ **Bug #1**: Optimización de selects pesados - Ya implementado con métodos `getForSelect()` y `getCachedForSelect()` en modelo Municipio
-- ✅ **Bug #2**: Eliminar hardcoded 'BE' - Reemplazados con constantes `Departamento::CODIGO_BENI` en:
-  - `database/seeders/ProvinciaSeeder.php`
-  - `tests/Unit/Unit/IdtgbCalculatorTest.php`
-  - `tests/Feature/PublicCalculatorTest.php`
-- ✅ **Bug #3**: Validación de integridad referencial en seeders - Agregado logging de advertencias en `PeopleBeniSeeder.php`
-- ✅ **Bug #4**: Restricciones unique compuestas en provincias y municipios
-- ✅ **Bug #5**: Relaciones faltantes en modelos (municipios, tasas) agregadas
-- ✅ **Bug #6**: Campo `codigo` en municipios - Agregado en migración `2026_01_20_123456_add_codigo_to_municipios_table.php`
-- ✅ **Bug #7**: Constantes de códigos de departamentos agregadas al modelo
-- ✅ **Bug #8**: Validación de integridad referencial en modelos - Agregados métodos `boot()` con validación en:
-  - `app/Models/Departamento.php` - Valida provincias y tasas asociadas antes de eliminar
-  - `app/Models/Provincia.php` - Valida municipios asociados antes de eliminar
-  - `app/Models/Municipio.php` - Valida inmuebles y personas asociadas antes de eliminar
+### v3.0.0 (20 de enero de 2026)
+**Correcciones Completadas (8/8):**
+- ✅ Bug #1: Optimización de selects pesados - Implementados `getForSelect()` y `getCachedForSelect()` en modelo Municipio
+- ✅ Bug #2: Eliminar hardcoded 'BE' - Reemplazados con `Departamento::CODIGO_BENI` en todos los archivos
+- ✅ Bug #3: Validación de integridad en seeders - Agregado logging de advertencias en `PeopleBeniSeeder.php`
+- ✅ Bug #4: Restricciones unique compuestas - Implementadas en provincias y municipios
+- ✅ Bug #5: Relaciones faltantes en modelos - Agregadas `municipios()` y `tasas()` en Departamento, `inmuebles()` y `personas()` en Municipio
+- ✅ Bug #6: Campo `codigo` en municipios - Agregado en migración `2026_01_20_123456_add_codigo_to_municipios_table.php`
+- ✅ Bug #7: Constantes de códigos - Agregadas en modelo Departamento
+- ✅ Bug #8: Validación de integridad referencial - Implementados métodos `boot()` en Departamento, Provincia y Municipio
 
 **Archivos Modificados:**
-- `database/migrations/2026_01_20_123456_add_codigo_to_municipios_table.php` - Nueva migración para agregar campo codigo
-- `app/Models/Departamento.php` - Agregado método `boot()` con validación de integridad
-- `app/Models/Provincia.php` - Agregado método `boot()` con validación de integridad
-- `app/Models/Municipio.php` - Agregado `codigo` a fillable y método `boot()` con validación de integridad
+- `database/migrations/2026_01_19_194859_add_unique_composite_to_provincias_and_municipios_tables.php` - Nueva migración unique compuestas
+- `database/migrations/2026_01_20_123456_add_codigo_to_municipios_table.php` - Nueva migración campo codigo
+- `app/Models/Departamento.php` - Agregadas constantes, relaciones faltantes y validación en `boot()`
+- `app/Models/Provincia.php` - Agregada validación en `boot()`
+- `app/Models/Municipio.php` - Agregado `codigo` a fillable, métodos `getForSelect()`/`getCachedForSelect()`, relaciones faltantes y validación en `boot()`
 - `database/seeders/ProvinciaSeeder.php` - Reemplazado hardcoded 'BE' con constante
 - `tests/Unit/Unit/IdtgbCalculatorTest.php` - Reemplazado hardcoded 'BE' con constante
 - `tests/Feature/PublicCalculatorTest.php` - Reemplazado hardcoded 'BE' con constante
-- `database/seeders/PeopleBeniSeeder.php` - Agregado logging de advertencias y validación de integridad
-
----
-
-## 📉 Optimizaciones
-
-### 1.  **Optimizar Consultas de Municipios en Formularios:**
-    -   **Problema:** Se cargan todos los municipios con relaciones anidadas en cada petición de create/edit.
-    -   **Ubicación:**
-        -   `app/Http/Controllers/PersonController.php:83` - `Municipio::with('provincia.departamento')->get()`
-        -   `app/Http/Controllers/PersonController.php:108` - `Municipio::with('provincia.departamento')->get()`
-        -   `app/Http/Controllers/InmuebleController.php:57` - `Municipio::with('provincia.departamento')->orderBy('nombre')->get()`
-        -   `app/Http/Controllers/InmuebleController.php:76` - `Municipio::with('provincia.departamento')->orderBy('nombre')->get()`
-    -   **Impacto:** ~340 municipios x 3 relaciones = ~1,020 objetos cargados en memoria por petición
-    -   **Soluciones:**
-        -   Implementar caching (ver Mejora #3)
-        -   Implementar selects en cascada con AJAX (ver Mejora #1)
-        -   Usar `lazy()` o `lazyById()` para carga diferida si es necesario
-
-### 2.  **Agregar Índices en Campos de Búsqueda Frecuentes:**
-    -   **Descripción:** Agregar índices en campos que se usan frecuentemente en WHERE.
-    -   **Ubicación:**
-        -   `database/migrations/2025_09_22_122711_create_provincias_table.php:16` - campo `nombre`
-        -   `database/migrations/2025_09_22_122715_create_municipios_table.php:16` - campo `nombre`
-    -   **Solución:** Agregar índices en migraciones:
-        ```php
-        $table->index('nombre'); // En ambas tablas
-        ```
-
-### 3.  **Optimizar Accesor `ubicacion_completa` en Modelo Person:**
-    -   **Ubicación:** `app/Models/Person.php:149-166`
-    -   **Problema:** El accesor verifica manualmente si las relaciones existen, pero no tiene protección contra excepciones.
-    -   **Solución actual:** Ya existe `ubicacion_segura` (líneas 171-178) que maneja excepciones.
-    -   **Optimización:** Usar siempre `ubicacion_segura` en lugar de `ubicacion_completa` en vistas que podrían no tener las relaciones cargadas.
-
-### 4.  **Usar `selectOnly` en Consultas de Municipios:**
-    -   **Descripción:** Cuando se cargan municipios para selects, no se necesitan todos los campos.
-    -   **Ubicación:** `app/Http/Controllers/PersonController.php:83`, `app/Http/Controllers/InmuebleController.php:57`
-    -   **Optimización:**
-        ```php
-        Municipio::select('id', 'nombre', 'provincia_id')
-            ->with(['provincia:id,nombre,departamento_id', 'provincia.departamento:id,nombre,codigo'])
-            ->orderBy('nombre')
-            ->get();
-        ```
-
----
-
-## 🚧 Faltan Cosas / Funcionalidades Faltantes
-
-### 1.  **CRUD para Administración de Geografía:**
-    -   **Descripción:** No hay interfaz para gestionar departamentos, provincias y municipios desde el panel de administración.
-    -   **Evidencia:** En `database/seeders/IdtgbMenuAppendSeeder.php:26-28` las rutas están comentadas:
-        ```php
-        // ['title' => 'Departamentos',         'route' => 'admin.departamentos.index',       ...],
-        // ['title' => 'Provincias',            'route' => 'admin.provincias.index',          ...],
-        // ['title' => 'Municipios',            'route' => 'admin.municipios.index',          ...],
-        ```
-    -   **Qué falta:**
-        -   Controladores para Departamento, Provincia y Municipio
-        -   Vistas de CRUD (index, create, edit)
-        -   Rutas en `routes/web.php`
-        -   FormRequests de validación
-
-### 2.  **Sistema de Importación/Exportación de Datos Geográficos:**
-    -   **Descripción:** No hay forma de importar datos geográficos desde archivos externos (CSV, Excel, JSON).
-    -   **Beneficios:**
-        -   Facilita actualizaciones periódicas de la división política
-        -   Permite mantener el sistema actualizado con cambios oficiales del INE o autoridades competentes
-    -   **Implementación sugerida:**
-        -   Comando de Artisan: `php artisan geografia:import archivo.csv`
-        -   Controlador para importación vía UI admin
-        -   Formato estándar para importación
-
-### 3.  **Endpoints API para Geografía:**
-    -   **Descripción:** No hay endpoints dedicados para consultar datos geográficos vía API.
-    -   **Beneficios:**
-        -   Permite integración con sistemas externos
-        -   Facilita implementación de selects en cascada
-        -   Útil para aplicaciones móviles o frontend separado
-    -   **Implementación sugerida:**
-        -   Crear `GeografiaController` con métodos:
-            -   `GET /api/departamentos`
-            -   `GET /api/departamentos/{id}/provincias`
-            -   `GET /api/provincias/{id}/municipios`
-            -   `GET /api/municipios/search?q={termino}`
-
-### 4.  **Validación de Coherencia en Datos:**
-    -   **Descripción:** No hay comandos o jobs que verifiquen la integridad de los datos geográficos.
-    -   **Beneficios:**
-        -   Detectar provincias sin departamento
-        -   Detectar municipios sin provincia
-        -   Detectar personas o inmuebles con municipio_id inválido
-    -   **Implementación sugerida:**
-        -   Comando de Artisan: `php artisan geografia:check-integrity`
-        -   Job programado para verificación periódica
-
-### 5.  **Normalización de Nombres:**
-    -   **Descripción:** No hay proceso para normalizar los nombres geográficos (acentos, mayúsculas, espacios).
-    -   **Beneficios:**
-        -   Consistencia en datos
-        -   Mejora búsquedas
-        -   Evita duplicados por variaciones de mayúsculas/acentos
-    -   **Implementación sugerida:**
-        -   Mutator en modelos para guardar nombres en formato normalizado
-        -   Comando para normalizar datos existentes
-
-### 6.  **Historial de Cambios en Geografía:**
-    -   **Descripción:** No hay registro de cambios en datos geográficos (quién modificó, cuándo, qué cambió).
-    -   **Beneficios:**
-        -   Auditoría de cambios
-        -   Posibilidad de revertir cambios
-        -   Trazabilidad de modificaciones
-    -   **Implementación sugerida:**
-        -   Usar paquete como `spatie/laravel-activitylog`
-        -   Agregar trait `LogsActivity` a modelos Departamento, Provincia, Municipio
-
-### 7.  **Métodos de Conveniencia en Modelos:**
-    -   **Descripción:** Los modelos no tienen métodos helper para operaciones comunes.
-    -   **Ubicación:** `app/Models/Departamento.php`, `app/Models/Provincia.php`, `app/Models/Municipio.php`
-    -   **Faltan:**
-        -   `Departamento::findByCodigo('BE')`
-        -   `Municipio::findByNombre('Trinidad')`
-        -   `Provincia::findByDepartamentoAndNombre($depId, 'Cercado')`
-        -   Métodos scope para filtros comunes
-
-### 8.  **Relaciones Inversas en Modelo Municipio:**
-    -   **Descripción:** El modelo Municipio no tiene las relaciones inversas mencionadas en la documentación.
-    -   **Ubicación:** `app/Models/Municipio.php:16-19` (solo tiene `provincia()`)
-    -   **Faltan según documentación (líneas 107-115):**
-        ```php
-        public function inmuebles()
-        {
-            return $this->hasMany(Inmueble::class);
-        }
-
-        public function personas()
-        {
-            return $this->hasMany(Person::class);
-        }
-        ```
-
----
-
-## 🔍 Observaciones Adicionales
-
-### 1.  **Consistencia de Nomenclatura:**
-    -   Las migraciones usan `string('nombre', 80)` para provincias y municipios (líneas 16 de cada migración), pero la documentación menciona `VARCHAR(100)` para municipios.
-    -   **Ubicación:** Documentación línea 58 vs `database/migrations/2025_09_22_122715_create_municipios_table.php:16`
-    -   **Recomendación:** Alinear la documentación con el código o viceversa.
-
-### 2.  **Uso Inconsistente de Hardcoded 'BE':**
-    -   El código 'BE' está hardcodeado en múltiples lugares:
-        -   `app/Http/Controllers/CalculadoraBeniController.php:59,92`
-        -   `app/Http/Controllers/Admin/TramiteWizardController.php:166`
-        -   `database/seeders/TasaSeeder.php:23`
-    -   Aunque `CalculadoraBeniController.php` tiene la constante `CODIGO_BENI = 'BE'` (línea 16), el modelo Departamento no tiene esta constante definida.
-    -   **Recomendación:** Mover constantes de códigos al modelo Departamento y usarlas en todos los controladores.
-
-### 3.  **Comentarios en Código Indicando Mejoras Futuras:**
-    -   En `CalculadoraBeniController.php` hay comentarios que indican mejoras ya implementadas:
-        -   Línea 20: "// Implementación de Caching para listas (Mejora #3)"
-        -   Línea 43: "// Mejora #4: Validación fecha futura"
-        -   Línea 51: "// Mejora #2: Logging de consultas"
-        -   Línea 58: "// Mejora #3: Uso de constante para evitar hardcoding"
-    -   **Recomendación:** Actualizar estos comentarios para reflejar el estado actual del código o eliminarlos si ya están completados.
-
-### 4.  **Selección de Municipios en Vistas:**
-    -   En `resources/views/admin/people/edit-add.blade.php:173` se muestra el municipio con formato: `{{ $m->nombre }} - {{ $m->provincia->nombre }} - {{ $m->provincia->departamento->nombre }}`
-    -   En `resources/views/admin/inmuebles/edit-add.blade.php:64` se muestra diferente: `{{ $m->nombre }} ({{ $m->provincia->departamento->codigo }})`
-    -   **Recomendación:** Estandarizar el formato de display usando un accesor en el modelo Municipio.
-
----
-
-## 📊 Resumen de Problemas por Severidad
-
-| Severidad | Problema | Ubicación | Estado |
-|-----------|----------|-----------|--------|
-| **CRÍTICO** | Falta de restricciones unique compuestas | `database/migrations/2025_09_22_122711_create_provincias_table.php`, `2025_09_22_122715_create_municipios_table.php` | ✅ CORREGIDO |
-| **CRÍTICO** | Relaciones faltantes en modelos (pueden causar errores) | `app/Models/Departamento.php`, `app/Models/Municipio.php` | ✅ CORREGIDO |
-| **ALTO** | Hardcoded 'BE' en múltiples lugares | `CalculadoraBeniController.php`, `TasaSeeder.php`, `TramiteWizardController.php` | ✅ CORREGIDO |
-| **ALTO** | Consultas ineficientes de municipios | `PersonController.php:83,108`, `InmuebleController.php:57,76` | ✅ CORREGIDO |
-| **MEDIO** | Campo `codigo` en municipios no implementado | `database/migrations/2025_09_22_122715_create_municipios_table.php` | ✅ CORREGIDO |
-| **MEDIO** | No hay CRUD para administración de geografía | `database/seeders/IdtgbMenuAppendSeeder.php:26-28` | ⏳ Pendiente |
-| **BAJO** | Falta de constantes en modelo Departamento | `app/Models/Departamento.php` | ✅ CORREGIDO |
-| **BAJO** | Formatos inconsistentes en vistas | `resources/views/admin/people/edit-add.blade.php:173`, `resources/views/admin/inmuebles/edit-add.blade.php:64` | ⏳ Pendiente |
-
----
-
-## 🛠️ Prioridad de Implementación Sugerida
-
-### 1.  ✅ **CRÍTICO (Completado):**
-    -   ✅ Agregar restricciones unique compuestas en migraciones (nueva migración)
-    -   ✅ Completar relaciones faltantes en modelos
-    -   ✅ Agregar constantes de códigos en modelo Departamento
-    -   ✅ Reemplazar hardcoded 'BE' con constantes en todos los archivos
-    -   ✅ Implementar validación de integridad referencial en modelos
-    -   ✅ Agregar campo `codigo` en municipios
-
-### 2.  ✅ **ALTO (Completado):**
-    -   ✅ Implementar selects en cascada con AJAX (Ya implementado con métodos getForSelect y getCachedForSelect)
-    -   ✅ Optimizar consultas de municipios (caching o carga diferida)
-    -   ✅ Centralizar carga de municipios en un método del modelo
-
-### 3.  **MEDIO (Mejoras futuras):**
-    -   Implementar CRUD para geografía
-    -   Agregar endpoints API para geografía
-    -   Implementar sistema de importación/exportación
-
-### 4.  **BAJO (Mejoras futuras):**
-    -   Agregar historial de cambios
-    -   Implementar comandos de verificación de integridad
-    -   Normalizar nombres geográficos
+- `database/seeders/PeopleBeniSeeder.php` - Agregado logging de advertencias

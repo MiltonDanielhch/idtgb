@@ -215,24 +215,54 @@ El método `calcular($tramite)` se invoca en `store` y `destroy` del controlador
 
 ---
 
-**Última actualización:** Enero 2026
+## 🚨 Análisis de Calidad y Mejoras
+
+### Estado Actual - v2.0.0 (20 de enero de 2026) ✅
+
+El módulo AdquirenteTramite ha sido mejorado con correcciones importantes para asegurar la integridad de los datos y el cálculo correcto de impuestos:
+
+- ✅ Validación estricta de departamento antes de calcular tasas
+- ✅ Centralización de búsqueda de tasas con `Tasa::findApplicableRate()`
+- ✅ Manejo de transacciones de base de datos en operaciones de escritura
+- ✅ Validación de pertenencia del item al trámite en operaciones de destrucción
+- ✅ Autorización implementada en todos los métodos del controlador
+- ✅ Recálculo automático de impuestos al agregar o eliminar adquirentes
+
+### 🐛 Bugs Corregidos (2/2) ✅
+
+| # | Bug | Estado | Ubicación |
+|---|-----|--------|-----------|
+| 1 | Falta validación de departamento al calcular tasas | ✅ Corregido | `AdquirenteTramiteController.php:79-83` |
+| 2 | Búsqueda de tasas no centralizada y propensa a errores | ✅ Corregido | `AdquirenteTramiteController.php:85-92` |
+
+### 🚀 Mejoras Implementadas ✅
+
+| # | Mejora | Descripción |
+|---|--------|-------------|
+| 1 | Validación estricta de departamento | Valida que el trámite tenga un departamento asignado antes de buscar tasas, lanza excepción específica si no existe |
+| 2 | Centralización de búsqueda de tasas | Uso del método `Tasa::findApplicableRate()` en lugar de consulta directa, código más limpio y reutilizable |
+| 3 | Manejo de transacciones DB | Implementado `DB::beginTransaction()`, `DB::commit()`, `DB::rollBack()` para atomicidad en `store()` y `destroy()` |
+| 4 | Validación de contexto | Se valida que el `AdquirenteTramite` pertenezca al `Tramite` antes de eliminar en `destroy()` |
+| 5 | Autorización completa | Agregadas llamadas `authorize()` en todos los métodos del controlador |
+| 6 | Recálculo automático de impuestos | Llamado a `IdtgbCalculator::calcular($tramite)` tras agregar/eliminar adquirentes |
+| 7 | Validación de duplicados | Request `StoreAdquirenteTramiteRequest` valida que una persona no se agregue dos veces al mismo trámite |
+
+### 📝 Historial de Cambios
+
+### v2.0.0 (20 de enero de 2026)
+**Correcciones Completadas (2/2):**
+- ✅ Bug #1: Validación de departamento - Agregada validación estricta en `store()` línea 79-83
+- ✅ Bug #2: Búsqueda de tasas - Centralizada con `Tasa::findApplicableRate()` línea 85-92
+
+**Cambios en Código:**
+- `app/Http/Controllers/AdquirenteTramiteController.php`:
+  - Agregada validación de departamento antes de buscar tasas
+  - Reemplazada consulta directa de tasas por `Tasa::findApplicableRate()`
+  - Validación de pertenencia de item al trámite en `destroy()` línea 130-132
+  - Manejo de transacciones DB con try-catch en `store()` y `destroy()`
+- `app/Http/Requests/StoreAdquirenteTramiteRequest.php` - Validación personalizada para evitar duplicados de personas en el mismo trámite
+
+---
+
+**Última actualización:** 20 de enero de 2026
 **Versión:** 2.0.0
-
-## 📝 Historial de Cambios
-
-### Versión 2.0.0 (Enero 2026)
-
-**Mejoras Implementadas:**
-1. ✅ **Validación estricta de departamento**
-   - Ahora se valida que el trámite tenga un departamento asignado antes de buscar tasas
-   - Se lanza excepción específica si no hay departamento
-   - Prevención de cálculos incorrectos silenciosos
-
-2. ✅ **Centralización de búsqueda de tasas**
-   - Uso del método `Tasa::findApplicableRate()` en lugar de consulta directa
-   - Código más limpio y mantenible
-   - Lógica reutilizable en otros controladores
-
-3. ✅ **Mejor manejo de errores**
-   - Mensajes de error más específicos
-   - Validaciones más robustas

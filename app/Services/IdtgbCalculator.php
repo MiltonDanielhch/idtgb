@@ -116,7 +116,7 @@ class IdtgbCalculator
     /**
      * CORE: Cálculo bajo Ley 812 con factor de participación.
      */
-    private function performCalculation($base, $depId, $tipoId, $fPres, $fTrans, $fVenc, $adquirentes, $exenciones, $tipoContribuyente, $participacion): array
+    public function performCalculation($base, $depId, $tipoId, $fPres, $fTrans, $fVenc, $adquirentes, $exenciones, $tipoContribuyente, $participacion): array
     {
         // 1. Aplicar Factor de Participación (Estilo Cochabamba)
         // Nota: Si es un trámite con múltiples adquirentes, $participacion suele ser la suma (ej: 100%)
