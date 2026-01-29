@@ -22,6 +22,15 @@
             </div>
 
             <div class="panel-body">
+                @if ($errors->any())
+                    <div class="alert alert-danger">
+                        <ul>
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
                 <div class="row">
                     {{-- Departamento --}}
                     <div class="col-md-3">
@@ -35,6 +44,9 @@
                                 </option>
                             @endforeach
                         </select>
+                        @if($errors->has('departamento_id'))
+                            <span class="text-danger">{{ $errors->first('departamento_id') }}</span>
+                        @endif
                     </div>
 
                     {{-- Parentesco --}}
@@ -49,6 +61,9 @@
                                 </option>
                             @endforeach
                         </select>
+                        @if($errors->has('parentesco_id'))
+                            <span class="text-danger">{{ $errors->first('parentesco_id') }}</span>
+                        @endif
                     </div>
 
                     {{-- Tipo Transmisión --}}
@@ -63,6 +78,9 @@
                                 </option>
                             @endforeach
                         </select>
+                        @if($errors->has('tipo_transmision_id'))
+                            <span class="text-danger">{{ $errors->first('tipo_transmision_id') }}</span>
+                        @endif
                     </div>
 
                     {{-- Tasa (%) --}}
@@ -71,6 +89,9 @@
                         <input type="number" step="0.01" min="0" max="99.99"
                                name="tasa" class="form-control"
                                value="{{ old('tasa', optional($tasa)->tasa) }}" required>
+                        @if($errors->has('tasa'))
+                            <span class="text-danger">{{ $errors->first('tasa') }}</span>
+                        @endif
                     </div>
 
                     {{-- Vigente Desde --}}
@@ -78,6 +99,9 @@
                         <label>Vigente Desde <span class="required">*</span></label>
                         <input type="date" name="vigente_desde" class="form-control"
                                value="{{ old('vigente_desde', optional($tasa)->vigente_desde?->format('Y-m-d')) }}" required>
+                        @if($errors->has('vigente_desde'))
+                            <span class="text-danger">{{ $errors->first('vigente_desde') }}</span>
+                        @endif
                     </div>
 
                     {{-- Vigente Hasta --}}
@@ -85,6 +109,9 @@
                         <label>Vigente Hasta</label>
                         <input type="date" name="vigente_hasta" class="form-control"
                                value="{{ old('vigente_hasta', optional($tasa)->vigente_hasta?->format('Y-m-d')) }}">
+                        @if($errors->has('vigente_hasta'))
+                            <span class="text-danger">{{ $errors->first('vigente_hasta') }}</span>
+                        @endif
                     </div>
                 </div>
             </div>

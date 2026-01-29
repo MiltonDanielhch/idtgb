@@ -39,7 +39,6 @@
             <div class="alert alert-warning">
                 <i class="fas fa-exclamation-triangle"></i>
                 <strong>Atención:</strong> Este cálculo es <strong>estimado y referencial</strong>.
-                Código 3026: Sintonía activada para el departamento del Beni.
             </div>
 
             <form id="form-calculadora">

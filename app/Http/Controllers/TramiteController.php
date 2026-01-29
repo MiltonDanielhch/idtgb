@@ -127,28 +127,62 @@ class TramiteController extends Controller
 
     public function a01(Tramite $tramite)
     {
+        // SOLUCIÓN DEFINITIVA: Extender tiempo de ejecución para PDFs complejos
+        // Esto previene timeouts de 30 segundos en la primera carga
+        set_time_limit(120); // 2 minutos para generación de PDF
+
         $this->authorize('view', $tramite);
 
-        // SOLUCIÓN DEFINITIVA: Cargar TODAS las relaciones anidadas necesarias para
-        // el PDF de una sola vez para eliminar el problema N+1 de raíz.
-        $tramite->load([
-            'tipoTransmision',
-            'adquirentes.parentesco',
-            'adquirentes.person.municipio.provincia.departamento',
-            'disponentes.person.municipio.provincia.departamento',
-            'exenciones',
-            'inmuebles.municipio.provincia.departamento'
-        ]);
+        try {
+            // Generar hash ANTES de cargar relaciones pesadas
+            // Esto separa la operación de guardado de la generación del PDF
+            if (!$tramite->hash_validacion) {
+                $tramite->generateHashValidacion();
+                $tramite->refresh(); // Recargar modelo con el hash guardado
+            }
 
-        // Genera el hash de validación si no existe
-        $hash = $tramite->hash_validacion ?: $tramite->generateHashValidacion();
+            $hash = $tramite->hash_validacion;
 
-        // Genera la URL de validación y el código QR
-        $validation_url = route('tramite.validar', ['hash' => $hash]);
-        $qr = base64_encode(\SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(200)->generate($validation_url));
+            // Cargar TODAS las relaciones anidadas necesarias en una sola consulta optimizada
+            // Esto elimina el problema N+1 de raíz
+            $tramite->load([
+                'tipoTransmision',
+                'adquirentes.parentesco',
+                'adquirentes.person.municipio.provincia.departamento',
+                'disponentes.person.municipio.provincia.departamento',
+                'exenciones',
+                'inmuebles.municipio.provincia.departamento'
+            ]);
 
-        // Carga la vista del PDF y pasa los datos
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.tramites.pdf.a01', compact('tramite', 'qr', 'hash'));
-        return $pdf->stream('Form-A01-'.$tramite->nro_tramite.'.pdf');
+            // Genera la URL de validación y el código QR
+            $validation_url = route('tramite.validar', ['hash' => $hash]);
+            $qr = base64_encode(\SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(200)->generate($validation_url));
+
+            // Carga la vista del PDF y pasa los datos
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.tramites.pdf.a01', compact('tramite', 'qr', 'hash'));
+            
+            Log::info('PDF A01 generado exitosamente', [
+                'tramite_id' => $tramite->id,
+                'nro_tramite' => $tramite->nro_tramite
+            ]);
+
+            return $pdf->stream('Form-A01-'.$tramite->nro_tramite.'.pdf');
+
+        } catch (\Exception $e) {
+            // Registro detallado del error para debugging
+            Log::error('Error al generar PDF A01', [
+                'tramite_id' => $tramite->id,
+                'nro_tramite' => $tramite->nro_tramite,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return redirect()->back()->with([
+                'message' => 'Error al generar el PDF. Por favor intente nuevamente. Si el problema persiste, contacte al administrador.',
+                'alert-type' => 'error'
+            ]);
+        }
     }
 }

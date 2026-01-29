@@ -157,12 +157,16 @@ class Tramite extends Model
 
     public function generateHashValidacion(): string
     {
+        // Retornar hash existente si ya está generado
         if ($this->hash_validacion) {
             return $this->hash_validacion;
         }
 
+        // Generar hash único basado en datos del trámite
         $this->hash_validacion = hash('sha256', $this->id . '|' . $this->nro_tramite . '|' . now()->timestamp . '|' . Str::random(10));
-        $this->save();
+        
+        // Usar saveQuietly() para evitar disparar observers y reducir overhead
+        $this->saveQuietly();
 
         return $this->hash_validacion;
     }

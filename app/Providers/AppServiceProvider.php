@@ -33,7 +33,7 @@ class AppServiceProvider extends ServiceProvider
         }
 
         // 2. Configurar el Paginador para Bootstrap
-        // Paginator::useBootstrap();
+        Paginator::useBootstrap();
 
         // 3. Sintonía de Tiempo: Asegurar que Carbon use la zona horaria de Bolivia
         // Esto es vital para los cálculos de intereses en el Beni
