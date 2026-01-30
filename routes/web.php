@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\ErrorController;
 use App\Http\Controllers\PersonController;
 use App\Http\Controllers\UserController;
@@ -158,6 +159,9 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
         Route::get('create-step-7', [TramiteWizardController::class, 'createStep7'])->name('create.step7');
         Route::post('store', [TramiteWizardController::class, 'store'])->name('store');
 
+        // Editar trámite existente
+        Route::get('edit/{id}', [TramiteWizardController::class, 'edit'])->name('edit');
+
         // Cancelar
         Route::get('cancel', [TramiteWizardController::class, 'cancelWizard'])->name('cancel');
 
@@ -278,3 +282,21 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
         ]);
     })->name('admin.clear.cache');
 });
+
+// ──────────────── SERVIDOR DE ARCHIVOS DIRECTO (Windows fix) ────────────────
+// Ruta alternativa para servir archivos cuando los enlaces simbólicos no funcionan
+Route::get('/storage/{path}', function ($path) {
+    if (!Storage::disk('public')->exists($path)) {
+        abort(404);
+    }
+
+    $file = Storage::disk('public')->get($path);
+    $fullPath = storage_path('app/public/' . $path);
+    $finfo = new \finfo(FILEINFO_MIME_TYPE);
+    $mimeType = $finfo->file($fullPath);
+
+    return response($file, 200, [
+        'Content-Type' => $mimeType ?: 'application/octet-stream',
+        'Content-Disposition' => 'inline; filename="' . basename($path) . '"',
+    ]);
+})->where('path', '.*')->name('storage.file');

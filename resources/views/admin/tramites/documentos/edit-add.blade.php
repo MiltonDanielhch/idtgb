@@ -44,9 +44,9 @@
                         <label>Archivo (PDF/JPG/PNG) <span class="required">*</span></label>
                         <input type="file" name="archivo" class="form-control"
                                accept=".pdf,.jpg,.jpeg,.png" {{ ($item->exists ?? false) ? 'disabled' : '' }}>
-                        @if(($item->exists ?? false) && $item->file_path)
+                        @if(($item->exists ?? false) && $item->archivo_path)
                             <small>Archivo actual:
-                                <a href="{{ \Storage::disk('public')->url($item->file_path) }}" target="_blank">Ver</a>
+                                <a href="{{ \Storage::disk('public')->url($item->archivo_path) }}" target="_blank">Ver</a>
                             </small>
                         @endif
                         @error('archivo') <small class="text-danger">{{ $message }}</small> @enderror

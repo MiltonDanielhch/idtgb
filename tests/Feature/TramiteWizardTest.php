@@ -221,6 +221,6 @@ class TramiteWizardTest extends TestCase
         $this->assertCount(1, $tramite->documentos, 'El documento no fue asociado al trámite.');
         $documentoGuardado = $tramite->documentos->first();
         $this->assertEquals('CI', $documentoGuardado->tipo_doc);
-        Storage::disk('public')->assertExists($documentoGuardado->file_path);
+        Storage::disk('public')->assertExists($documentoGuardado->archivo_path);
     }
 }

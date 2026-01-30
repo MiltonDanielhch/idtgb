@@ -98,6 +98,21 @@
         </div>
     </div>
 
+    {{-- ACCIONES --}}
+    @if(!in_array($tramite->estado, ['Finalizado', 'Anulado', 'Pagado']))
+    <div class="panel panel-bordered panel-warning">
+        <div class="panel-heading">
+            <h3 class="panel-title"><i class="voyager-wrench"></i> Acciones disponibles</h3>
+        </div>
+        <div class="panel-body">
+            <a href="{{ route('admin.tramites.wizard.edit', $tramite->id) }}" class="btn btn-lg btn-warning">
+                <i class="voyager-edit"></i> Editar trámite
+            </a>
+            <p class="text-muted small">Modifique datos, personas, inmuebles o documentos del trámite</p>
+        </div>
+    </div>
+    @endif
+
     {{-- AUDITORÍA --}}
     <div class="panel panel-bordered panel-default">
         <div class="panel-heading">

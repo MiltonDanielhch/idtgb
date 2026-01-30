@@ -84,7 +84,6 @@
                         <li>Gestionar adquirentes, disponentes e inmuebles</li>
                         <li>Subir y validar documentos</li>
                         <li>Registrar pagos y generar Formulario A-01 oficial</li>
-                        <li>Exportar trámites finalizados al SIN</li>
                     </ul>
                     <div class="mt-auto">
                         <a href="/admin/login" class="btn btn-primary w-100">

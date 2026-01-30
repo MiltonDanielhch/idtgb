@@ -54,9 +54,15 @@
                             </a>
                         @endcan
                         @can('update', $t)
-                            <a href="{{ route('admin.tramites.edit', $t) }}" class="btn btn-xs btn-primary" title="Editar">
-                                <i class="voyager-edit"></i>
-                            </a>
+                            @if(in_array($t->estado, ['Finalizado', 'Anulado', 'Pagado']))
+                                <button class="btn btn-xs btn-primary" disabled title="No se puede editar">
+                                    <i class="voyager-edit"></i>
+                                </button>
+                            @else
+                                <a href="{{ route('admin.tramites.wizard.edit', $t->id) }}" class="btn btn-xs btn-primary" title="Editar">
+                                    <i class="voyager-edit"></i>
+                                </a>
+                            @endif
                         @endcan
                         @can('delete', $t)
                             <form action="{{ route('admin.tramites.destroy', $t) }}" method="POST"

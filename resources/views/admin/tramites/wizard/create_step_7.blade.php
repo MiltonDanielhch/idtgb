@@ -209,8 +209,8 @@
             <div class="col-md-6 text-right">
                 <form action="{{ route('admin.tramites.wizard.store') }}" method="POST" style="display: inline;">
                     @csrf
-                    <button type="submit" class="btn btn-success btn-lg" onclick="return confirm('¿Está seguro de que desea finalizar y registrar este trámite?')">
-                        <i class="voyager-check"></i> Confirmar y Guardar Trámite
+                    <button type="submit" class="btn btn-success btn-lg" onclick="return confirm('{{ $is_edit ?? false ? "¿Está seguro de que desea actualizar este trámite?" : "¿Está seguro de que desea finalizar y registrar este trámite?" }}')">
+                        <i class="voyager-check"></i> {{ $is_edit ?? false ? 'Actualizar Trámite' : 'Confirmar y Guardar Trámite' }}
                     </button>
                 </form>
             </div>

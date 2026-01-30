@@ -39,7 +39,7 @@ class IdtgbMaestrosSeeder extends Seeder
 
             // 6. Componentes finales (Menús y UFV)
             IdtgbMenuAppendSeeder::class, // <-- AÑADIR ESTE SEEDER
-            UfvSeeder::class,
+            // UfvSeeder::class,
         ]);
     }
 }

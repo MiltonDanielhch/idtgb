@@ -25,7 +25,7 @@
                     <td>{{ optional($item->persona)->fullName ?? '—' }}</td>
                     <td><small class="text-muted">{{ Str::limit($item->hash_sha256, 16, '…') }}</small></td>
                     <td class="text-center" style="width: 15%">
-                        <a href="{{ \Storage::disk('public')->url($item->file_path) }}" target="_blank" class="btn btn-xs btn-primary" title="Descargar">
+                        <a href="{{ \Storage::disk('public')->url($item->archivo_path) }}" target="_blank" class="btn btn-xs btn-primary" title="Descargar">
                             <i class="voyager-download"></i>
                         </a>
                         @can('view', $item)

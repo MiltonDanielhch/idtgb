@@ -129,7 +129,7 @@ class TramiteWizardController extends Controller
                         'tipo_doc' => $doc->tipo_doc,
                         'person_id' => $doc->person_id,
                         'temp_path' => null,
-                        'original_name' => $doc->original_name ?? basename($doc->file_path),
+                        'original_name' => $doc->original_name ?? basename($doc->archivo_path),
                         'existing' => true
                     ];
                 })->toArray()
@@ -153,13 +153,18 @@ class TramiteWizardController extends Controller
         $wizardData = $this->getWizardData($request);
         $tiposTransmision = TipoTransmision::all();
 
+        $isEdit = !empty($wizardData['current_tramite_id']);
+        $actionText = $isEdit ? 'Editar' : 'Crear';
+
         return view('admin.tramites.wizard.create_step_1', [
-            'tiposTransmision' => $tiposTransmision, // Corregido
-            'wizardData' => $wizardData,            // Corregido: pasar el array completo para usar $wizardData['step1']
-            'step_title' => 'Paso 1: Datos Generales',
+            'tiposTransmision' => $tiposTransmision,
+            'wizardData' => $wizardData,
+            'step_title' => "Paso 1: Datos Generales ({$actionText})",
             'current_step' => 1,
             'total_steps' => 7,
             'progress' => 14,
+            'is_edit' => $isEdit,
+            'current_tramite_id' => $wizardData['current_tramite_id'] ?? null,
         ]);
     }
 
@@ -201,10 +206,14 @@ class TramiteWizardController extends Controller
             return Person::find($personId);
         })->filter();
 
+        $isEdit = !empty($wizardData['current_tramite_id']);
+
         return view('admin.tramites.wizard.create_step_2', [
             'disponentes' => $disponentes,
             'step_title' => 'Paso 2: Disponentes',
-            'current_step' => 2, 'total_steps' => 7, 'progress' => 28, // Ajustar progreso
+            'current_step' => 2, 'total_steps' => 7, 'progress' => 28,
+            'is_edit' => $isEdit,
+            'current_tramite_id' => $wizardData['current_tramite_id'] ?? null,
         ]);
     }
 
@@ -276,7 +285,6 @@ class TramiteWizardController extends Controller
             return $person;
         })->filter();
 
-        // MODIFICADO: Cargar parentescos con sus tasas para el departamento del Beni
         $beni = \App\Models\Departamento::where('codigo', \App\Models\Departamento::CODIGO_BENI)->first();
         $parentescos = Parentesco::with(['tasas' => function ($query) use ($beni) {
             if ($beni) {
@@ -287,17 +295,20 @@ class TramiteWizardController extends Controller
                       });
             }
         }])->get()->map(function ($parentesco) {
-            // Asignar la tasa directamente al modelo de parentesco para fácil acceso en la vista
             $tasa = $parentesco->tasas->first();
             $parentesco->tasa_aplicable = $tasa ? $tasa->tasa : 0.00;
             return $parentesco;
         });
 
+        $isEdit = !empty($wizardData['current_tramite_id']);
+
         return view('admin.tramites.wizard.create_step_3', [
             'adquirentes' => $adquirentes,
             'parentescos' => $parentescos,
             'step_title' => 'Paso 3: Adquirentes',
-            'current_step' => 3, 'total_steps' => 7, 'progress' => 42, // Ajustar progreso
+            'current_step' => 3, 'total_steps' => 7, 'progress' => 42,
+            'is_edit' => $isEdit,
+            'current_tramite_id' => $wizardData['current_tramite_id'] ?? null,
         ]);
     }
 
@@ -383,10 +394,14 @@ class TramiteWizardController extends Controller
             return Inmueble::find($inmuebleId);
         })->filter();
 
+        $isEdit = !empty($wizardData['current_tramite_id']);
+
         return view('admin.tramites.wizard.create_step_4', [
             'inmuebles' => $inmuebles,
             'step_title' => 'Paso 4: Inmuebles',
-            'current_step' => 4, 'total_steps' => 7, 'progress' => 57, // Ajustar progreso
+            'current_step' => 4, 'total_steps' => 7, 'progress' => 57,
+            'is_edit' => $isEdit,
+            'current_tramite_id' => $wizardData['current_tramite_id'] ?? null,
         ]);
     }
 
@@ -438,18 +453,18 @@ class TramiteWizardController extends Controller
             return redirect()->route('admin.tramites.wizard.create.step4');
         }
 
-        // Obtener todas las personas (disponentes y adquirentes) para el select
         $disponentesIds = $wizardData['step2']['disponentes'] ?? [];
         $adquirentesIds = collect($wizardData['step3']['adquirentes'] ?? [])->pluck('person_id')->all();
         $personas = Person::whereIn('id', array_merge($disponentesIds, $adquirentesIds))->get();
 
         $tiposDocumento = ['Escritura', 'Testamento', 'Partida', 'CI', 'Avaluo', 'Poder', 'Otro'];
 
-        // Cargar documentos ya subidos en la sesión
         $documentosSubidos = collect($wizardData['step5']['documentos'] ?? [])->map(function ($doc) {
             $doc['persona'] = Person::find($doc['person_id']);
             return (object) $doc;
         });
+
+        $isEdit = !empty($wizardData['current_tramite_id']);
 
         return view('admin.tramites.wizard.create_step_5', [
             'documentosSubidos' => $documentosSubidos,
@@ -457,6 +472,8 @@ class TramiteWizardController extends Controller
             'tiposDocumento' => $tiposDocumento,
             'step_title' => 'Paso 5: Documentos de Respaldo',
             'current_step' => 5, 'total_steps' => 7, 'progress' => 71,
+            'is_edit' => $isEdit,
+            'current_tramite_id' => $wizardData['current_tramite_id'] ?? null,
         ]);
     }
 
@@ -515,25 +532,27 @@ class TramiteWizardController extends Controller
     public function createStep6(Request $request)
     {
         $wizardData = $this->getWizardData($request);
-        if (empty($wizardData['step4']['inmuebles'])) { // Podríamos validar el paso 5 si fuera obligatorio
+        if (empty($wizardData['step4']['inmuebles'])) {
             return redirect()->route('admin.tramites.wizard.create.step4');
         }
 
-        // Exenciones seleccionadas
         $exencionesSeleccionadas = \App\Models\Exencion::whereIn('id', $wizardData['step6']['exenciones'] ?? [])->get();
 
-        // Exenciones disponibles (que no han sido seleccionadas)
         $exencionesDisponibles = \App\Models\Exencion::whereDate('vigente_desde', '<=', now())
             ->where(fn($q) => $q->whereNull('vigente_hasta')->orWhereDate('vigente_hasta', '>=', now()))
             ->whereNotIn('id', $wizardData['step6']['exenciones'] ?? [])
             ->orderBy('nombre')
             ->get();
 
-        return view('admin.tramites.wizard.create_step_6', [ // Vista renombrada
+        $isEdit = !empty($wizardData['current_tramite_id']);
+
+        return view('admin.tramites.wizard.create_step_6', [
             'exencionesSeleccionadas' => $exencionesSeleccionadas,
             'exencionesDisponibles' => $exencionesDisponibles,
             'step_title' => 'Paso 6: Exenciones Aplicables',
             'current_step' => 6, 'total_steps' => 7, 'progress' => 85,
+            'is_edit' => $isEdit,
+            'current_tramite_id' => $wizardData['current_tramite_id'] ?? null,
         ]);
     }
 
@@ -573,19 +592,15 @@ class TramiteWizardController extends Controller
     {
         $wizardData = $this->getWizardData($request);
 
-        // 1. Validaciones de seguridad
         if (empty($wizardData['step1']) || empty($wizardData['step3']['adquirentes']) || empty($wizardData['step4']['inmuebles'])) {
             return redirect()->route('admin.tramites.wizard.create.step1');
         }
 
-        // 2. Ejecutar Cálculo Preventivo para la Vista
         $calculator = app(IdtgbCalculator::class);
 
-        // Obtenemos el primer inmueble para sacar el departamento (necesario para la tasa)
         $inmuebleRef = Inmueble::with('municipio.provincia')->find($wizardData['step4']['inmuebles'][0]);
         $depId = $inmuebleRef->municipio->provincia->departamento_id;
 
-        // Preparamos los adquirentes para el calculador
         $adquirentesData = collect($wizardData['step3']['adquirentes'])->map(function($adq) {
             return [
                 'parentesco_id' => $adq['parentesco_id'],
@@ -593,24 +608,22 @@ class TramiteWizardController extends Controller
             ];
         })->all();
 
-        // Invocamos el cálculo (Simulación para el resumen)
         $fechaVencimiento = Carbon::parse($wizardData['step1']['fecha_presentacion'])->addDays(30);
-        $exencionesData = []; // Para el wizard, las exenciones aún no tienen monto.
+        $exencionesData = [];
 
         $liquidacion = $calculator->performCalculation(
             $wizardData['step1']['base_imponible'],
             $depId,
             $wizardData['step1']['tipo_transmision_id'],
-            now()->toDateString(), // Fecha de "pago" (simulación)
+            now()->toDateString(),
             $wizardData['step1']['fecha_transmision'],
             $fechaVencimiento->toDateString(),
             $adquirentesData,
             $exencionesData,
-            'Natural', // Asumir 'Natural' para el wizard, o tomar de algún campo si existe.
-            100 // Participación global es 100%, se prorratea por adquirente dentro.
+            'Natural',
+            100
         );
 
-        // 3. Llamar al showSummary pasando la $liquidacion
         return $this->showSummary($request, $wizardData, $liquidacion);
     }
 
@@ -663,8 +676,9 @@ class TramiteWizardController extends Controller
                 return $adq;
             });
 
-            // Cargar datos adicionales para el resumen
             $tipoTransmision = \App\Models\TipoTransmision::find($wizardData['step1']['tipo_transmision_id']);
+
+            $isEdit = !empty($wizardData['current_tramite_id']);
 
             return view('admin.tramites.wizard.create_step_7', [
                 'wizardData' => $wizardData,
@@ -674,11 +688,13 @@ class TramiteWizardController extends Controller
                 'documentos' => $documentos,
                 'exenciones' => $exenciones,
                 'tipoTransmision' => $tipoTransmision,
-                'liquidacion' => $liquidacion, // <--- PASAR ESTO A LA VISTA
+                'liquidacion' => $liquidacion,
                 'step_title' => 'Paso 7: Resumen y Confirmación',
                 'current_step' => 7,
                 'total_steps' => 7,
                 'progress' => 100,
+                'is_edit' => $isEdit,
+                'current_tramite_id' => $wizardData['current_tramite_id'] ?? null,
             ]);
         } catch (\Exception $e) {
             \Log::error('Error en createStep5: ' . $e->getMessage());
@@ -799,8 +815,8 @@ class TramiteWizardController extends Controller
                             $newDoc = $tramite->documentos()->create([
                                 'tipo_doc' => $docData['tipo_doc'],
                                 'person_id' => $docData['person_id'],
-                                'file_path' => $finalPath,
-                                'hash_file' => $hash,
+                                'archivo_path' => $finalPath,
+                                'hash_sha256' => $hash,
                                 'version' => $version,
                                 'vigente' => true,
                                 'original_name' => $docData['original_name'] ?? 'documento.pdf'

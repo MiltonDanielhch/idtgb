@@ -66,6 +66,15 @@
 <div class="page-content container-fluid">
     @include('voyager::alerts')
 
+    {{-- Banner de edición --}}
+    @if(isset($is_edit) && $is_edit)
+    <div class="alert alert-info" style="margin-bottom: 20px;">
+        <i class="voyager-info-circled"></i>
+        <strong>Modo edición:</strong> Estás modificando el trámite #{{ $current_tramite_id ?? '' }}.
+        Los cambios se guardarán cuando completes el paso 7.
+    </div>
+    @endif
+
     {{-- Barra de progreso --}}
     <div class="wizard-progress">
         <div class="step-indicator">

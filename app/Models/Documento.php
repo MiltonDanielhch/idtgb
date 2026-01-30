@@ -22,6 +22,7 @@ class Documento extends Model
         'version',
         'created_by',
         'updated_by',
+        'original_name',
     ];
 
     protected $casts = [

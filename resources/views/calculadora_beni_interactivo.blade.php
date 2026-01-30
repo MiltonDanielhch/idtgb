@@ -52,7 +52,7 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">C.I. / NIT</label>
-                        <input type="text" name="ci_sujeto" class="form-control" placeholder="10824260">
+                        <input type="text" name="ci_sujeto" class="form-control" placeholder="12345678">
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Participación (%)</label>
@@ -72,7 +72,7 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Valor del inmueble (Bs.)</label>
-                        <input type="number" name="base_imponible" class="form-control" value="1000" min="0.01" step="0.01" required>
+                        <input type="number" name="base_imponible" class="form-control" value="" min="0.01" step="0.01" required>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Tipo de transmisión</label>
