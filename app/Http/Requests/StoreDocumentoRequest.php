@@ -15,8 +15,8 @@ class StoreDocumentoRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'tipo_doc' => 'required|in:Escritura,Testamento,Partida,CI,Avaluo,Poder,Otro',
-            'archivo' => 'required|file|mimes:pdf,jpg,jpeg,png|max:2048',
+            'tipo_doc' => 'required|string|max:100',
+            'archivo' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
             'person_id' => 'nullable|exists:people,id',
         ];
     }

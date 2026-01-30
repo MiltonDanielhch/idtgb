@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Inmueble;
 use App\Models\TipoInmueble;
 use App\Models\Municipio;
+use App\Http\Requests\StoreInmuebleRequest;
 use App\Http\Requests\UpdateInmuebleRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -58,33 +59,21 @@ class InmuebleController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreInmuebleRequest $request)
     {
         $this->authorize('create', Inmueble::class);
 
-        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
-            'catastro' => 'required|unique:inmuebles,catastro',
-            'direccion' => 'required',
-            'tipo_inmueble_id' => 'required',
-            'municipio_id' => 'required',
-            'valor_catastral' => 'required|numeric',
-        ]);
-
-        if ($validator->fails()) {
-            return back()->withErrors($validator)->withInput()->with(['message' => 'Error de validación: ' . $validator->errors()->first(), 'alert-type' => 'error']);
-        }
-
         try {
-            $data = $validator->validated();
+            $data = $request->validated();
             $data['created_by'] = auth()->id();
             $data['updated_by'] = auth()->id();
 
             Inmueble::create($data);
 
             return redirect()->route('admin.inmuebles.index')
-                ->with(['message' => 'Inmueble creado exitosamente.', 'alert-type' => 'success']);
+                ->with(['message' => 'Inmueble creado con éxito.', 'alert-type' => 'success']);
         } catch (\Exception $e) {
-            Log::error('Error al crear inmueble: ' . $e->getMessage());
+            Log::error('Error al crear el inmueble: ' . $e->getMessage());
             return back()->withInput()
                 ->with(['message' => 'Ocurrió un error al guardar el inmueble.', 'alert-type' => 'error']);
         }

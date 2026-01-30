@@ -58,8 +58,16 @@
                         <label>Inmueble <span class="required">*</span></label>
                        <select name="inmueble_id" class="form-control select2" required>
                             <option value="">Elija...</option>
+                            @php
+                                $selectedInmueble = old('inmueble_id', optional($tramite)->inmueble_id);
+                                if (!$selectedInmueble && isset($tramite) && $tramite->exists) {
+                                    $selectedInmueble = $tramite->inmuebles->first()?->id;
+                                }
+                            @endphp
                             @foreach($inmuebles as $i)
-                                <option value="{{ $i->id }}">{{ $i->catastro }}</option>
+                                <option value="{{ $i->id }}" {{ $selectedInmueble == $i->id ? 'selected' : '' }}>
+                                    {{ $i->catastro }}
+                                </option>
                             @endforeach
                         </select>
                     </div>

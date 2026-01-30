@@ -23,7 +23,7 @@ class UfvApiSeeder extends Seeder
         // Podrías obtener la última fecha registrada en tu DB y empezar desde ahí.
         $lastUfvDate = Ufv::orderByDesc('fecha')->first()?->fecha;
         // Si no hay UFVs, empieza desde una fecha razonable (ej. inicio del año anterior o una fecha específica).
-        $startDate = $lastUfvDate ? $lastUfvDate->addDay() : Carbon::parse('2023-01-01');
+        $startDate = $lastUfvDate ? $lastUfvDate->copy()->addDay() : Carbon::parse('2023-01-01');
         $endDate = now();
 
         // URL de la API del Banco Central de Bolivia (BCB) o un servicio similar.

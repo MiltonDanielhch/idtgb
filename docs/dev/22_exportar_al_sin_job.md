@@ -974,7 +974,7 @@ public function handle(): void
         Log::info('Archivo CSV generado', [
             'request_id' => $requestId,
             'file_name' => $fileName,
-            'file_path' => $filePath,
+            'archivo_path' => $filePath,
             'file_size' => strlen($csvData),
         ]);
 

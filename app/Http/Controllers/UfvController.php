@@ -1,8 +1,6 @@
 <?php
 
 namespace App\Http\Controllers;
-// app/Http/Controllers/UfvController.php
-namespace App\Http\Controllers;
 
 use App\Models\Ufv;
 use Illuminate\Http\Request;
@@ -90,73 +88,67 @@ class UfvController extends Controller
             $errors   = [];
             $toInsert = [];
             $now      = now();
+            $today    = now()->startOfDay();
             $userId   = auth()->id();
 
-            // --- NUEVO: Detectar automáticamente el delimitador ---
-            // Leemos la primera línea para ver si contiene un punto y coma.
             $firstLine = fgets($handle);
             $delimiter = (strpos($firstLine, ';') !== false) ? ';' : ',';
-            // Volvemos al principio del archivo para que fgetcsv lo procese desde el inicio.
             rewind($handle);
 
-            // Omitimos la fila de encabezado, usando el delimitador que acabamos de detectar.
             fgetcsv($handle, 0, $delimiter);
 
-            // Obtener todas las fechas existentes para evitar duplicados
             $existingDates = Ufv::pluck('fecha')->map(fn($date) => $date->format('Y-m-d'))->flip();
 
-            // Usamos el delimitador detectado en el bucle
             while (($line = fgetcsv($handle, 0, $delimiter)) !== false) {
                 if (count($line) < 2) continue;
 
                 $fecha = trim($line[0]);
-
                 $valor = trim($line[1]);
-                // --- NUEVO: Detección inteligente del formato de fecha ---
-                // Primero intentamos con el formato día/mes/año
-                $dateObject = \DateTime::createFromFormat('d/m/Y', $fecha);
 
-                // Si falla, intentamos con el formato año-mes-día
+                $dateObject = \DateTime::createFromFormat('d/m/Y', $fecha);
                 if (!$dateObject) {
                     $dateObject = \DateTime::createFromFormat('Y-m-d', $fecha);
                 }
 
                 if (!$dateObject) {
-                    $errors[] = "Formato de fecha inválido: {$fecha} (se espera DD/MM/YYYY o YYYY-MM-DD)";
+                    $errors[] = "Formato de fecha inválido: {$fecha}";
+                    continue;
+                }
+                
+                if ($dateObject > $today) {
+                    $errors[] = "La fecha no puede ser futura: {$fecha}";
                     continue;
                 }
 
-                // Siempre guardamos la fecha en el formato estándar de la BD
                 $fechaFormatted = $dateObject->format('Y-m-d');
 
-                // Limpiamos el valor por si tiene caracteres extraños
-                // $valor = str_replace([' ', '|'], '', $valor);
-                $valor = str_replace([' ', '|', ','], ['', '', '.'], $valor);
+                // Bug #5: Mejorar conversión de separadores.
+                // 1. Quitar separadores de miles (puntos)
+                // 2. Reemplazar la coma decimal por un punto.
+                $valor = str_replace('.', '', $valor);
+                $valor = str_replace(',', '.', $valor);
 
                 if (!is_numeric($valor) || $valor <= 0) {
                     $errors[] = "Valor inválido: {$valor}";
                     continue;
                 }
 
-                // Verificar duplicados
                 if (isset($existingDates[$fechaFormatted])) {
                     $errors[] = "Fecha duplicada: {$fechaFormatted}";
                     continue;
                 }
 
-                // Preparar el array para la inserción masiva
                 $toInsert[] = [
                     'fecha'      => $fechaFormatted,
                     'valor'      => $valor,
-                    // 'created_by' => $userId,
-                    // 'updated_by' => $userId,
+                    'created_by' => $userId,
+                    'updated_by' => $userId,
                     'created_at' => $now,
                     'updated_at' => $now,
                 ];
             }
             fclose($handle);
 
-            // Realizar una única inserción masiva si hay datos para insertar
             if (!empty($toInsert)) {
                 Ufv::insert($toInsert);
             }
@@ -172,8 +164,44 @@ class UfvController extends Controller
 
         } catch (\Throwable $e) {
             DB::rollBack();
-            // Log::error('Error importando UFVs: ' . $e->getMessage());
+            Log::error('Error importando UFVs: ' . $e->getMessage());
             return back()->withInput()->with(['message' => 'Error al importar el archivo: ' . $e->getMessage(), 'alert-type' => 'error']);
         }
+    }
+
+    /* ---------- EDICIÓN ---------- */
+    public function edit(Ufv $ufv)
+    {
+        $this->authorize('update', $ufv);
+        return view('admin.ufvs.edit', compact('ufv'));
+    }
+
+    public function update(Request $request, Ufv $ufv)
+    {
+        $this->authorize('update', $ufv);
+
+        $request->validate([
+            'fecha' => 'required|date|before_or_equal:today|unique:ufvs,fecha,' . $ufv->id,
+            'valor' => 'required|numeric|min:0.00001',
+        ]);
+
+        $ufv->update([
+            'fecha' => $request->fecha,
+            'valor' => $request->valor,
+            'updated_by' => auth()->id(),
+        ]);
+
+        return redirect()->route('admin.ufvs.index')
+            ->with(['message' => 'Valor UFV actualizado.', 'alert-type' => 'success']);
+    }
+
+    /* ---------- ELIMINACIÓN ---------- */
+    public function destroy(Ufv $ufv)
+    {
+        $this->authorize('delete', $ufv);
+        $ufv->delete();
+
+        return redirect()->route('admin.ufvs.index')
+            ->with(['message' => 'Valor UFV eliminado.', 'alert-type' => 'success']);
     }
 }

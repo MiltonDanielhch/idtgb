@@ -64,7 +64,8 @@ class TramiteController extends Controller
         $this->authorize('update', $tramite);
 
         if (in_array($tramite->estado, ['Pagado', 'Anulado', 'Finalizado'])) {
-            abort(403, 'No se pueden editar trámites en estado Pagado, Anulado o Finalizado.');
+            return redirect()->route('admin.tramites.index')
+                ->with(['message' => 'No se pueden editar trámites en estado Pagado, Anulado o Finalizado.', 'alert-type' => 'error']);
         }
 
         return view('admin.tramites.edit-add', [
@@ -160,7 +161,7 @@ class TramiteController extends Controller
 
             // Carga la vista del PDF y pasa los datos
             $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.tramites.pdf.a01', compact('tramite', 'qr', 'hash'));
-            
+
             Log::info('PDF A01 generado exitosamente', [
                 'tramite_id' => $tramite->id,
                 'nro_tramite' => $tramite->nro_tramite

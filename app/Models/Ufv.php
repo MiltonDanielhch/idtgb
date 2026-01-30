@@ -13,12 +13,14 @@ class Ufv extends Model
 
     protected $fillable = [
         'fecha',
-        'valor'
+        'valor',
+        'created_by',
+        'updated_by'
     ];
 
     protected $casts = [
         'fecha' => 'date',
-        'valor' => 'float'
+        'valor' => 'decimal:5'
     ];
 
     /**
@@ -41,5 +43,15 @@ class Ufv extends Model
         }
 
         return (float) $ufv->valor;
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function editor()
+    {
+        return $this->belongsTo(User::class, 'updated_by');
     }
 }

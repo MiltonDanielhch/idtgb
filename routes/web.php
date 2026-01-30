@@ -245,6 +245,9 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
         Route::post('/', [UfvController::class, 'store'])->name('store');
         Route::post('/import', [UfvController::class, 'import'])->name('import');
         Route::get('/{ufv}', [UfvController::class, 'show'])->name('show');
+        Route::get('/{ufv}/edit', [UfvController::class, 'edit'])->name('edit');
+        Route::put('/{ufv}', [UfvController::class, 'update'])->name('update');
+        Route::delete('/{ufv}', [UfvController::class, 'destroy'])->name('destroy');
     });
 
     // ──────────────── USUARIOS Y ROLES (Extensión de Voyager) ────────────────

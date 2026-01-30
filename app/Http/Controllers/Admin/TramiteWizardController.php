@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use Illuminate\Validation\Rule;
 
 class TramiteWizardController extends Controller
 {
@@ -83,10 +84,72 @@ class TramiteWizardController extends Controller
         return true;
     }
 
+    // ==================== NUEVO MÉTODO: EDITAR ====================
+    public function edit($id, Request $request)
+    {
+        $tramite = Tramite::with(['disponentes', 'adquirentes', 'inmuebles', 'documentos', 'tramiteExenciones'])->findOrFail($id);
+
+        if (in_array($tramite->estado, ['Finalizado', 'Anulado', 'Pagado'])) {
+            return redirect()->route('admin.tramites.index')
+                ->with(['message' => 'No se puede editar un trámite en estado ' . $tramite->estado, 'alert-type' => 'error']);
+        }
+
+        $this->initializeWizard($request);
+
+        $wizardData = [
+            'current_tramite_id' => $tramite->id,
+            'step1' => [
+                'nro_tramite' => $tramite->nro_tramite,
+                'fecha_presentacion' => $tramite->fecha_presentacion->format('Y-m-d'),
+                'fecha_transmision' => $tramite->fecha_transmision->format('Y-m-d'),
+                'tipo_transmision_id' => $tramite->tipo_transmision_id,
+                'valor_declarado' => $tramite->valor_declarado,
+                'base_imponible' => $tramite->base_imponible,
+                'observaciones' => $tramite->observaciones,
+            ],
+            'step2' => [
+                'disponentes' => $tramite->disponentes->pluck('person_id')->toArray()
+            ],
+            'step3' => [
+                'adquirentes' => $tramite->adquirentes->map(function($adq) {
+                    return [
+                        'person_id' => $adq->person_id,
+                        'parentesco_id' => $adq->parentesco_id,
+                        'porcentaje' => $adq->porcentaje
+                    ];
+                })->toArray()
+            ],
+            'step4' => [
+                'inmuebles' => $tramite->inmuebles->pluck('id')->toArray()
+            ],
+            'step5' => [
+                'documentos' => $tramite->documentos->where('vigente', true)->map(function($doc) {
+                    return [
+                        'id' => $doc->id,
+                        'tipo_doc' => $doc->tipo_doc,
+                        'person_id' => $doc->person_id,
+                        'temp_path' => null,
+                        'original_name' => $doc->original_name ?? basename($doc->file_path),
+                        'existing' => true
+                    ];
+                })->toArray()
+            ],
+            'step6' => [
+                'exenciones' => $tramite->tramiteExenciones->pluck('exencion_id')->toArray()
+            ]
+        ];
+
+        $this->updateWizardData($request, $wizardData);
+
+        return redirect()->route('admin.tramites.wizard.create.step1');
+    }
+
     // ==================== PASO 1: DATOS GENERALES ====================
     public function createStep1(Request $request)
     {
-        $this->initializeWizard($request);
+        if (!$request->session()->has($this->getSessionKey())) {
+            $this->initializeWizard($request);
+        }
         $wizardData = $this->getWizardData($request);
         $tiposTransmision = TipoTransmision::all();
 
@@ -102,8 +165,16 @@ class TramiteWizardController extends Controller
 
     public function postStep1(Request $request)
     {
+        $wizardData = $this->getWizardData($request);
+        $currentId = $wizardData['current_tramite_id'] ?? null;
+
         $validated = $request->validate([
-            'nro_tramite' => 'required|string|max:15|unique:tramites,nro_tramite',
+            'nro_tramite' => [
+                'required',
+                'string',
+                'max:15',
+                Rule::unique('tramites', 'nro_tramite')->ignore($currentId)
+            ],
             'fecha_presentacion' => 'required|date',
             'fecha_transmision' => 'required|date|before_or_equal:fecha_presentacion', // Validación lógica
             'tipo_transmision_id' => 'required|exists:tipos_transmision,id',
@@ -112,7 +183,6 @@ class TramiteWizardController extends Controller
             'observaciones' => 'nullable|string|max:500',
         ]);
 
-        $wizardData = $this->getWizardData($request);
         $wizardData['step1'] = $validated;
         $this->updateWizardData($request, $wizardData);
 
@@ -639,15 +709,26 @@ class TramiteWizardController extends Controller
         try {
             DB::beginTransaction();
 
-            // 1. Crear trámite principal
-            $tramite = Tramite::create(array_merge($wizardData['step1'], [
+            $currentId = $wizardData['current_tramite_id'] ?? null;
+            $tramiteData = array_merge($wizardData['step1'], [
                 'user_id' => auth()->id(),
-                'created_by' => auth()->id(),
                 'updated_by' => auth()->id(),
                 'fecha_vencimiento' => Carbon::parse($wizardData['step1']['fecha_presentacion'])->addDays(30),
-                'estado' => 'Borrador',
-                'ufv_aplicada' => 1.00000, // Valor por defecto
-            ]));
+            ]);
+
+            if ($currentId) {
+                $tramite = Tramite::findOrFail($currentId);
+                $tramite->update($tramiteData);
+
+                $tramite->disponentes()->delete();
+                $tramite->adquirentes()->delete();
+                $tramite->tramiteExenciones()->delete();
+            } else {
+                $tramiteData['created_by'] = auth()->id();
+                $tramiteData['estado'] = 'Borrador';
+                $tramiteData['ufv_aplicada'] = 1.00000;
+                $tramite = Tramite::create($tramiteData);
+            }
 
             // 2. Asociar disponentes
             foreach ($wizardData['step2']['disponentes'] as $personId) {
@@ -664,8 +745,7 @@ class TramiteWizardController extends Controller
                     'person_id' => $adqData['person_id'],
                     'parentesco_id' => $adqData['parentesco_id'],
                     'tasa_aplicada' => 0,
-                    // 'porcentaje' => 0,
-                    'porcentaje' => $adqData['porcentaje'] ?? 0, // <--- ¡SOLUCIÓN! Usar el valor de la sesión.
+                    'porcentaje' => $adqData['porcentaje'] ?? 0,
                     'idtgb_proporcional' => 0,
                     'es_beneficiario_exencion' => false
                 ]);
@@ -678,8 +758,14 @@ class TramiteWizardController extends Controller
             $tramite->load('inmuebles');
 
             // 5. Guardar y asociar documentos
+            $documentosMantenidosIds = [];
+
             if (!empty($wizardData['step5']['documentos'])) {
                 foreach ($wizardData['step5']['documentos'] as $docData) {
+                    if (!empty($docData['existing'])) {
+                        $documentosMantenidosIds[] = $docData['id'];
+                        continue;
+                    }
 
                     $tempPath = $docData['temp_path'];
                     $finalPath = str_replace('wizard_temp_docs', "tramites/{$tramite->id}/documentos", $tempPath);
@@ -710,7 +796,7 @@ class TramiteWizardController extends Controller
                                 ->where('tipo_doc', $docData['tipo_doc'])
                                 ->update(['vigente' => false]);
 
-                            $tramite->documentos()->create([
+                            $newDoc = $tramite->documentos()->create([
                                 'tipo_doc' => $docData['tipo_doc'],
                                 'person_id' => $docData['person_id'],
                                 'file_path' => $finalPath,
@@ -719,6 +805,7 @@ class TramiteWizardController extends Controller
                                 'vigente' => true,
                                 'original_name' => $docData['original_name'] ?? 'documento.pdf'
                             ]);
+                            $documentosMantenidosIds[] = $newDoc->id;
                         }
                     } else {
                         // OPCIONAL: Registrar en el log si el archivo no se encontró
@@ -728,6 +815,13 @@ class TramiteWizardController extends Controller
                         // si crear el registro en BD o saltarlo.
                     }
                 }
+            }
+
+            if ($currentId) {
+                $tramite->documentos()
+                    ->whereNotIn('id', $documentosMantenidosIds)
+                    ->where('vigente', true)
+                    ->update(['vigente' => false]);
             }
 
             // 6. Asociar exenciones (si las hay)
@@ -755,9 +849,10 @@ class TramiteWizardController extends Controller
             // Limpiar sesión
             $request->session()->forget($this->getSessionKey());
 
+            $accion = $currentId ? "actualizado" : "creado";
             return redirect()->route('admin.tramites.show', $tramite)
                 ->with([
-                    'message' => "Trámite #{$tramite->nro_tramite} creado exitosamente",
+                    'message' => "Trámite #{$tramite->nro_tramite} {$accion} exitosamente",
                     'alert-type' => 'success'
                 ]);
 

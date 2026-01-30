@@ -22,6 +22,15 @@
             </div>
 
             <div class="panel-body">
+                @if ($errors->any())
+                    <div class="alert alert-danger">
+                        <ul>
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
                 <div class="row">
                     {{-- Complemento --}}
                     <div class="col-md-3">
@@ -29,6 +38,9 @@
                         <input type="text" name="complemento" class="form-control"
                                value="{{ old('complemento', optional($inmueble)->complemento) }}"
                                maxlength="3" placeholder="Ej: A">
+                        @error('complemento')
+                            <small class="text-danger">{{ $message }}</small>
+                        @enderror
                     </div>
 
                     {{-- Catástro (único) --}}
@@ -37,6 +49,9 @@
                         <input type="text" name="catastro" class="form-control"
                                value="{{ old('catastro', optional($inmueble)->catastro) }}"
                                required maxlength="15" placeholder="Ej: 123456789012345">
+                        @error('catastro')
+                            <small class="text-danger">{{ $message }}</small>
+                        @enderror
                     </div>
 
                     {{-- Tipo de inmueble --}}
@@ -51,6 +66,9 @@
                                 </option>
                             @endforeach
                         </select>
+                        @error('tipo_inmueble_id')
+                            <small class="text-danger">{{ $message }}</small>
+                        @enderror
                     </div>
 
                     {{-- Municipio --}}
@@ -65,6 +83,9 @@
                                 </option>
                             @endforeach
                         </select>
+                        @error('municipio_id')
+                            <small class="text-danger">{{ $message }}</small>
+                        @enderror
                     </div>
                 </div>
 
@@ -75,6 +96,9 @@
                         <input type="text" name="barrio_comunidad" class="form-control"
                                value="{{ old('barrio_comunidad', optional($inmueble)->barrio_comunidad) }}"
                                maxlength="100" placeholder="Ej: Barrio Los Álamos">
+                        @error('barrio_comunidad')
+                            <small class="text-danger">{{ $message }}</small>
+                        @enderror
                     </div>
 
                     {{-- Dirección --}}
@@ -83,6 +107,9 @@
                         <input type="text" name="direccion" class="form-control"
                                value="{{ old('direccion', optional($inmueble)->direccion) }}"
                                maxlength="200" placeholder="Ej: Av. 6 de Agosto #123">
+                        @error('direccion')
+                            <small class="text-danger">{{ $message }}</small>
+                        @enderror
                     </div>
 
                     {{-- Matrícula RR --}}
@@ -91,6 +118,9 @@
                         <input type="text" name="matricula_rr" class="form-control"
                                value="{{ old('matricula_rr', optional($inmueble)->matricula_rr) }}"
                                maxlength="20" placeholder="Ej: RR-123456">
+                        @error('matricula_rr')
+                            <small class="text-danger">{{ $message }}</small>
+                        @enderror
                     </div>
                 </div>
 
@@ -101,6 +131,9 @@
                         <input type="number" step="0.01" min="0" name="superficie_m2" class="form-control"
                                value="{{ old('superficie_m2', optional($inmueble)->superficie_m2) }}"
                                placeholder="Ej: 250.50">
+                        @error('superficie_m2')
+                            <small class="text-danger">{{ $message }}</small>
+                        @enderror
                     </div>
 
                     {{-- Valor Catastral --}}
@@ -109,6 +142,9 @@
                         <input type="number" step="0.01" min="0" name="valor_catastral" class="form-control"
                                value="{{ old('valor_catastral', optional($inmueble)->valor_catastral) }}"
                                required placeholder="Ej: 500000.00">
+                        @error('valor_catastral')
+                            <small class="text-danger">{{ $message }}</small>
+                        @enderror
                     </div>
 
                     {{-- Es vivienda única --}}
@@ -118,6 +154,9 @@
                             <option value="0" {{ !old('es_vivienda_unica_familiar', optional($inmueble)->es_vivienda_unica_familiar) ? 'selected' : '' }}>No</option>
                             <option value="1" {{ old('es_vivienda_unica_familiar', optional($inmueble)->es_vivienda_unica_familiar) ? 'selected' : '' }}>Sí</option>
                         </select>
+                        @error('es_vivienda_unica_familiar')
+                            <small class="text-danger">{{ $message }}</small>
+                        @enderror
                     </div>
 
                     {{-- Estado del inmueble --}}
@@ -132,6 +171,9 @@
                                 <option value="{{ $e }}" {{ $current == $e ? 'selected' : '' }}>{{ $e }}</option>
                             @endforeach
                         </select>
+                        @error('estado_inmueble')
+                            <small class="text-danger">{{ $message }}</small>
+                        @enderror
                     </div>
                 </div>
             </div>

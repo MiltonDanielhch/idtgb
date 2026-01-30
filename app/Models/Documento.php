@@ -14,11 +14,14 @@ class Documento extends Model
     protected $fillable = [
         'tramite_id',
         'tipo_doc',
-        'file_path',
+        'archivo_path',
+        'descripcion',
         'hash_sha256',
         'person_id',
         'vigente',
         'version',
+        'created_by',
+        'updated_by',
     ];
 
     protected $casts = [

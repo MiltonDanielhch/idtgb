@@ -72,6 +72,7 @@
                         </select>
                         @error('person_id') <small class="text-danger">{{ $message }}</small> @enderror
                     </div>
+                </div>
 
 
                 <div class="row" style="margin-top: 15px;">

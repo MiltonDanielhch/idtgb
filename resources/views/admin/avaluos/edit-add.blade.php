@@ -23,6 +23,15 @@
             </div>
 
             <div class="panel-body">
+                @if ($errors->any())
+                    <div class="alert alert-danger">
+                        <ul>
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
                 <div class="row">
                     {{-- Inmueble --}}
                     <div class="col-md-4">
@@ -36,6 +45,9 @@
                                 </option>
                             @endforeach
                         </select>
+                        @error('inmueble_id')
+                            <small class="text-danger">{{ $message }}</small>
+                        @enderror
                     </div>
 
                     {{-- Tipo de avalúo --}}
@@ -50,6 +62,9 @@
                                 <option value="{{ $t }}" {{ $current == $t ? 'selected' : '' }}>{{ $t }}</option>
                             @endforeach
                         </select>
+                        @error('tipo_avaluo')
+                            <small class="text-danger">{{ $message }}</small>
+                        @enderror
                     </div>
 
                     {{-- Fecha del avalúo --}}
@@ -58,6 +73,9 @@
                         <input type="date" name="fecha_avaluo" class="form-control"
                                value="{{ old('fecha_avaluo', optional($avaluo)->fecha_avaluo?->format('Y-m-d')) }}"
                                required>
+                        @error('fecha_avaluo')
+                            <small class="text-danger">{{ $message }}</small>
+                        @enderror
                     </div>
                 </div>
 
@@ -68,6 +86,9 @@
                         <input type="number" step="0.01" min="0" name="valor" class="form-control"
                                value="{{ old('valor', optional($avaluo)->valor) }}"
                                required placeholder="Ej: 520000.00">
+                        @error('valor')
+                            <small class="text-danger">{{ $message }}</small>
+                        @enderror
                     </div>
 
                     {{-- Perito --}}
@@ -82,6 +103,9 @@
                                 </option>
                             @endforeach
                         </select>
+                        @error('perito_id')
+                            <small class="text-danger">{{ $message }}</small>
+                        @enderror
                     </div>
 
                     {{-- Estado --}}
@@ -96,6 +120,9 @@
                                 <option value="{{ $e }}" {{ $current == $e ? 'selected' : '' }}>{{ $e }}</option>
                             @endforeach
                         </select>
+                        @error('estado')
+                            <small class="text-danger">{{ $message }}</small>
+                        @enderror
                     </div>
                 </div>
 
@@ -104,6 +131,9 @@
                     <div class="col-md-12">
                         <label>Documento (pdf/jpg/png ≤ 5 MB)</label>
                         <input type="file" name="documento" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+                        @error('documento')
+                            <small class="text-danger">{{ $message }}</small>
+                        @enderror
                         @if($avaluo->exists && $avaluo->documento_path)
                             <div class="mt-2">
                                 <small>Archivo actual:</small>

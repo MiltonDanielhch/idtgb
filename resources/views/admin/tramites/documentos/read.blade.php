@@ -73,10 +73,10 @@
                 <div class="col-md-12">
                     <label>Archivo</label>
                     <p class="form-control-static">
-                        <a href="{{ \Storage::disk('public')->url($item->file_path) }}" target="_blank" class="btn btn-sm btn-primary">
+                        <a href="{{ \Storage::disk('public')->url($item->archivo_path) }}" target="_blank" class="btn btn-sm btn-primary">
                             <i class="voyager-download"></i> Descargar archivo
                         </a>
-                        <small class="text-muted ml-2">{{ basename($item->file_path) }}</small>
+                        <small class="text-muted ml-2">{{ basename($item->archivo_path) }}</small>
                     </p>
                 </div>
             </div>

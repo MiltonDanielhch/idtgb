@@ -11,6 +11,8 @@ class DocumentoSeeder extends Seeder
 {
     public function run(): void
     {
+        $adminId = 1;
+
         // === Trámite 1: Herencia (BE-2025-0001) ===
         $tramite1 = Tramite::where('nro_tramite', 'BE-2025-0001')->first();
         if ($tramite1) {
@@ -26,10 +28,13 @@ class DocumentoSeeder extends Seeder
                 Documento::updateOrCreate(
                     ['tramite_id' => $tramite1->id, 'tipo_doc' => 'Partida', 'person_id' => $disponente1->id],
                     [
-                        'file_path' => 'documentos/BE-2025-0001/partida_defuncion_pedro.pdf',
+                        'archivo_path' => 'documentos/BE-2025-0001/partida_defuncion_pedro.pdf',
+                        'descripcion' => 'Partida de Defunción',
                         'hash_sha256' => 'a1b2c3d4e5f67890123456789012345678901234567890123456789012345678', // hash simulado
                         'vigente' => true,
                         'version' => 1,
+                        'created_by' => $adminId,
+                        'updated_by' => $adminId,
                     ]
                 );
 
@@ -37,10 +42,13 @@ class DocumentoSeeder extends Seeder
                 Documento::updateOrCreate(
                     ['tramite_id' => $tramite1->id, 'tipo_doc' => 'CI', 'person_id' => $adquirente1->id],
                     [
-                        'file_path' => 'documentos/BE-2025-0001/ci_hijo.pdf',
+                        'archivo_path' => 'documentos/BE-2025-0001/ci_hijo.pdf',
+                        'descripcion' => 'Cédula de Identidad del Adquirente',
                         'hash_sha256' => 'b2c3d4e5f6789012345678901234567890123456789012345678901234567890',
                         'vigente' => true,
                         'version' => 1,
+                        'created_by' => $adminId,
+                        'updated_by' => $adminId,
                     ]
                 );
 
@@ -48,10 +56,13 @@ class DocumentoSeeder extends Seeder
                 Documento::updateOrCreate(
                     ['tramite_id' => $tramite1->id, 'tipo_doc' => 'Testamento', 'person_id' => $disponente1->id],
                     [
-                        'file_path' => 'documentos/BE-2025-0001/testamento_pedro.pdf',
+                        'archivo_path' => 'documentos/BE-2025-0001/testamento_pedro.pdf',
+                        'descripcion' => 'Testamento del Causante',
                         'hash_sha256' => 'c3d4e5f678901234567890123456789012345678901234567890123456789012',
                         'vigente' => true,
                         'version' => 1,
+                        'created_by' => $adminId,
+                        'updated_by' => $adminId,
                     ]
                 );
             }
@@ -70,10 +81,13 @@ class DocumentoSeeder extends Seeder
                 Documento::updateOrCreate(
                     ['tramite_id' => $tramite2->id, 'tipo_doc' => 'Escritura', 'person_id' => $disponente2->id],
                     [
-                        'file_path' => 'documentos/BE-2025-0002/escritura_donacion.pdf',
+                        'archivo_path' => 'documentos/BE-2025-0002/escritura_donacion.pdf',
+                        'descripcion' => 'Escritura Pública de Donación',
                         'hash_sha256' => 'd4e5f67890123456789012345678901234567890123456789012345678901234',
                         'vigente' => true,
                         'version' => 1,
+                        'created_by' => $adminId,
+                        'updated_by' => $adminId,
                     ]
                 );
 
@@ -81,10 +95,13 @@ class DocumentoSeeder extends Seeder
                 Documento::updateOrCreate(
                     ['tramite_id' => $tramite2->id, 'tipo_doc' => 'CI', 'person_id' => $adquirente2->id],
                     [
-                        'file_path' => 'documentos/BE-2025-0002/ci_tercero.pdf',
+                        'archivo_path' => 'documentos/BE-2025-0002/ci_tercero.pdf',
+                        'descripcion' => 'Cédula de Identidad del Beneficiario',
                         'hash_sha256' => 'e5f6789012345678901234567890123456789012345678901234567890123456',
                         'vigente' => true,
                         'version' => 1,
+                        'created_by' => $adminId,
+                        'updated_by' => $adminId,
                     ]
                 );
             }
@@ -103,10 +120,13 @@ class DocumentoSeeder extends Seeder
                 Documento::updateOrCreate(
                     ['tramite_id' => $tramite3->id, 'tipo_doc' => 'Partida', 'person_id' => $disponente3->id],
                     [
-                        'file_path' => 'documentos/BE-2025-0003/partida_defuncion_pedro2.pdf',
+                        'archivo_path' => 'documentos/BE-2025-0003/partida_defuncion_pedro2.pdf',
+                        'descripcion' => 'Partida de Defunción',
                         'hash_sha256' => 'f678901234567890123456789012345678901234567890123456789012345678',
                         'vigente' => true,
                         'version' => 1,
+                        'created_by' => $adminId,
+                        'updated_by' => $adminId,
                     ]
                 );
 
@@ -114,10 +134,13 @@ class DocumentoSeeder extends Seeder
                 Documento::updateOrCreate(
                     ['tramite_id' => $tramite3->id, 'tipo_doc' => 'Otro', 'person_id' => $adquirente3->id],
                     [
-                        'file_path' => 'documentos/BE-2025-0003/cert_matrimonio.pdf',
+                        'archivo_path' => 'documentos/BE-2025-0003/cert_matrimonio.pdf',
+                        'descripcion' => 'Certificado de Matrimonio (Exención)',
                         'hash_sha256' => '7890123456789012345678901234567890123456789012345678901234567890',
                         'vigente' => true,
                         'version' => 1,
+                        'created_by' => $adminId,
+                        'updated_by' => $adminId,
                     ]
                 );
             }

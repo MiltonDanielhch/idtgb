@@ -994,7 +994,7 @@ public function handle(): void
         
         Log::channel('sin')->info('CSV generado', [
             'request_id' => $requestId,
-            'file_path' => $filePath,
+            'archivo_path' => $filePath,
             'file_size' => filesize($filePath),
         ]);
         
