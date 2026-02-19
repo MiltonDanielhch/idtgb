@@ -129,7 +129,7 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
         Route::get('create-step-2', [TramiteWizardController::class, 'createStep2'])->name('create.step2');
         Route::post('post-step-2', [TramiteWizardController::class, 'postStep2'])->name('post.step2');
         Route::post('add-disponente', [TramiteWizardController::class, 'addDisponente'])->name('add.disponente');
-        Route::delete('remove-disponente/{person_id}', [TramiteWizardController::class, 'removeDisponente'])->name('remove.disponente');
+        Route::get('remove-disponente/{person_id}', [TramiteWizardController::class, 'removeDisponente'])->name('remove.disponente');
 
         // Step 3: Adquirentes
         Route::get('create-step-3', [TramiteWizardController::class, 'createStep3'])->name('create.step3');
@@ -141,7 +141,7 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
         Route::get('create-step-4', [TramiteWizardController::class, 'createStep4'])->name('create.step4');
         Route::post('post-step-4', [TramiteWizardController::class, 'postStep4'])->name('post.step4');
         Route::post('add-inmueble', [TramiteWizardController::class, 'addInmueble'])->name('add.inmueble');
-        Route::delete('remove-inmueble', [TramiteWizardController::class, 'removeInmueble'])->name('remove.inmueble');
+        Route::get('remove-inmueble/{id}', [TramiteWizardController::class, 'removeInmueble'])->name('remove.inmueble');
 
         // Step 5: Documentos
         Route::get('create-step-5', [TramiteWizardController::class, 'createStep5'])->name('create.step5');

@@ -550,12 +550,15 @@ class TramiteWizardController extends Controller
         // Bug #3: Usar fecha de presentación del trámite en lugar de now()
         $fechaPresentacion = $wizardData['step1']['fecha_presentacion'] ?? now()->toDateString();
 
-        $exencionesSeleccionadas = \App\Models\Exencion::whereIn('id', $wizardData['step6']['exenciones'] ?? [])->get();
-
-        $exencionesDisponibles = \App\Models\Exencion::whereDate('vigente_desde', '<=', $fechaPresentacion)
-            ->where(fn ($q) => $q->whereNull('vigente_hasta')->orWhereDate('vigente_hasta', '>=', $fechaPresentacion))
-            ->whereNotIn('id', $wizardData['step6']['exenciones'] ?? [])
+        // Obtener exenciones NO seleccionadas
+        $exencionesSeleccionadasIds = $wizardData['step6']['exenciones'] ?? [];
+        $exencionesDisponibles = \App\Models\Exencion::withTrashed()
+            ->whereNotIn('id', $exencionesSeleccionadasIds)
             ->orderBy('nombre')
+            ->get();
+
+        $exencionesSeleccionadas = \App\Models\Exencion::withTrashed()
+            ->whereIn('id', $exencionesSeleccionadasIds)
             ->get();
 
         $isEdit = ! empty($wizardData['current_tramite_id']);

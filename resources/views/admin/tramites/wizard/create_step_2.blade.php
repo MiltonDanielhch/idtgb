@@ -10,7 +10,6 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap.min.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
     <style>
-        /* Fuerza el z-index del dropdown de Select2 para que aparezca sobre el modal */
         .select2-container--open {
             z-index: 9999 !important;
         }
@@ -40,12 +39,36 @@
 
         <div class="row">
             <div class="col-md-12">
-                <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#searchPersonModal">
+                <button type="button" class="btn btn-primary" id="toggleSearchPanel">
                     <i class="voyager-search"></i> Buscar y Añadir Disponente
                 </button>
                 <small class="text-muted" style="display: block; margin-top: 10px;">
                     Personas que transfieren el bien (donantes, causantes, etc.)
                 </small>
+            </div>
+        </div>
+
+        <div id="searchPersonPanel" class="panel panel-default" style="margin-top: 20px; display: none;">
+            <div class="panel-body">
+                <div class="form-group">
+                    <label>Buscar persona:</label>
+                    <select id="person-select" class="form-control" style="width: 100%;">
+                        <option value=""></option>
+                    </select>
+                </div>
+
+                <div id="selected-person-info" style="display: none;">
+                    <hr>
+                    <h5>Persona seleccionada:</h5>
+                    <div id="person-details" class="alert alert-info"></div>
+                    <form id="add-disponente-form" action="{{ route('admin.tramites.wizard.add.disponente') }}" method="POST">
+                        @csrf
+                        <input type="hidden" name="person_id" id="selected-person-id">
+                        <button type="submit" class="btn btn-success">
+                            <i class="voyager-plus"></i> Agregar como Disponente
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -105,43 +128,6 @@
         </div>
     </div>
 </form>
-
-<!-- Modal de Búsqueda de Personas -->
-<div class="modal fade" id="searchPersonModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-                <h4 class="modal-title">
-                    <i class="voyager-search"></i> Buscar Persona para Disponente
-                </h4>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>Buscar persona:</label>
-                    <select id="person-select" class="form-control" style="width: 100%;">
-                        <option value=""></option>
-                    </select>
-                </div>
-
-                <div id="selected-person-info" style="display: none;">
-                    <hr>
-                    <h5>Persona seleccionada:</h5>
-                    <div id="person-details" class="alert alert-info"></div>
-                    <form id="add-disponente-form" action="{{ route('admin.tramites.wizard.add.disponente') }}" method="POST">
-                        @csrf
-                        <input type="hidden" name="person_id" id="selected-person-id">
-                        <button type="submit" class="btn btn-success">
-                            <i class="voyager-plus"></i> Agregar como Disponente
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 @endsection
 
 @push('javascript')
@@ -152,14 +138,27 @@
 
 <script>
 $(document).ready(function () {
-    // Inicializar Select2 para búsqueda de personas
+    var select2Initialized = false;
+
+    $('#toggleSearchPanel').on('click', function () {
+        var $panel = $('#searchPersonPanel');
+        if ($panel.is(':hidden')) {
+            $panel.slideDown(300);
+            if (!select2Initialized) {
+                initializeSelect2();
+                select2Initialized = true;
+            }
+        } else {
+            $panel.slideUp(300);
+        }
+    });
+
     function initializeSelect2() {
         $('#person-select').select2({
             theme: 'bootstrap',
             language: 'es',
             placeholder: 'Escriba nombre, CI o NIT para buscar...',
             minimumInputLength: 2,
-            dropdownParent: $('#searchPersonModal'), // IMPORTANTE: Esto conecta el dropdown al modal
             ajax: {
                 url: '{{ route("admin.tramites.wizard.ajax.personList") }}',
                 dataType: 'json',
@@ -179,31 +178,10 @@ $(document).ready(function () {
         });
     }
 
-    // Cuando se abre el modal, inicializar Select2
-    $('#searchPersonModal').on('shown.bs.modal', function () {
-        // Pequeño delay para asegurar que el modal esté completamente visible
-        setTimeout(function() {
-            initializeSelect2();
-            // Ya no se abre automáticamente para evitar la sensación de "ya buscando"
-            // $('#person-select').select2('open');
-        }, 100);
-    });
-
-    // Cuando se cierra el modal, limpiar y destruir Select2
-    $('#searchPersonModal').on('hidden.bs.modal', function () {
-        if ($('#person-select').hasClass('select2-hidden-accessible')) {
-            $('#person-select').val(null).trigger('change');
-            $('#person-select').select2('destroy');
-        }
-        $('#selected-person-info').hide();
-    });
-
-    // Cuando se selecciona una persona
     $(document).on('select2:select', '#person-select', function (e) {
         var data = e.params.data;
         $('#selected-person-id').val(data.id);
 
-        // Mostrar información de la persona seleccionada
         $('#person-details').html(`
             <strong>Nombre:</strong> ${data.text}<br>
             <strong>Tipo:</strong> ${data.person_type || 'No especificado'}<br>
@@ -212,7 +190,6 @@ $(document).ready(function () {
         $('#selected-person-info').show();
     });
 
-    // Manejar envío del formulario de añadir disponente
     $('#add-disponente-form').on('submit', function(e) {
         e.preventDefault();
 
@@ -221,25 +198,18 @@ $(document).ready(function () {
             return;
         }
 
-        // Mostrar loading
         var submitBtn = $(this).find('button[type="submit"]');
         var originalText = submitBtn.html();
         submitBtn.html('<i class="voyager-loading"></i> Agregando...').prop('disabled', true);
 
-        // Enviar formulario via AJAX
         $.ajax({
             url: $(this).attr('action'),
             method: 'POST',
             data: $(this).serialize(),
             success: function(response) {
-                // Si la petición AJAX tiene éxito (HTTP 2xx), recargamos la página.
-                // Esto soluciona el problema donde el backend funciona pero el frontend
-                // muestra un error porque no recibe `response.success === true`.
-                $('#searchPersonModal').modal('hide');
                 location.reload();
             },
             error: function(xhr) {
-                // Intentar obtener un mensaje de error más específico del JSON de respuesta
                 var errorMessage = 'Error de servidor. No se pudo agregar el disponente.';
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMessage = xhr.responseJSON.message;
@@ -247,7 +217,6 @@ $(document).ready(function () {
                 alert('Error: ' + errorMessage);
             },
             complete: function() {
-                // Esto se ejecuta después de success o error
                 submitBtn.html(originalText).prop('disabled', false);
             }
         });

@@ -4,19 +4,11 @@
 @push('css')
     <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
     <style>
-        /* Fuerza el z-index del dropdown de Select2 para que aparezca sobre el modal */
         .select2-container--open {
             z-index: 9999 !important;
         }
         .select2-dropdown {
             z-index: 9999 !important;
-        }
-        /* Asegurar que el modal tenga un z-index adecuado */
-        .modal {
-            z-index: 1050;
-        }
-        .modal-backdrop {
-            z-index: 1040;
         }
     </style>
 @endpush
@@ -41,12 +33,36 @@
 
         <div class="row">
             <div class="col-md-12">
-                <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#searchInmuebleModal">
+                <button type="button" class="btn btn-primary" id="toggleSearchPanel">
                     <i class="voyager-search"></i> Buscar y Añadir Inmueble
                 </button>
                 <small class="text-muted" style="display: block; margin-top: 10px;">
                     Inmueble(s) objeto de la transferencia.
                 </small>
+            </div>
+        </div>
+
+        <div id="searchInmueblePanel" class="panel panel-default" style="margin-top: 20px; display: none;">
+            <div class="panel-body">
+                <div class="form-group">
+                    <label>Buscar inmueble:</label>
+                    <select id="inmueble-select" class="form-control" style="width: 100%;">
+                        <option value=""></option>
+                    </select>
+                </div>
+
+                <div id="selected-inmueble-info" style="display: none;">
+                    <hr>
+                    <h5>Inmueble seleccionado:</h5>
+                    <div id="inmueble-details" class="alert alert-info"></div>
+                    <form id="add-inmueble-form" action="{{ route('admin.tramites.wizard.add.inmueble') }}" method="POST">
+                        @csrf
+                        <input type="hidden" name="inmueble_id" id="selected-inmueble-id">
+                        <button type="submit" class="btn btn-success">
+                            <i class="voyager-plus"></i> Agregar Inmueble
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -108,43 +124,6 @@
         </div>
     </div>
 </form>
-
-<!-- Modal de Búsqueda de Inmuebles -->
-<div class="modal fade" id="searchInmuebleModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-                <h4 class="modal-title">
-                    <i class="voyager-search"></i> Buscar Inmueble
-                </h4>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>Buscar inmueble:</label>
-                    <select id="inmueble-select" class="form-control" style="width: 100%;">
-                        <option value=""></option>
-                    </select>
-                </div>
-
-                <div id="selected-inmueble-info" style="display: none;">
-                    <hr>
-                    <h5>Inmueble seleccionado:</h5>
-                    <div id="inmueble-details" class="alert alert-info"></div>
-                    <form id="add-inmueble-form" action="{{ route('admin.tramites.wizard.add.inmueble') }}" method="POST">
-                        @csrf
-                        <input type="hidden" name="inmueble_id" id="selected-inmueble-id">
-                        <button type="submit" class="btn btn-success">
-                            <i class="voyager-plus"></i> Agregar Inmueble
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 @endsection
 
 @push('javascript')
@@ -153,14 +132,27 @@
 
 <script>
 $(document).ready(function () {
-    // Función para inicializar Select2 de búsqueda de inmuebles
+    var select2Initialized = false;
+
+    $('#toggleSearchPanel').on('click', function () {
+        var $panel = $('#searchInmueblePanel');
+        if ($panel.is(':hidden')) {
+            $panel.slideDown(300);
+            if (!select2Initialized) {
+                initializeInmuebleSelect();
+                select2Initialized = true;
+            }
+        } else {
+            $panel.slideUp(300);
+        }
+    });
+
     function initializeInmuebleSelect() {
         $('#inmueble-select').select2({
             theme: 'bootstrap',
             language: 'es',
             placeholder: 'Escriba catastro, dirección o matrícula...',
             minimumInputLength: 2,
-            dropdownParent: $('#searchInmuebleModal'), // CRÍTICO: Conectar al modal
             ajax: {
                 url: '{{ route("admin.inmuebles.ajax.search") }}',
                 dataType: 'json',
@@ -180,32 +172,10 @@ $(document).ready(function () {
         });
     }
 
-    // Cuando se abre el modal, inicializar Select2
-    $('#searchInmuebleModal').on('shown.bs.modal', function () {
-        // Pequeño delay para asegurar que el modal esté completamente visible
-        setTimeout(function() {
-            initializeInmuebleSelect();
-            // Ya no se abre automáticamente para evitar la sensación de "ya buscando"
-            // $('#inmueble-select').select2('open');
-        }, 100);
-    });
-
-    // Cuando se cierra el modal, limpiar y destruir Select2
-    $('#searchInmuebleModal').on('hidden.bs.modal', function () {
-        if ($('#inmueble-select').hasClass('select2-hidden-accessible')) {
-            $('#inmueble-select').val(null).trigger('change');
-            $('#inmueble-select').select2('destroy');
-        }
-        $('#selected-inmueble-info').hide();
-        $('#selected-inmueble-id').val('');
-    });
-
-    // Cuando se selecciona un inmueble
     $(document).on('select2:select', '#inmueble-select', function (e) {
         var data = e.params.data;
         $('#selected-inmueble-id').val(data.id);
 
-        // Formatear valor catastral
         var valorCatastral = 'N/A';
         if (data.valor_catastral) {
             valorCatastral = 'Bs. ' + parseFloat(data.valor_catastral).toLocaleString('es-ES', {
@@ -214,7 +184,6 @@ $(document).ready(function () {
             });
         }
 
-        // Mostrar información del inmueble seleccionado
         $('#inmueble-details').html(`
             <strong>Catastro:</strong> ${data.catastro || 'N/A'}<br>
             <strong>Dirección:</strong> ${data.direccion || 'N/A'}<br>
@@ -224,7 +193,6 @@ $(document).ready(function () {
         $('#selected-inmueble-info').show();
     });
 
-    // Manejar envío del formulario de añadir inmueble
     $('#add-inmueble-form').on('submit', function(e) {
         e.preventDefault();
 
@@ -233,19 +201,15 @@ $(document).ready(function () {
             return;
         }
 
-        // Mostrar loading
         var submitBtn = $(this).find('button[type="submit"]');
         var originalText = submitBtn.html();
         submitBtn.html('<i class="voyager-loading"></i> Agregando...').prop('disabled', true);
 
-        // Enviar formulario via AJAX
         $.ajax({
             url: $(this).attr('action'),
             method: 'POST',
             data: $(this).serialize(),
             success: function(response) {
-                // Si la petición AJAX tiene éxito (HTTP 2xx), recargamos la página.
-                $('#searchInmuebleModal').modal('hide');
                 location.reload();
             },
             error: function(xhr) {
@@ -263,12 +227,6 @@ $(document).ready(function () {
                 submitBtn.html(originalText).prop('disabled', false);
             }
         });
-    });
-
-    // Validar el botón principal del formulario
-    $('form').on('keyup change', function() {
-        var hasInmuebles = {{ $inmuebles->count() }} > 0;
-        $('button[type="submit"]').prop('disabled', !hasInmuebles);
     });
 });
 </script>
