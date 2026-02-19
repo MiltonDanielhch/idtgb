@@ -4,110 +4,163 @@
 
 @push('styles')
 <style>
-    .disclaimer { background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 12px; border-radius: 6px; margin-top: 15px; }
-    .card-header-primary { background-color: #007A33; color: white; } /* Color institucional Beni */
-    .step-header { font-weight: bold; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 5px; }
-    .boleta-container { font-family: 'Courier New', Courier, monospace; background: #f9f9f9; padding: 20px; border: 1px solid #ccc; }
+    :root { --verde-beni: #007A33; --verde-hover: #005f27; }
+    .card-header-primary { background-color: var(--verde-beni); color: white; }
+    .step-header { font-weight: bold; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 5px; color: var(--verde-beni); }
+
+    /* Boleta de preliquidación con estilo de ticket */
     .boleta-container {
-        border-left: 10px solid #007A33; /* El verde del Beni */
-        background-color: #fcfcfc;
-        box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
-        padding: 20px;
-        border-radius: 4px;
+        border-left: 8px solid var(--verde-beni);
+        background-color: #ffffff;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        padding: 25px;
+        border-radius: 8px;
+        font-family: 'Courier New', Courier, monospace;
     }
+
+    /* Optimización de Grupos de Parentesco */
+    .parentesco-group {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        transition: transform 0.2s;
+    }
+    .parentesco-group:hover { transform: translateY(-2px); }
+
+    .parentesco-group-header {
+        padding: 8px 12px;
+        font-size: 0.9rem;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .linea-directa .parentesco-group-header { background: #d4edda; color: #155724; }
+    .colateral .parentesco-group-header { background: #fff3cd; color: #856404; }
+    .otros .parentesco-group-header { background: #f8d7da; color: #721c24; }
+
+    .parentesco-group-body { padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    .parentesco-option {
+        font-size: 0.85rem;
+        display: flex;
+        align-items: center;
+        padding: 8px;
+        border: 1px solid #eee;
+        border-radius: 5px;
+        cursor: pointer;
+        margin: 0;
+    }
+    .parentesco-option.selected { background-color: #e7f3ff; border-color: #007bff; }
+    .parentesco-option input { margin-right: 8px; }
+
+    .tasa-badge { font-size: 0.75rem; margin-left: auto; padding: 2px 6px; border-radius: 10px; font-weight: bold; opacity: 0.8; }
 </style>
 @endpush
 
 @section('content')
-<div class="container py-2">
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb mb-0">
+<div class="container py-3">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="/">Inicio</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Calculá el IDTGB</li>
+            <li class="breadcrumb-item active">Calculadora IDTGB</li>
         </ol>
     </nav>
-</div>
 
-<div class="container pb-5">
-    <div class="card shadow">
-        <div class="card-header card-header-primary d-flex align-items-center">
-            <i class="fas fa-calculator me-2"></i>
-            <span>Calculá el Impuesto Departamental a la Transmisión Gratuita de Bienes (IDTGB)</span>
+    <div class="card shadow-sm border-0">
+        <div class="card-header card-header-primary p-3">
+            <h5 class="mb-0"><i class="fas fa-calculator me-2"></i> Calculadora IDTGB - GAD BENI</h5>
         </div>
-        <div class="card-body">
 
-            <div class="alert alert-warning">
-                <i class="fas fa-exclamation-triangle"></i>
-                <strong>Atención:</strong> Este cálculo es <strong>estimado y referencial</strong>.
+        <div class="card-body p-4">
+            <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center">
+                <i class="fas fa-exclamation-triangle fs-4 me-3"></i>
+                <div><strong>Aviso Legal:</strong> Este cálculo es referencial basado en la Ley 812. El monto final se determina en ventanilla oficial.</div>
             </div>
 
             <form id="form-calculadora">
                 @csrf
+                <div class="row">
+                    <div class="col-lg-7">
+                        <div class="step-header"><i class="fas fa-id-card me-2"></i> 1. Información del Trámite</div>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-8">
+                                <label class="form-label fw-bold small">Nombres y Apellidos</label>
+                                <input type="text" name="nombre_sujeto" class="form-control" placeholder="Nombre completo">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold small">C.I. / NIT</label>
+                                <input type="text" name="ci_sujeto" class="form-control" placeholder="Documento">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small">Tipo de contribuyente</label>
+                                <select name="tipo_contribuyente" class="form-select">
+                                    <option value="Natural">Persona Natural (50 UFV multa)</option>
+                                    <option value="Jurídica">Persona Jurídica (100 UFV multa)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small">Valor del Inmueble (Bs.)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">Bs.</span>
+                                    <input type="number" name="base_imponible" class="form-control" min="0.01" step="0.01" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold small">Participación %</label>
+                                <input type="number" name="participacion" class="form-control" value="100" min="1" max="100">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold small">Tipo de Transmisión</label>
+                                <select name="tipo_transmision" class="form-select">
+                                    @foreach($tipos_transmision as $tipo)
+                                        <option value="{{ $tipo->nombre }}">{{ $tipo->nombre }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold small">Fecha Transmisión</label>
+                                <input type="date" name="fecha_transmision" class="form-control" required>
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="step-header text-success"><i class="fas fa-id-card"></i> 1. Datos del Sujeto Pasivo</div>
-                <div class="row g-3 mb-4">
-                    <div class="col-md-5">
-                        <label class="form-label">Nombres y Apellidos</label>
-                        <input type="text" name="nombre_sujeto" class="form-control" placeholder="Ej: MILTON ...">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">C.I. / NIT</label>
-                        <input type="text" name="ci_sujeto" class="form-control" placeholder="12345678">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Participación (%)</label>
-                        <input type="number" name="participacion" class="form-control" value="100" min="1" max="100" required>
-                        <div class="form-text">Porcentaje de la propiedad que se transmite.</div>
+                    <div class="col-lg-5">
+                        <div class="step-header"><i class="fas fa-users me-2"></i> 2. Parentesco</div>
+                        <div id="parentesco-selector">
+                            @foreach($parentescosAgrupados as $grupoKey => $grupo)
+                                <div class="parentesco-group {{ $grupoKey }}">
+                                    <div class="parentesco-group-header">
+                                        <i class="fas {{ $grupo['icono'] }}"></i>
+                                        <span>{{ $grupo['label'] }} ({{ $grupo['tasa'] }}%)</span>
+                                    </div>
+                                    <div class="parentesco-group-body">
+                                        @foreach($grupo['parentescos'] as $p)
+                                            <label class="parentesco-option" data-group="{{ $grupoKey }}">
+                                                <input type="radio" name="parentesco_id" value="{{ $p->id }}" required>
+                                                <span>{{ $p->nombre }}</span>
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
                     </div>
                 </div>
 
-                <div class="step-header text-success"><i class="fas fa-list-ol"></i> 2. Parámetros del Impuesto</div>
-                <div class="row g-3 mb-4">
-                    <div class="col-md-6">
-                        <label class="form-label">Tipo de contribuyente</label>
-                        <select name="tipo_contribuyente" class="form-select" required>
-                            <option value="Natural">Persona Natural</option>
-                            <option value="Jurídica">Persona Jurídica</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Valor del inmueble (Bs.)</label>
-                        <input type="number" name="base_imponible" class="form-control" value="" min="0.01" step="0.01" required>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Tipo de transmisión</label>
-                        <select name="tipo_transmision" class="form-select" required>
-                            @foreach($tipos_transmision as $tipo)
-                                <option value="{{ $tipo->nombre }}">{{ $tipo->nombre }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Fecha de transmisión</label>
-                        <input type="date" name="fecha_transmision" class="form-control" required>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Parentesco</label>
-                        <select name="parentesco_id" class="form-select" required>
-                            @foreach($parentescos as $p)
-                                <option value="{{ $p->id }}">{{ $p->nombre }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-
-                <div class="text-end">
-                    <button type="submit" class="btn btn-success btn-lg">
-                        <i class="fas fa-play-circle"></i> Calcular Preliquidación
+                <div class="text-center mt-4">
+                    <button type="submit" class="btn btn-success btn-lg px-5 shadow-sm">
+                        <i class="fas fa-calculator me-2"></i> Generar Preliquidación
                     </button>
                 </div>
             </form>
 
             <div id="resultado" class="mt-5 d-none">
-                <div class="step-header text-primary"><i class="fas fa-chart-line"></i> 3. Resultado Estimado (Preliquidación)</div>
+                <hr>
+                <div class="step-header text-primary mt-4"><i class="fas fa-file-invoice-dollar me-2"></i> 3. Resultado Estimado</div>
                 <div id="boleta-detalle"></div>
             </div>
-
         </div>
     </div>
 </div>
@@ -116,23 +169,30 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    // [Tu lógica original de JS aquí, solo ajustaré la presentación del HTML generado]
     const form = document.getElementById('form-calculadora');
     const resultadoDiv = document.getElementById('resultado');
     const boletaDetalle = document.getElementById('boleta-detalle');
 
+    // Selección visual de parentescos
+    document.querySelectorAll('.parentesco-option').forEach(option => {
+        option.addEventListener('click', function() {
+            document.querySelectorAll('.parentesco-option').forEach(opt => opt.classList.remove('selected'));
+            this.classList.add('selected');
+            this.querySelector('input').checked = true;
+        });
+    });
+
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         resultadoDiv.classList.remove('d-none');
-        boletaDetalle.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-success"></div><p>Sintonizando cálculos...</p></div>';
+        boletaDetalle.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-success"></div><p class="mt-2">Sintonizando cálculos...</p></div>';
 
         try {
             const res = await fetch('{{ route("calculadora.beni.post") }}', {
                 method: 'POST',
                 body: new FormData(form),
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json'
-                }
+                headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
             });
 
             const json = await res.json();
@@ -141,46 +201,42 @@ document.addEventListener('DOMContentLoaded', () => {
             const fmt = (n) => parseFloat(n).toLocaleString('es-BO', { minimumFractionDigits: 2 });
 
             boletaDetalle.innerHTML = `
-                <div class="row">
-                    <div class="col-md-5">
-                        <div class="card bg-light border-0 p-3">
-                            <h6>INFORMACIÓN DE REFERENCIA</h6>
-                            <hr>
-                            <p><strong>Nº TRÁMITE:</strong> <span class="text-primary">${json.nro_tramite}</span></p>
-                            <p><strong>UFV VENCIMIENTO:</strong> ${json.ufv_vencimiento}</p>
-                            <p><strong>UFV PAGO (HOY):</strong> ${json.ufv_pago}</p>
-                            <p><strong>DÍAS MORA:</strong> ${json.dias_mora}</p>
-                            <p><strong>PARTICIPACIÓN:</strong> ${json.participacion}%</p>
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="p-3 border-start border-4 border-primary bg-light rounded">
+                            <h6 class="text-uppercase small fw-bold">Referencia</h6>
+                            <div class="small">
+                                <div class="d-flex justify-content-between"><span>Trámite:</span> <span class="fw-bold">${json.nro_tramite}</span></div>
+                                <div class="d-flex justify-content-between"><span>UFV Venc:</span> <span>${json.ufv_vencimiento}</span></div>
+                                <div class="d-flex justify-content-between"><span>UFV Pago:</span> <span>${json.ufv_pago}</span></div>
+                                <div class="d-flex justify-content-between"><span>Días Mora:</span> <span>${json.dias_mora}</span></div>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-7">
+                    <div class="col-md-8">
                         <div class="boleta-container">
-                            <div class="text-center"><strong>GAD BENI - PRELIQUIDACIÓN</strong></div>
-                            <hr>
-                            <div class="d-flex justify-content-between"><span>TRIBUTO OMITIDO (S900)</span> <strong>Bs. ${fmt(json.idtgb_base)}</strong></div>
-                            <div class="d-flex justify-content-between"><span>MANT. DE VALOR (S920)</span> <strong>Bs. ${fmt(json.mantenimiento_valor)}</strong></div>
-                            <div class="d-flex justify-content-between"><span>INTERÉS MORATORIO (S930)</span> <strong>Bs. ${fmt(json.interes)}</strong></div>
-                            <div class="d-flex justify-content-between">
-                                <span>
-                                    MULTA POR IDF (S900)
-                                    <small class="text-muted">(${json.tipo_contribuyente == 'Natural' ? '50' : '100'} UFV x ${json.ufv_pago})</small>
-                                </span>
-                                <strong>Bs. ${fmt(json.multa_idf)}</strong>
+                            <div class="text-center mb-3">
+                                <h5 class="mb-0">ESTADO DE CUENTA PRELIMINAR</h5>
+                                <small>GAD BENI - ADMINISTRACIÓN TRIBUTARIA</small>
                             </div>
-                            <hr>
-                            <div class="d-flex justify-content-between h5"><span>TOTAL DEUDA</span> <strong>Bs. ${fmt(json.final)}</strong></div>
+                            <div class="d-flex justify-content-between mb-2"><span>(+) Tributo Omitido</span> <span class="fw-bold">Bs. ${fmt(json.idtgb_base)}</span></div>
+                            <div class="d-flex justify-content-between mb-2"><span>(+) Mantenimiento Valor</span> <span class="fw-bold">Bs. ${fmt(json.mantenimiento_valor)}</span></div>
+                            <div class="d-flex justify-content-between mb-2"><span>(+) Interés Moratorio</span> <span class="fw-bold">Bs. ${fmt(json.interes)}</span></div>
+                            <div class="d-flex justify-content-between mb-3"><span>(+) Multa IDF</span> <span class="fw-bold">Bs. ${fmt(json.multa_idf)}</span></div>
+                            <div class="border-top border-2 border-dark pt-2 d-flex justify-content-between h4">
+                                <span class="fw-bold">TOTAL DEUDA</span>
+                                <span class="fw-bold text-success">Bs. ${fmt(json.final)}</span>
+                            </div>
                         </div>
                         <div class="text-end mt-3">
-                            <button type="button" onclick="descargarPDF()" class="btn btn-danger">
-                                <i class="fas fa-file-pdf"></i> Imprimir PDF Oficial
+                            <button type="button" onclick="descargarPDF()" class="btn btn-danger btn-lg shadow-sm">
+                                <i class="fas fa-file-pdf me-2"></i> Descargar Reporte Oficial
                             </button>
                         </div>
                     </div>
                 </div>
             `;
-
             resultadoDiv.scrollIntoView({ behavior: 'smooth' });
-
         } catch (err) {
             boletaDetalle.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
         }

@@ -6,10 +6,10 @@ use App\Models\Departamento;
 use App\Models\Parentesco;
 use App\Models\TipoTransmision;
 use App\Services\IdtgbCalculator;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
-use Carbon\Carbon;
 
 class CalculadoraBeniController extends Controller
 {
@@ -18,8 +18,8 @@ class CalculadoraBeniController extends Controller
     public function formulario()
     {
         // Implementación de Caching para listas (Mejora #3)
-        $parentescos = Cache::remember('parentescos.all', 3600, function () {
-            return Parentesco::all();
+        $parentescosAgrupados = Cache::remember('parentescos.agrupados', 3600, function () {
+            return Parentesco::agruparParaSelect();
         });
 
         $tipos_transmision = Cache::remember('tipos_transmision.all', 3600, function () {
@@ -27,23 +27,23 @@ class CalculadoraBeniController extends Controller
         });
 
         return view('calculadora_beni_interactivo', [
-                'parentescos' => $parentescos,
-                'tipos_transmision' => $tipos_transmision,
-                'nro_tramite' => null
-            ]);
+            'parentescosAgrupados' => $parentescosAgrupados,
+            'tipos_transmision' => $tipos_transmision,
+            'nro_tramite' => null,
+        ]);
     }
 
     public function calcular(Request $request, IdtgbCalculator $calculator)
     {
         $request->validate([
-            'nombre_sujeto'      => 'nullable|string|max:150',
-            'ci_sujeto'          => 'nullable|string|max:20',
+            'nombre_sujeto' => 'nullable|string|max:150',
+            'ci_sujeto' => 'nullable|string|max:20',
             'tipo_contribuyente' => 'required|in:Natural,Jurídica',
-            'parentesco_id'      => 'required|exists:parentescos,id',
-            'fecha_transmision'  => 'required|date|before_or_equal:today', // Mejora #4: Validación fecha futura
-            'base_imponible'     => 'required|numeric|min:0.01',
-            'tipo_transmision'   => 'required|string',
-            'participacion'      => 'required|numeric|min:1|max:100',
+            'parentesco_id' => 'required|exists:parentescos,id',
+            'fecha_transmision' => 'required|date|before_or_equal:today', // Mejora #4: Validación fecha futura
+            'base_imponible' => 'required|numeric|min:0.01',
+            'tipo_transmision' => 'required|string',
+            'participacion' => 'required|numeric|min:1|max:100',
         ], [
             'fecha_transmision.before_or_equal' => 'La fecha de transmisión no puede ser futura.',
         ]);
@@ -52,12 +52,12 @@ class CalculadoraBeniController extends Controller
         Log::info('Calculadora Beni: Nuevo cálculo solicitado', [
             'base' => $request->base_imponible,
             'tipo' => $request->tipo_transmision,
-            'ip' => $request->ip()
+            'ip' => $request->ip(),
         ]);
 
         // Mejora #3: Uso de constante para evitar hardcoding
         $beniId = Departamento::where('codigo', self::CODIGO_BENI)->firstOrFail()->id;
-        
+
         // Mejora #1: Validación más robusta de Tipo de Transmisión
         // Intentamos buscar por nombre, pero si falla usamos ID 1 (Herencia) como fallback seguro
         $tipoTransmisionId = TipoTransmision::where('nombre', $request->tipo_transmision)->first()?->id ?? 1;
@@ -67,21 +67,21 @@ class CalculadoraBeniController extends Controller
 
         // Ejecutar el cálculo con el nuevo factor de participación
         $calculo = $calculator->calculateEstimate(
-            (float)$request->base_imponible,
+            (float) $request->base_imponible,
             $beniId,
-            (int)$request->parentesco_id,
+            (int) $request->parentesco_id,
             $tipoTransmisionId,
             $fecha_transmision->toDateString(),
             Carbon::now()->toDateString(),
             $fecha_vencimiento->toDateString(),
             $request->tipo_contribuyente,
-            (float)$request->participacion
+            (float) $request->participacion
         );
 
         // Añadimos los datos del sujeto al array de respuesta
         return response()->json(array_merge($calculo, [
             'nombre_sujeto' => strtoupper($request->nombre_sujeto ?? 'CONSULTA REFERENCIAL'),
-            'ci_sujeto'     => $request->ci_sujeto ?? 'S/N',
+            'ci_sujeto' => $request->ci_sujeto ?? 'S/N',
             'tipo_contribuyente' => $request->tipo_contribuyente,
         ]));
     }
@@ -96,29 +96,29 @@ class CalculadoraBeniController extends Controller
         $fecha_vencimiento = $fecha_transmision->copy()->addDays(90);
 
         $calculo = $calculator->calculateEstimate(
-            (float)$request->base_imponible,
+            (float) $request->base_imponible,
             $beniId,
-            (int)$request->parentesco_id,
+            (int) $request->parentesco_id,
             $tipoTransmisionId,
             $request->fecha_transmision,
             Carbon::now()->toDateString(),
             $fecha_vencimiento->toDateString(),
             $request->tipo_contribuyente,
-            (float)$request->participacion
+            (float) $request->participacion
         );
 
         // Datos adicionales para el reporte formal
         $dataReporte = array_merge($calculo, [
             'nombre_sujeto' => strtoupper($request->nombre_sujeto ?? 'CONSULTA REFERENCIAL'),
-            'ci_sujeto'     => $request->ci_sujeto ?? 'S/N',
+            'ci_sujeto' => $request->ci_sujeto ?? 'S/N',
             'tipo_contribuyente' => $request->tipo_contribuyente,
-            'telefono'      => $request->telefono ?? '',
-            'parentesco'    => Parentesco::find($request->parentesco_id)->nombre,
-            'tipo_transmision_nombre' => $request->tipo_transmision
+            'telefono' => $request->telefono ?? '',
+            'parentesco' => Parentesco::find($request->parentesco_id)->nombre,
+            'tipo_transmision_nombre' => $request->tipo_transmision,
         ]);
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.calculo_estimado_beni', $dataReporte);
 
-        return $pdf->download('Preliquidacion_IDTGB_Beni_' . $calculo['nro_tramite'] . '.pdf');
+        return $pdf->download('Preliquidacion_IDTGB_Beni_'.$calculo['nro_tramite'].'.pdf');
     }
 }
