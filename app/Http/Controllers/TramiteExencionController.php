@@ -52,8 +52,12 @@ class TramiteExencionController extends Controller
     {
         $this->authorize('create', TramiteExencion::class);
 
-        $exenciones = Exencion::whereDate('vigente_desde', '<=', now())
-            ->where(fn($q) => $q->whereNull('vigente_hasta')->orWhereDate('vigente_hasta', '>=', now()))
+        // Bug #3: Usar fecha de presentación del trámite en lugar de now()
+        $fechaTramite = $tramite->fecha_presentacion->toDateString();
+
+        $exenciones = Exencion::whereDate('vigente_desde', '<=', $fechaTramite)
+            ->where(fn($q) => $q->whereNull('vigente_hasta')->orWhereDate('vigente_hasta', '>=', $fechaTramite))
+            ->whereNotIn('id', $tramite->exenciones()->pluck('exenciones.id')) // Excluir ya aplicadas
             ->orderBy('nombre')
             ->get();
 
@@ -66,10 +70,16 @@ class TramiteExencionController extends Controller
 
         DB::beginTransaction();
         try {
+            $exencionId = $request->exencion_id;
+            $exencion = Exencion::findOrFail($exencionId);
+
+            // Bug #5: Calcular automáticamente el monto según el tipo de exención
+            $montoCalculado = $this->calcularMontoExencion($exencion, $tramite);
+
             TramiteExencion::create([
                 'tramite_id'     => $tramite->id,
-                'exencion_id'    => $request->exencion_id,
-                'monto_aplicado' => $request->monto_aplicado,
+                'exencion_id'    => $exencionId,
+                'monto_aplicado' => $montoCalculado,
             ]);
 
             app(IdtgbCalculator::class)->calcular($tramite);
@@ -77,7 +87,7 @@ class TramiteExencionController extends Controller
             DB::commit();
 
             return redirect()->route('admin.tramites.exenciones.index', $tramite)
-                ->with(['message' => 'Exención aplicada.', 'alert-type' => 'success']);
+                ->with(['message' => 'Exención aplicada correctamente.', 'alert-type' => 'success']);
 
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -101,11 +111,39 @@ class TramiteExencionController extends Controller
             DB::commit();
 
             return redirect()->route('admin.tramites.exenciones.index', $tramite)
-                ->with(['message' => 'Exención quitada.', 'alert-type' => 'success']);
+                ->with(['message' => 'Exención quitada correctamente.', 'alert-type' => 'success']);
 
         } catch (\Throwable $e) {
             DB::rollBack();
             return back()->with(['message' => $e->getMessage(), 'alert-type' => 'error']);
         }
+    }
+
+    /**
+     * Bug #5: Calcular el monto de la exención según su tipo
+     * 
+     * @param Exencion $exencion
+     * @param Tramite $tramite
+     * @return float
+     */
+    private function calcularMontoExencion(Exencion $exencion, Tramite $tramite): float
+    {
+        $baseImponible = $tramite->base_imponible ?? 0;
+        $montoCalculado = 0;
+
+        if ($exencion->tipo === 'porcentaje') {
+            // Calcular porcentaje sobre la base imponible
+            $montoCalculado = ($baseImponible * $exencion->valor) / 100;
+        } elseif ($exencion->tipo === 'monto_fijo') {
+            // Usar el monto fijo directamente
+            $montoCalculado = $exencion->valor;
+        }
+
+        // Aplicar monto máximo si existe
+        if ($exencion->monto_maximo !== null && $montoCalculado > $exencion->monto_maximo) {
+            $montoCalculado = $exencion->monto_maximo;
+        }
+
+        return round($montoCalculado, 2);
     }
 }

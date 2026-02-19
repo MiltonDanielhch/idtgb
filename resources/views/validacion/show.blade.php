@@ -51,7 +51,7 @@
                     <dd class="col-sm-8">{{ $tramite->fecha_presentacion->format('d/m/Y') }}</dd>
 
                     <dt class="col-sm-4">Tipo de Transmisión</dt>
-                    <dd class="col-sm-8">{{ $tramite->tipoTransmision->nombre }}</dd>
+                    <dd class="col-sm-8">{{ optional($tramite->tipoTransmision)->nombre ?? 'No especificado' }}</dd>
 
                     <dt class="col-sm-4">Adquirente Principal</dt>
                     <dd class="col-sm-8">{{ optional(optional($tramite->adquirentes->first())->person)->display_name ?? optional(optional($tramite->adquirentes->first())->person)->full_name ?? 'No especificado' }}</dd>

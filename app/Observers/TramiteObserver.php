@@ -22,7 +22,6 @@ class TramiteObserver
                 'base_imponible',
                 'fecha_transmision',
                 'tipo_transmision_id',
-                'tipo_contribuyente'
             ];
 
             if ($tramite->isDirty($camposCriticos)) {

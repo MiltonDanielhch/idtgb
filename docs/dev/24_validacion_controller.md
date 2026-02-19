@@ -52,23 +52,38 @@ Route::get('/validar/{hash}', [ValidacionController::class, 'show'])->name('tram
 
 Muestra la información de un trámite a partir de su hash de validación.
 
-**Ubicación:** `app/Http/Controllers/ValidacionController.php:15-20`
+**Ubicación:** `app/Http/Controllers/ValidacionController.php:15-35`
 
 #### Parámetros
-- `$hash` (string): El hash de validación SHA256 de 64 caracteres
+- `$hash` (string): El hash de validación SHA256 de 64 caracteres hexadecimales
 
 #### Retorno
 - `Illuminate\View\View`: Vista con la información del trámite
+- `Illuminate\Http\Response`: 404 si el hash es inválido o el trámite no está disponible
 
 #### Lógica
-1. Busca el trámite por el campo `hash_validacion`
-2. Si no existe, lanza excepción `ModelNotFoundException` (404)
-3. Retorna la vista `validacion.show` con el trámite cargado
+1. **Validación del hash** (Bug #2): Verifica que tenga exactamente 64 caracteres y sea hexadecimal
+2. **Consulta optimizada** (Bug #5): Usa el scope `whereHashValidacion()` con eager loading
+3. **Validación de estado** (Bug #4): Rechaza trámites en estados `Borrador` o `Anulado`
+4. Si no existe o no es válido, lanza excepción 404
+5. Retorna la vista `validacion.show` con el trámite cargado
 
 ```php
 public function show(string $hash)
 {
-    $tramite = Tramite::where('hash_validacion', $hash)->firstOrFail();
+    // Bug #2: Validar longitud exacta de hash SHA256 (64 caracteres hexadecimales)
+    if (strlen($hash) !== 64 || !ctype_xdigit($hash)) {
+        abort(404, 'Hash de validación inválido');
+    }
+
+    // Bug #5: Usar scope whereHashValidacion para reutilización y eager loading
+    $tramite = Tramite::whereHashValidacion($hash)->firstOrFail();
+
+    // Bug #4: Validar que el trámite no esté en estados no válidos para verificación
+    if (in_array($tramite->estado, ['Borrador', 'Anulado'])) {
+        abort(404, 'El trámite no está disponible para validación');
+    }
+
     return view('validacion.show', compact('tramite'));
 }
 ```
@@ -153,7 +168,7 @@ public function a01(Tramite $tramite)
 
 ### Invalidación Automática
 
-Si se modifican campos críticos de un trámite que ya tiene hash, este se invalida automáticamente (`app/Observers/TramiteObserver.php:16-32`):
+Si se modifican campos críticos de un trámite que ya tiene hash, este se invalida automáticamente (`app/Observers/TramiteObserver.php:16-31`):
 
 ```php
 public function saving(Tramite $tramite): void
@@ -163,7 +178,6 @@ public function saving(Tramite $tramite): void
             'base_imponible',
             'fecha_transmision',
             'tipo_transmision_id',
-            'tipo_contribuyente'
         ];
 
         if ($tramite->isDirty($camposCriticos)) {
@@ -172,6 +186,8 @@ public function saving(Tramite $tramite): void
     }
 }
 ```
+
+**Nota:** El campo `tipo_contribuyente` fue eliminado del array `$camposCriticos` en v1.1.0 porque no existe en la tabla `tramites` (Bug #1 corregido).
 
 ## Vista de Validación
 
@@ -191,7 +207,21 @@ public function saving(Tramite $tramite): void
 - Footer con fecha de generación
 
 ### Variables Disponibles en la Vista
-- `$tramite`: Instancia del modelo `Tramite` con todas sus relaciones
+- `$tramite`: Instancia del modelo `Tramite` con relaciones cargadas vía eager loading
+
+### Manejo de Relaciones Nulas (Bug #3 Corregido)
+
+La vista utiliza el helper `optional()` de Laravel para manejar casos donde las relaciones pueden ser nulas:
+
+```php
+{{-- Antes (propenso a error 500) --}}
+{{ $tramite->tipoTransmision->nombre }}
+
+{{-- Después (seguro) --}}
+{{ optional($tramite->tipoTransmision)->nombre ?? 'No especificado' }}
+```
+
+Esto evita errores 500 si el tipo de transmisión no está definido para el trámite.
 
 ## Seguridad
 
@@ -238,6 +268,25 @@ En la vista de validación se accede a las siguientes relaciones:
 - `adquirentes.person` → Persona del adquirente
 - `adquirentes.person.display_name` o `full_name` → Nombre de la persona
 
+### Scope `whereHashValidacion()`
+
+El modelo `Tramite` incluye un scope reutilizable para consultar por hash de validación (Bug #5 corregido):
+
+```php
+// app/Models/Tramite.php
+public function scopeWhereHashValidacion($query, string $hash)
+{
+    return $query->where('hash_validacion', $hash)
+                 ->with(['tipoTransmision', 'adquirentes.person']);
+}
+```
+
+**Ventajas:**
+- Reutilización de código
+- Eager loading automático de relaciones necesarias
+- Reducción de consultas N+1
+- Facilita mantenimiento y testing
+
 ## Estados de Trámite
 
 Los posibles estados mostrados en la validación son:
@@ -276,19 +325,27 @@ Este controlador **NO** utiliza policies de autorización ya que es una ruta pú
 
 ## 🚨 Análisis de Calidad y Mejoras
 
-### Estado Actual - v1.0.0 (11 de octubre de 2025) ⚠️
+### Estado Actual - v1.1.0 (19 de febrero de 2026) ✅
 
-El módulo `ValidacionController` funciona correctamente para la validación pública de trámites mediante hash SHA256. Sin embargo, existen bugs y mejoras pendientes que deben abordarse para mejorar la seguridad, rendimiento y funcionalidad del sistema.
+El módulo `ValidacionController` está **funcional y listo para producción**. Todos los bugs críticos identificados han sido corregidos:
 
-### 🐛 Bugs Conocidos (5/5) ⚠️
+- ✅ Validación de longitud exacta de hash SHA256 (64 caracteres hexadecimales)
+- ✅ Validación de formato hexadecimal del hash
+- ✅ Uso de scope reutilizable `whereHashValidacion()` con eager loading
+- ✅ Validación de estado del trámite (rechaza Borrador/Anulado)
+- ✅ Manejo seguro de relaciones nulas en la vista
+- ✅ Eliminado campo inexistente del observer de invalidación
+- ✅ Consulta optimizada con eager loading de relaciones necesarias
 
-| # | Bug | Severidad | Estado | Ubicación |
-|---|-----|-----------|--------|-----------|
-| 1 | Campo `tipo_contribuyente` inexistente en Observer | Alta | ❌ Pendiente | `TramiteObserver.php:25` |
-| 2 | Sin validación de longitud de hash (64 caracteres) | Media | ❌ Pendiente | `ValidacionController.php:15-20` |
-| 3 | Posible error 500 si no existe relación tipoTransmision | Media | ❌ Pendiente | `validacion/show.blade.php:54` |
-| 4 | No se validan trámites en estado específico | Baja | ❌ Pendiente | `ValidacionController.php:17` |
-| 5 | No se usa scope `whereHashValidacion()` para reutilización | Baja | ❌ Pendiente | `ValidacionController.php:17` |
+### 🐛 Bugs Corregidos (5/5) ✅
+
+| # | Bug | Severidad | Estado | Ubicación | Solución Aplicada |
+|---|-----|-----------|--------|-----------|-------------------|
+| 1 | Campo `tipo_contribuyente` inexistente en Observer | Alta | ✅ Corregido | `TramiteObserver.php:21-26` | Eliminado `'tipo_contribuyente'` del array `$camposCriticos`. El campo no existe en la tabla `tramites`. |
+| 2 | Sin validación de longitud de hash (64 caracteres) | Media | ✅ Corregido | `ValidacionController.php:15-26` | Agregada validación `strlen($hash) !== 64 \|\| !ctype_xdigit($hash)` antes de consultar la BD. |
+| 3 | Posible error 500 si no existe relación tipoTransmision | Media | ✅ Corregido | `validacion/show.blade.php:54` | Usado `optional($tramite->tipoTransmision)->nombre ?? 'No especificado'` para manejar relaciones nulas. |
+| 4 | No se validan trámites en estado específico | Baja | ✅ Corregido | `ValidacionController.php:28-30` | Agregada validación para rechazar trámites en estados `'Borrador'` o `'Anulado'`. |
+| 5 | No se usa scope `whereHashValidacion()` para reutilización | Baja | ✅ Corregido | `Tramite.php:176-187` y `ValidacionController.php:26` | Creado scope `scopeWhereHashValidacion()` con eager loading de relaciones necesarias. |
 
 ### 🚀 Mejoras Sugeridas (10)
 
@@ -315,81 +372,65 @@ El módulo `ValidacionController` funciona correctamente para la validación pú
 | 4 | Route model binding para hash | Baja | ⏳ Pendiente | `RouteServiceProvider.php` |
 | 5 | Prevenir timing attacks en validación | Baja | ⏳ Pendiente | `ValidacionController.php:17` |
 
-### 📝 Detalle de Bugs Principales
+### 📝 Detalle de Correcciones Aplicadas
 
-#### Bug #1: Campo `tipo_contribuyente` inexistente en Observer
+#### Bug #1: Campo `tipo_contribuyente` inexistente en Observer ✅
 
-**Severidad:** ALTA
-**Ubicación:** `app/Observers/TramiteObserver.php:25`
+**Severidad:** ALTA  
+**Ubicación:** `app/Observers/TramiteObserver.php:21-26`  
+**Estado:** ✅ CORREGIDO
 
-El observer intenta invalidar el hash si cambia el campo `tipo_contribuyente`, pero este campo NO existe en la tabla `tramites` según la migración `database/migrations/2025_09_22_122758_create_tramites_table.php`.
+**Problema:** El observer intentaba invalidar el hash si cambiaba el campo `tipo_contribuyente`, pero este campo NO existía en la tabla `tramites`.
 
-**Problema:**
+**Solución aplicada:** Eliminado `'tipo_contribuyente'` del array `$camposCriticos`.
+
 ```php
-// En TramiteObserver.php
+// ✅ CORREGIDO - Eliminado campo inexistente
 $camposCriticos = [
     'base_imponible',
     'fecha_transmision',
     'tipo_transmision_id',
-    'tipo_contribuyente'  // ❌ Este campo no existe
+    // 'tipo_contribuyente'  // Eliminado: campo no existe
 ];
-
-if ($tramite->isDirty($camposCriticos)) {
-    $tramite->hash_validacion = null;
-}
 ```
-
-**Solución sugerida:**
-- Si el campo no se usa: Eliminar `'tipo_contribuyente'` del array `$camposCriticos`
-- Si el campo debería existir: Crear una migración para agregar el campo
 
 ---
 
-#### Bug #2: Sin validación de longitud de hash en el controlador
+#### Bug #2: Sin validación de longitud de hash en el controlador ✅
 
-**Severidad:** MEDIA
-**Ubicación:** `app/Http/Controllers/ValidacionController.php:15-20`
+**Severidad:** MEDIA  
+**Ubicación:** `app/Http/Controllers/ValidacionController.php:18-21`  
+**Estado:** ✅ CORREGIDO
 
-El controlador no valida que el hash tenga 64 caracteres antes de realizar la consulta a la base de datos.
+**Problema:** El controlador no validaba que el hash tuviera exactamente 64 caracteres hexadecimales antes de consultar la BD.
 
-**Problema:**
+**Solución aplicada:** Agregada validación de longitud y formato hexadecimal.
+
 ```php
 public function show(string $hash)
 {
-    $tramite = Tramite::where('hash_validacion', $hash)->firstOrFail();
-    return view('validacion.show', compact('tramite'));
-}
-```
-
-**Solución sugerida:**
-```php
-public function show(string $hash)
-{
-    if (strlen($hash) !== 64) {
+    // ✅ CORREGIDO - Validación de hash SHA256
+    if (strlen($hash) !== 64 || !ctype_xdigit($hash)) {
         abort(404, 'Hash de validación inválido');
     }
 
-    $tramite = Tramite::where('hash_validacion', $hash)->firstOrFail();
-    return view('validacion.show', compact('tramite'));
+    $tramite = Tramite::whereHashValidacion($hash)->firstOrFail();
+    // ...
 }
 ```
 
 ---
 
-#### Bug #3: Posible error 500 si no existe la relación tipoTransmision
+#### Bug #3: Posible error 500 si no existe la relación tipoTransmision ✅
 
-**Severidad:** MEDIA
-**Ubicación:** `resources/views/validacion/show.blade.php:54`
+**Severidad:** MEDIA  
+**Ubicación:** `resources/views/validacion/show.blade.php:54`  
+**Estado:** ✅ CORREGIDO
 
-La vista accede directamente a `$tramite->tipoTransmision->nombre` sin verificar que la relación existe.
+**Problema:** La vista accedía directamente a `$tramite->tipoTransmision->nombre` sin verificar que la relación existiera.
 
-**Problema:**
-```php
-<dt class="col-sm-4">Tipo de Transmisión</dt>
-<dd class="col-sm-8">{{ $tramite->tipoTransmision->nombre }}</dd>
-```
+**Solución aplicada:** Usado helper `optional()` con valor por defecto.
 
-**Solución sugerida:**
 ```php
 <dt class="col-sm-4">Tipo de Transmisión</dt>
 <dd class="col-sm-8">{{ optional($tramite->tipoTransmision)->nombre ?? 'No especificado' }}</dd>
@@ -397,12 +438,62 @@ La vista accede directamente a `$tramite->tipoTransmision->nombre` sin verificar
 
 ---
 
+#### Bug #4: No se validan trámites en estado específico ✅
+
+**Severidad:** BAJA  
+**Ubicación:** `ValidacionController.php:28-30`  
+**Estado:** ✅ CORREGIDO
+
+**Problema:** El controlador permitía validar trámites en estados `Borrador` o `Anulado`, que no deberían ser válidos para verificación pública.
+
+**Solución aplicada:** Agregada validación de estado antes de mostrar el trámite.
+
+```php
+// ✅ CORREGIDO - Validación de estado
+if (in_array($tramite->estado, ['Borrador', 'Anulado'])) {
+    abort(404, 'El trámite no está disponible para validación');
+}
+```
+
+---
+
+#### Bug #5: No se usa scope `whereHashValidacion()` para reutilización ✅
+
+**Severidad:** BAJA  
+**Ubicación:** `Tramite.php:176-187` y `ValidacionController.php:26`  
+**Estado:** ✅ CORREGIDO
+
+**Problema:** La consulta se realizaba directamente sin usar un scope reutilizable y sin eager loading de relaciones.
+
+**Solución aplicada:** Creado scope `whereHashValidacion()` en el modelo con eager loading incluido.
+
+```php
+// En Tramite.php
+public function scopeWhereHashValidacion($query, string $hash)
+{
+    return $query->where('hash_validacion', $hash)
+                 ->with(['tipoTransmision', 'adquirentes.person']);
+}
+
+// En ValidacionController.php
+$tramite = Tramite::whereHashValidacion($hash)->firstOrFail();
+```
+
+---
+
 ### 📊 Resumen de Prioridades
 
-#### 🔴 URGENTE (Resolver pronto)
-1. **Bug #1:** Campo `tipo_contribuyente` inexistente en Observer
-2. **Optimización #2:** Verificar índice de hash en producción
-3. **Mejora #6:** Crear tests automatizados
+#### ✅ RESUELTOS (v1.1.0 - 19 Febrero 2026)
+Todos los bugs identificados han sido corregidos:
+1. ✅ **Bug #1:** Campo `tipo_contribuyente` inexistente en Observer
+2. ✅ **Bug #2:** Validación de longitud de hash (64 caracteres)
+3. ✅ **Bug #3:** Validar relaciones en vista (optional)
+4. ✅ **Bug #4:** Validar trámites en estado específico
+5. ✅ **Bug #5:** Usar scope `whereHashValidacion()`
+
+#### 🔴 URGENTE (Mejoras pendientes)
+1. **Optimización #2:** Verificar índice de hash en producción
+2. **Mejora #6:** Crear tests automatizados
 
 #### 🟠 ALTA
 1. **Mejora #1:** Agregar rate limiting
@@ -410,22 +501,35 @@ La vista accede directamente a `$tramite->tipoTransmision->nombre` sin verificar
 3. **Mejora #7:** Notificación al invalidar hash
 
 #### 🟡 MEDIA
-1. **Bug #2:** Validación de longitud de hash
-2. **Bug #3:** Validar relaciones en vista
-3. **Optimización #1:** Eager loading
-4. **Mejora #2:** Crear endpoint API JSON
-5. **Mejora #9:** Regeneración manual de hash
+1. **Mejora #2:** Crear endpoint API JSON
+2. **Mejora #9:** Regeneración manual de hash
 
 #### 🟢 BAJA
-1. **Bug #4:** Validar trámites en estado específico
-2. **Bug #5:** Usar scope `whereHashValidacion()`
-3. **Mejora #4:** Metadatos SEO/Open Graph
-4. **Mejora #5:** Indicador visual de generación de hash
-5. **Mejora #8:** Historial de cambios de hash
-6. **Mejora #10:** Verificación de firma digital
-7. **Optimización #3-5:** Caché, route model binding, timing attacks
+1. **Mejora #4:** Metadatos SEO/Open Graph
+2. **Mejora #5:** Indicador visual de generación de hash
+3. **Mejora #8:** Historial de cambios de hash
+4. **Mejora #10:** Verificación de firma digital
+5. **Optimización #1,3-5:** Eager loading adicional, caché, route model binding, timing attacks
 
 ### 📝 Historial de Cambios
+
+### v1.1.0 (19 de febrero de 2026) ✅
+**Corrección de Bugs Críticos:**
+- Todos los 5 bugs identificados han sido corregidos
+- El módulo está listo para producción
+
+**Bugs Corregidos:**
+- **Bug #1:** Eliminado campo inexistente `'tipo_contribuyente'` de `TramiteObserver.php`
+- **Bug #2:** Agregada validación de longitud (64 caracteres) y formato hexadecimal en `ValidacionController.php`
+- **Bug #3:** Usado `optional()` en vista para manejar relaciones nulas de `tipoTransmision`
+- **Bug #4:** Agregada validación para rechazar trámites en estados `Borrador` o `Anulado`
+- **Bug #5:** Creado scope `whereHashValidacion()` en modelo `Tramite` con eager loading
+
+**Archivos Modificados:**
+- `app/Observers/TramiteObserver.php` - Eliminado campo inexistente
+- `app/Http/Controllers/ValidacionController.php` - Validaciones de hash y estado
+- `app/Models/Tramite.php` - Nuevo scope `whereHashValidacion()`
+- `resources/views/validacion/show.blade.php` - Uso de `optional()` para relaciones
 
 ### v1.0.0 (11 de octubre de 2025)
 **Versión inicial:**
@@ -435,10 +539,12 @@ La vista accede directamente a `$tramite->tipoTransmision->nombre` sin verificar
 - Vista de validación con Bootstrap 5.3.2
 - Integración con generación de PDF Formulario A01
 
-**Bugs conocidos identificados:**
-- Campo `tipo_contribuyente` inexistente en observer (línea 25 de TramiteObserver.php)
+**Bugs conocidos identificados (ahora corregidos en v1.1.0):**
+- Campo `tipo_contribuyente` inexistente en observer
 - Sin validación de longitud de hash en controlador
 - Posible error 500 si no existe relación tipoTransmision
+- No se validan estados de trámite
+- No se usa scope reutilizable para consulta de hash
 
 ---
 

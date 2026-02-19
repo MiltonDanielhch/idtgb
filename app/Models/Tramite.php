@@ -173,6 +173,20 @@ class Tramite extends Model
 
     /* ================== SCOPES ================== */
 
+    /**
+     * Scope para buscar trámite por hash de validación.
+     * Bug #5: Facilita reutilización y eager loading de relaciones necesarias.
+     * 
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param string $hash
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeWhereHashValidacion($query, string $hash)
+    {
+        return $query->where('hash_validacion', $hash)
+                     ->with(['tipoTransmision', 'adquirentes.person']);
+    }
+
     public function scopeConRelacionesCompletas($query)
     {
         return $query->with([

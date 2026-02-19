@@ -286,12 +286,13 @@ class TramiteWizardController extends Controller
         })->filter();
 
         $beni = \App\Models\Departamento::where('codigo', \App\Models\Departamento::CODIGO_BENI)->first();
-        $parentescos = Parentesco::with(['tasas' => function ($query) use ($beni) {
+        $fechaPresentacion = $wizardData['step1']['fecha_presentacion'] ?? now()->toDateString();
+        $parentescos = Parentesco::with(['tasas' => function ($query) use ($beni, $fechaPresentacion) {
             if ($beni) {
                 $query->where('departamento_id', $beni->id)
-                      ->where('vigente_desde', '<=', now())
-                      ->where(function ($q) {
-                          $q->whereNull('vigente_hasta')->orWhere('vigente_hasta', '>=', now());
+                      ->where('vigente_desde', '<=', $fechaPresentacion)
+                      ->where(function ($q) use ($fechaPresentacion) {
+                          $q->whereNull('vigente_hasta')->orWhere('vigente_hasta', '>=', $fechaPresentacion);
                       });
             }
         }])->get()->map(function ($parentesco) {
@@ -457,7 +458,8 @@ class TramiteWizardController extends Controller
         $adquirentesIds = collect($wizardData['step3']['adquirentes'] ?? [])->pluck('person_id')->all();
         $personas = Person::whereIn('id', array_merge($disponentesIds, $adquirentesIds))->get();
 
-        $tiposDocumento = ['Escritura', 'Testamento', 'Partida', 'CI', 'Avaluo', 'Poder', 'Otro'];
+        // $tiposDocumento = ['Escritura', 'Testamento', 'Partida', 'CI', 'Avaluo', 'Poder', 'Otro'];
+        $tiposDocumento = ['Declaratorio', 'Aceptación de Herencia', 'Sentencia', 'Minuta', 'Auto Avaluo', 'CI', 'DPF', 'Otro'];
 
         $documentosSubidos = collect($wizardData['step5']['documentos'] ?? [])->map(function ($doc) {
             $doc['persona'] = Person::find($doc['person_id']);
@@ -536,10 +538,13 @@ class TramiteWizardController extends Controller
             return redirect()->route('admin.tramites.wizard.create.step4');
         }
 
+        // Bug #3: Usar fecha de presentación del trámite en lugar de now()
+        $fechaPresentacion = $wizardData['step1']['fecha_presentacion'] ?? now()->toDateString();
+
         $exencionesSeleccionadas = \App\Models\Exencion::whereIn('id', $wizardData['step6']['exenciones'] ?? [])->get();
 
-        $exencionesDisponibles = \App\Models\Exencion::whereDate('vigente_desde', '<=', now())
-            ->where(fn($q) => $q->whereNull('vigente_hasta')->orWhereDate('vigente_hasta', '>=', now()))
+        $exencionesDisponibles = \App\Models\Exencion::whereDate('vigente_desde', '<=', $fechaPresentacion)
+            ->where(fn($q) => $q->whereNull('vigente_hasta')->orWhereDate('vigente_hasta', '>=', $fechaPresentacion))
             ->whereNotIn('id', $wizardData['step6']['exenciones'] ?? [])
             ->orderBy('nombre')
             ->get();
@@ -840,14 +845,31 @@ class TramiteWizardController extends Controller
                     ->update(['vigente' => false]);
             }
 
-            // 6. Asociar exenciones (si las hay)
+            // 6. Asociar exenciones (si las hay) - Bug #6: Calcular monto correcto
             if (!empty($wizardData['step6']['exenciones'])) {
                 foreach ($wizardData['step6']['exenciones'] as $exencionId) {
-                    // El monto se calculará y guardará en el servicio
-                    $tramite->tramiteExenciones()->create([
-                        'exencion_id' => $exencionId,
-                        'monto_aplicado' => 0, // Se recalculará
-                    ]);
+                    $exencion = \App\Models\Exencion::find($exencionId);
+                    if ($exencion) {
+                        // Calcular el monto según el tipo de exención
+                        $baseImponible = $wizardData['step1']['base_imponible'] ?? 0;
+                        $montoCalculado = 0;
+
+                        if ($exencion->tipo === 'porcentaje') {
+                            $montoCalculado = ($baseImponible * $exencion->valor) / 100;
+                        } elseif ($exencion->tipo === 'monto_fijo') {
+                            $montoCalculado = $exencion->valor;
+                        }
+
+                        // Aplicar monto máximo si existe
+                        if ($exencion->monto_maximo !== null && $montoCalculado > $exencion->monto_maximo) {
+                            $montoCalculado = $exencion->monto_maximo;
+                        }
+
+                        $tramite->tramiteExenciones()->create([
+                            'exencion_id' => $exencionId,
+                            'monto_aplicado' => round($montoCalculado, 2),
+                        ]);
+                    }
                 }
             }
 

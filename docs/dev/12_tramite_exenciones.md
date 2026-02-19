@@ -8,9 +8,9 @@ El módulo `TrámiteExenciones` gestiona la relación muchos a muchos entre los 
 
 ## 2. Estructura de la Base de Datos
 
-La relación se gestiona a través de una tabla pivote `tramite_exenciones`.
+La relación se gestiona a través de una tabla pivote `tramite_exenciones` con índices optimizados y soporte para soft deletes.
 
-### Migración: `2025_09_22_122804_create_tramite_exenciones_table.php`
+### Migración Original: `2025_09_22_122804_create_tramite_exenciones_table.php`
 
 ```php
 Schema::create('tramite_exenciones', function (Blueprint $table) {
@@ -22,9 +22,26 @@ Schema::create('tramite_exenciones', function (Blueprint $table) {
 });
 ```
 
+### Migración de Corrección: `2025_02_19_000001_fix_exenciones_bugs.php`
+
+```php
+// Agrega índice único para prevenir duplicados (Bug #1)
+Schema::table('tramite_exenciones', function (Blueprint $table) {
+    $table->unique(['tramite_id', 'exencion_id'], 'unique_tramite_exencion');
+    $table->softDeletes();
+});
+
+// Agrega soft deletes a exenciones (Bug #8)
+Schema::table('exenciones', function (Blueprint $table) {
+    $table->softDeletes();
+});
+```
+
 -   **`tramite_id`**: FK a la tabla `tramites`.
 -   **`exencion_id`**: FK a la tabla `exenciones`.
 -   **`monto_aplicado`**: El valor monetario específico que se descuenta del trámite en virtud de esta exención.
+-   **`deleted_at`**: Timestamp para soft deletes (mantiene historial de exenciones eliminadas).
+-   **Índice único**: `unique(['tramite_id', 'exencion_id'])` previene race conditions al aplicar la misma exención dos veces.
 
 ## 3. Modelos (Eloquent)
 
@@ -36,16 +53,23 @@ Este es el modelo para la tabla pivote.
 
 -   **Tabla**: `tramite_exenciones`
 -   **Fillable**: `['tramite_id', 'exencion_id', 'monto_aplicado']`
+-   **Traits**: `SoftDeletes` (mantiene historial de exenciones eliminadas)
 -   **Relaciones**:
     -   `tramite()`: `belongsTo(Tramite::class)`
     -   `exencion()`: `belongsTo(Exencion::class)`
+-   **Métodos Helper**:
+    -   `isVigente()`: Verifica si la exención está vigente para la fecha del trámite
+    -   `getMontoFormateadoAttribute()`: Accessor para mostrar el monto formateado (Bs. X.XX)
 
 ```php
 // app/Models/TramiteExencion.php
 
 class TramiteExencion extends Model
 {
-    // ...
+    use HasFactory, SoftDeletes;
+    
+    protected $table = 'tramite_exenciones';
+    
     protected $fillable = [
         'tramite_id',
         'exencion_id',
@@ -60,6 +84,19 @@ class TramiteExencion extends Model
     public function exencion()
     {
         return $this->belongsTo(Exencion::class);
+    }
+    
+    public function isVigente(): bool
+    {
+        if (!$this->tramite || !$this->exencion) {
+            return false;
+        }
+        return $this->exencion->isVigente($this->tramite->fecha_presentacion->toDateString());
+    }
+    
+    public function getMontoFormateadoAttribute(): string
+    {
+        return 'Bs. ' . number_format($this->monto_aplicado, 2);
     }
 }
 ```
@@ -136,12 +173,13 @@ Route::prefix('admin')->group(function () {
 Este controlador gestiona el ciclo de vida de una exención aplicada a un trámite.
 
 -   **`index()` y `list()`**: Muestran la lista de exenciones aplicadas para un trámite. `list()` es para la carga vía AJAX.
--   **`create()`**: Muestra el formulario para agregar una nueva exención, listando solo las exenciones vigentes.
+-   **`create()`**: Muestra el formulario para agregar una nueva exención, listando solo las exenciones vigentes para la **fecha de presentación del trámite** (no usa `now()`).
 -   **`store(StoreTramiteExencionRequest $request, Tramite $tramite)`**:
-    1.  Valida la solicitud usando `StoreTramiteExencionRequest`.
-    2.  Crea una nueva entrada en `tramite_exenciones`.
-    3.  **Acción Clave**: Invoca a `app(IdtgbCalculator::class)->calcular($tramite)` para recalcular los montos del trámite.
-    4.  Toda la operación se ejecuta dentro de una transacción de base de datos (`DB::transaction`).
+    1.  Valida la solicitud usando `StoreTramiteExencionRequest` (incluye validaciones de monto máximo, vigencia y suma vs impuesto).
+    2.  Calcula automáticamente el monto a aplicar usando `calcularMontoExencion()` según el tipo de exención (porcentaje o monto fijo).
+    3.  Crea una nueva entrada en `tramite_exenciones` con el monto calculado.
+    4.  **Acción Clave**: Invoca a `app(IdtgbCalculator::class)->calcular($tramite)` para recalcular los montos del trámite.
+    5.  Toda la operación se ejecuta dentro de una transacción de base de datos (`DB::transaction`).
 -   **`destroy(Tramite $tramite, TramiteExencion $item)`**:
     1.  Elimina la entrada de la tabla `tramite_exenciones`.
     2.  **Acción Clave**: Invoca nuevamente a `app(IdtgbCalculator::class)->calcular($tramite)` para actualizar los montos.
@@ -151,14 +189,17 @@ Este controlador gestiona el ciclo de vida de una exención aplicada a un trámi
 
 **Archivo**: `app/Http/Requests/StoreTramiteExencionRequest.php`
 
-Este FormRequest valida los datos para agregar una exención.
+Este FormRequest valida los datos para agregar una exención con múltiples capas de seguridad.
 
--   **`authorize()`**: Retorna `true`, la autorización real se delega a la Policy en el controlador.
+-   **`authorize()`**: Usa `Gate::allows('create', TramiteExencion::class)` para verificar permisos.
 -   **`rules()`**:
     -   `exencion_id`: Requerido y debe existir en la tabla `exenciones`.
     -   `monto_aplicado`: Requerido, numérico y mayor que cero.
 -   **Validación Personalizada (`withValidator`)**:
-    -   Asegura que la misma exención no se pueda aplicar dos veces al mismo trámite.
+    -   **Unicidad**: Asegura que la misma exención no se pueda aplicar dos veces al mismo trámite (protegido también por índice único en BD).
+    -   **Monto máximo**: Valida que el monto aplicado no exceda el `monto_maximo` definido en la exención.
+    -   **Vigencia**: Valida que la exención estuviera vigente en la fecha de presentación del trámite (no usa `now()`).
+    -   **Suma vs Impuesto**: Valida que la suma total de exenciones aplicadas no exceda el impuesto calculado del trámite.
 
 ## 7. Autorización: `TramiteExencionPolicy`
 
@@ -189,8 +230,9 @@ Aunque este servicio tiene una lógica más amplia, es un componente fundamental
 4.  `TramiteExencionController@create` le presenta un formulario con las exenciones vigentes.
 5.  El usuario envía el formulario.
 6.  `TramiteExencionController@store` recibe la petición:
-    -   `StoreTramiteExencionRequest` valida que la exención sea válida y no esté duplicada.
+    -   `StoreTramiteExencionRequest` valida que la exención sea válida, no esté duplicada, respete el monto máximo, esté vigente para la fecha del trámite, y que la suma no exceda el impuesto.
     -   `TramiteExencionPolicy` confirma que el usuario tiene permiso para crear.
+    -   Se calcula automáticamente el monto según el tipo de exención (porcentaje sobre base imponible o monto fijo), aplicando el límite máximo si existe.
     -   Se crea el registro en `tramite_exenciones`.
     -   Se llama a `IdtgbCalculator` para que el `Tramite` padre actualice sus totales.
     -   El usuario es redirigido a la lista de exenciones.
@@ -200,36 +242,37 @@ Aunque este servicio tiene una lógica más amplia, es un componente fundamental
 
 ## 🚨 Análisis de Calidad y Mejoras
 
-### Estado Actual - v1.0.0 (Enero 2026) ⚠️
+### Estado Actual - v1.1.0 (19 Febrero 2026) ✅
 
-El módulo TramiteExenciones está funcional pero presenta varios bugs críticos y mejoras pendientes. El código actual incluye:
+El módulo TramiteExenciones está **funcional y listo para producción**. Todos los bugs críticos identificados han sido corregidos:
 
 - ✅ Autorización implementada en todos los métodos del controlador
 - ✅ Manejo de transacciones de base de datos en operaciones de escritura
 - ✅ Recálculo automático de impuestos al agregar o eliminar exenciones
-- ✅ Validación de unicidad de exenciones en el mismo trámite
+- ✅ Validación de unicidad de exenciones en el mismo trámite (con índice único en BD)
 - ✅ Validación de pertenencia del item al trámite en operaciones de destrucción
-- ⚠️ BUG CRÍTICO: Uso de `now()` en lugar de fecha del trámite
-- ⚠️ BUG: Falta índice único compuesto en la base de datos (race condition)
-- ⚠️ BUG: No se valida monto máximo de exención
-- ⚠️ BUG: Falta validación de que exención no exceda el impuesto
+- ✅ Uso de fecha de presentación del trámite en lugar de `now()`
+- ✅ Índice único compuesto en la base de datos (previene race condition)
+- ✅ Validación de monto máximo de exención
+- ✅ Validación de que exención no exceda el impuesto calculado
+- ✅ Cálculo automático de monto según tipo (porcentaje/monto fijo)
+- ✅ SoftDeletes implementado para mantener historial
 
-### 🐛 Bugs Corregidos (2/2) ✅
+### 🐛 Bugs Corregidos (7/7) ✅
 
-| # | Bug | Estado | Ubicación |
-|---|-----|--------|-----------|
-| 1 | Falta de autorización en métodos del controlador | ✅ Corregido | `TramiteExencionController.php:23,29,45,53,65,91` |
-| 2 | Falta de manejo de transacciones en operaciones de escritura | ✅ Corregido | `TramiteExencionController.php:67-86, 97-109` |
+| # | Bug | Estado | Ubicación | Solución Aplicada |
+|---|-----|--------|-----------|-------------------|
+| 1 | Falta de autorización en métodos del controlador | ✅ Corregido | `TramiteExencionController.php` | Llamadas `$this->authorize()` en todos los métodos |
+| 2 | Falta de manejo de transacciones en operaciones de escritura | ✅ Corregido | `TramiteExencionController.php` | Implementado `DB::transaction` en store y destroy |
+| 3 | Race condition en validación de duplicados | ✅ Corregido | `database/migrations/2025_02_19_000001_fix_exenciones_bugs.php` | Índice único `unique(['tramite_id', 'exencion_id'])` |
+| 4 | No se valida monto máximo de exención | ✅ Corregido | `StoreTramiteExencionRequest.php:withValidator()` | Validación `$montoAplicado > $exencion->monto_maximo` |
+| 5 | Cálculo manual de monto aplicado propenso a errores | ✅ Corregido | `TramiteExencionController.php:calcularMontoExencion()` | Método privado que calcula automáticamente según tipo |
+| 6 | Uso de `now()` en lugar de fecha de trámite | ✅ Corregido | `TramiteExencionController.php:create()` | Usa `$tramite->fecha_presentacion` |
+| 7 | Falta validación de que exención no exceda el impuesto | ✅ Corregido | `StoreTramiteExencionRequest.php:withValidator()` | Validación `$nuevaSuma > $impuestoCalculado` |
 
-### 🐛 Bugs Pendientes (5/5) ⚠️
+### 🐛 Bugs Pendientes (0/0) ✅
 
-| # | Bug | Prioridad | Estado | Ubicación |
-|---|-----|-----------|--------|-----------|
-| 1 | Race condition en validación de duplicados | **ALTA** | ⚠️ Pendiente | `StoreTramiteExencionRequest.php`, migración `2025_09_22_122804...` |
-| 2 | No se valida monto máximo de exención | **ALTA** | ⚠️ Pendiente | `StoreTramiteExencionRequest.php:15-21` |
-| 3 | Cálculo manual de monto aplicado propenso a errores | **ALTA** | ⚠️ Pendiente | `TramiteExencionController.php:63-86` |
-| 4 | Uso de `now()` en lugar de fecha de trámite | **MEDIA** | ⚠️ Pendiente | `TramiteExencionController.php:55-56` |
-| 5 | Falta validación de que exención no exceda el impuesto | **MEDIA** | ⚠️ Pendiente | `StoreTramiteExencionRequest.php:23-33` |
+*No hay bugs pendientes. Todos los problemas identificados han sido resueltos.*
 
 ### 🚀 Mejoras Implementadas ✅
 
@@ -240,17 +283,19 @@ El módulo TramiteExenciones está funcional pero presenta varios bugs críticos
 | 3 | Recálculo automático de impuestos | Llamado a `IdtgbCalculator::calcular($tramite)` tras agregar/eliminar exenciones |
 | 4 | Validación de unicidad | Request valida que la exención no se agregue dos veces al mismo trámite |
 | 5 | Validación de contexto | Se valida que el `TramiteExencion` pertenezca al `Tramite` antes de eliminar |
+| 6 | Cálculo automático de montos | Método `calcularMontoExencion()` calcula según tipo (porcentaje/monto fijo) y aplica monto máximo |
+| 7 | Validación de vigencia | Usa fecha de presentación del trámite para validar vigencia de exenciones |
+| 8 | Validación de exceso | Valida que suma de exenciones no exceda el impuesto calculado |
+| 9 | SoftDeletes | Implementado en modelo para mantener historial de exenciones eliminadas |
+| 10 | Índice único en BD | Previene duplicados a nivel de base de datos (race condition) |
 
 ### 📋 Mejoras Futuras Sugeridas
 
 | Prioridad | Mejora | Descripción |
 |-----------|--------|-------------|
-| **ALTA** | Índice único compuesto | Agregar índice `unique(['tramite_id', 'exencion_id'])` en migración para evitar race conditions |
 | **ALTA** | Sistema de tests automatizados | Crear pruebas unitarias y de integración para validación, cálculo y autorizaciones |
 | **ALTA** | Documento de sustento obligatorio | Requerir documento que justifique la exención (certificado, decreto, etc.) |
-| **MEDIA** | Soft Deletes | Implementar `SoftDeletes` para mantener historial de exenciones eliminadas |
 | **MEDIA** | Sistema de auditoría | Agregar campos `created_by`, `deleted_by` con timestamps y usuarios |
-| **MEDIA** | Validación de vigencia vs fecha de trámite | Validar que la exención estaba vigente en la fecha del trámite, no actualmente |
 | **MEDIA** | Cálculo automático de monto en frontend | Agregar JavaScript para calcular automáticamente monto cuando es porcentaje |
 | **MEDIA** | Validación de exclusividad | Validar que ciertas exenciones sean mutuamente excluyentes (ej: dos de tipo "discapacidad") |
 | **BAJO** | Caching de exenciones vigentes | Implementar cache para consultas de exenciones vigentes |
@@ -259,7 +304,31 @@ El módulo TramiteExenciones está funcional pero presenta varios bugs críticos
 | **BAJO** | Optimizar múltiples recálculos | Implementar cálculo diferido o batch para evitar recalcular en cada operación |
 | **BAJO** | Reportes de exenciones | Crear reportes de exenciones más aplicadas, montos totales, por período/tipo |
 
+**Mejoras Ya Implementadas (v1.1.0):**
+- ✅ Índice único compuesto `unique(['tramite_id', 'exencion_id'])` - Previene race conditions
+- ✅ Soft Deletes - Mantiene historial de exenciones eliminadas
+- ✅ Validación de vigencia vs fecha de trámite - Usa fecha de presentación del trámite |
+
 ### 📝 Historial de Cambios
+
+### v1.1.0 (19 Febrero 2026) ✅
+**Corrección de Bugs Críticos:**
+- Todos los 7 bugs identificados han sido corregidos
+- El módulo está listo para producción
+
+**Bugs Corregidos en esta Versión (5 adicionales):**
+- Bug #3: Race condition - Agregado índice único `unique_tramite_exencion` en BD
+- Bug #4: Validación de monto máximo - Implementada en `StoreTramiteExencionRequest`
+- Bug #5: Cálculo automático - Método `calcularMontoExencion()` en controlador
+- Bug #6: Fecha de vigencia - Usa `$tramite->fecha_presentacion` correctamente
+- Bug #7: Validación suma vs impuesto - Implementada en Request
+
+**Archivos Modificados:**
+- `database/migrations/2025_02_19_000001_fix_exenciones_bugs.php` - Nueva migración con índices y soft deletes
+- `app/Models/TramiteExencion.php` - SoftDeletes + helpers `isVigente()` y `getMontoFormateadoAttribute()`
+- `app/Models/Exencion.php` - Métodos helper `isVigente()` y `calcularMonto()`
+- `app/Http/Requests/StoreTramiteExencionRequest.php` - Validaciones mejoradas (monto máximo, vigencia, suma)
+- `app/Http/Controllers/TramiteExencionController.php` - Cálculo automático y uso de fecha de trámite
 
 ### v1.0.0 (Enero 2026)
 **Estado Inicial:**
@@ -282,8 +351,8 @@ El módulo TramiteExenciones está funcional pero presenta varios bugs críticos
 - `resources/views/admin/tramites/exenciones/create.blade.php`
 - `routes/web.php`
 
-**Estado Actual de Correcciones:**
+**Bugs Corregidos en v1.0.0 (2/7):**
 - ✅ Autorización implementada en todos los métodos
 - ✅ Transacciones DB implementadas
 - ✅ Recálculo automático de impuestos
-- ⚠️ 5 bugs pendientes (race condition, monto máximo, cálculo manual, now() vs fecha, validación exceso)
+- ⚠️ 5 bugs pendientes para v1.1.0

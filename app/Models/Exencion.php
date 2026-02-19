@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Exencion extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'exenciones';
 
@@ -35,6 +36,65 @@ class Exencion extends Model
         return $query->where('vigente_desde', '<=', $fecha)
                      ->where(fn ($q) => $q->whereNull('vigente_hasta')
                                            ->orWhere('vigente_hasta', '>=', $fecha));
+    }
+
+    /**
+     * Verificar si la exención está vigente para una fecha específica
+     * 
+     * @param string|null $fecha
+     * @return bool
+     */
+    public function isVigente(?string $fecha = null): bool
+    {
+        $fecha = $fecha ?? today()->toDateString();
+        
+        if ($fecha < $this->vigente_desde->toDateString()) {
+            return false;
+        }
+        
+        if ($this->vigente_hasta !== null && $fecha > $this->vigente_hasta->toDateString()) {
+            return false;
+        }
+        
+        return true;
+    }
+
+    /**
+     * Calcular el monto de la exención basado en una base imponible
+     * Bug #5: Calcular automáticamente según tipo
+     * 
+     * @param float $baseImponible
+     * @return float
+     */
+    public function calcularMonto(float $baseImponible): float
+    {
+        $montoCalculado = 0;
+
+        if ($this->tipo === 'porcentaje') {
+            $montoCalculado = ($baseImponible * $this->valor) / 100;
+        } elseif ($this->tipo === 'monto_fijo') {
+            $montoCalculado = $this->valor;
+        }
+
+        // Aplicar monto máximo si existe (Bug #2)
+        if ($this->monto_maximo !== null && $montoCalculado > $this->monto_maximo) {
+            $montoCalculado = $this->monto_maximo;
+        }
+
+        return round($montoCalculado, 2);
+    }
+
+    /**
+     * Accessor para mostrar el valor formateado
+     * 
+     * @return string
+     */
+    public function getValorFormateadoAttribute(): string
+    {
+        if ($this->tipo === 'porcentaje') {
+            return $this->valor . '%';
+        }
+        return 'Bs. ' . number_format($this->valor, 2);
     }
 
     /* ================== RELATIONS ================== */
