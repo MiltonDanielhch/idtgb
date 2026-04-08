@@ -5,7 +5,53 @@
 
 @section('wizard-styles')
 <style>
-    /* Estilos para grupos de parentesco */
+    .categoria-card {
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 15px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-align: center;
+        background: #fff;
+    }
+    .categoria-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .categoria-card.selected {
+        border-color: #007bff;
+        background-color: #e7f3ff;
+    }
+    .categoria-card.selected::after {
+        content: '\f00c';
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        color: #007bff;
+    }
+    .categoria-tasa {
+        font-size: 1.8rem;
+        font-weight: bold;
+        line-height: 1;
+    }
+    .categoria-tasa.linea-directa { color: #28a745; }
+    .categoria-tasa.colateral { color: #ffc107; }
+    .categoria-tasa.otros { color: #dc3545; }
+    .categoria-icon {
+        font-size: 1.5rem;
+        margin-bottom: 5px;
+    }
+    .categoria-icon.linea-directa { color: #28a745; }
+    .categoria-icon.colateral { color: #ffc107; }
+    .categoria-icon.otros { color: #dc3545; }
+    .categoria-desc {
+        font-size: 0.75rem;
+        color: #6c757d;
+        margin-top: 5px;
+    }
+
     .parentesco-group {
         border: 2px solid #e9ecef;
         border-radius: 10px;
@@ -114,25 +160,49 @@
                     <select name="person_id" id="person_id_select" class="form-control" required></select>
                 </div>
                 <div class="col-md-5">
-                    <label>Parentesco <span class="required">*</span> <span class="text-muted">(seleccione grupo y tipo)</span></label>
-                    <div id="parentesco-selector">
-                        @foreach($parentescosAgrupados as $grupoKey => $grupo)
-                            <div class="parentesco-group {{ $grupoKey }}">
-                                <div class="parentesco-group-header">
-                                    <i class="voyager-{{ $grupoKey === 'linea-directa' ? 'person' : ($grupoKey === 'colateral' ? 'people' : 'user') }}"></i>
-                                    <span>{{ $grupo['label'] }}</span>
-                                </div>
-                                <div class="parentesco-group-body">
-                                    @foreach($grupo['parentescos'] as $p)
-                                        <label class="parentesco-option" data-group="{{ $grupoKey }}" data-tasa="{{ number_format($p->tasa_aplicable, 2) }}">
-                                            <input type="radio" name="parentesco_id" value="{{ $p->id }}" required>
-                                            <span>{{ $p->nombre }}</span>
-                                            <span class="tasa-badge {{ $grupoKey }}">{{ number_format($p->tasa_aplicable, 2) }}%</span>
-                                        </label>
-                                    @endforeach
-                                </div>
+                    <label>Categoría de Parentesco <span class="required">*</span></label>
+                    <p class="text-muted small mb-2">Seleccione la categoría:</p>
+                    <div class="row g-2 mb-3" id="categoria-selector">
+                        @foreach($categorias as $cat)
+                            <div class="col-12">
+                                <label class="categoria-card position-relative" data-categoria="{{ $cat['key'] }}">
+                                    <input type="radio" name="categoria_tasa" value="{{ $cat['key'] }}" class="d-none">
+                                    <div class="d-flex align-items-center justify-content-center gap-3">
+                                        <div class="categoria-icon {{ $cat['grupo'] }}">
+                                            <i class="fas {{ $cat['icono'] }}"></i>
+                                        </div>
+                                        <div>
+                                            <div class="categoria-tasa {{ $cat['grupo'] }}">{{ $cat['tasa'] }}%</div>
+                                            <div class="fw-bold">{{ $cat['label'] }}</div>
+                                            <div class="categoria-desc">{{ $cat['descripcion'] }}</div>
+                                        </div>
+                                    </div>
+                                </label>
                             </div>
                         @endforeach
+                    </div>
+                    
+                    <div id="parentesco-detalle" class="mt-3" style="display: none;">
+                        <label class="text-muted small">Parentesco específico:</label>
+                        <div id="parentesco-selector">
+                            @foreach($parentescosAgrupados as $grupoKey => $grupo)
+                                <div class="parentesco-group {{ $grupoKey }}" data-grupo="{{ $grupoKey }}">
+                                    <div class="parentesco-group-header">
+                                        <i class="voyager-{{ $grupoKey === 'linea-directa' ? 'person' : ($grupoKey === 'colateral' ? 'people' : 'user') }}"></i>
+                                        <span>{{ $grupo['label'] }}</span>
+                                    </div>
+                                    <div class="parentesco-group-body">
+                                        @foreach($grupo['parentescos'] as $p)
+                                            <label class="parentesco-option" data-group="{{ $grupoKey }}" data-tasa="{{ number_format($p->tasa_aplicable, 2) }}">
+                                                <input type="radio" name="parentesco_id" value="{{ $p->id }}" required>
+                                                <span>{{ $p->nombre }}</span>
+                                                <span class="tasa-badge {{ $grupoKey }}">{{ number_format($p->tasa_aplicable, 2) }}%</span>
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
                     </div>
                 </div>
                 <div class="col-md-3">
@@ -221,9 +291,45 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    // Manejo de selección de categorías
+    const categoriaCards = document.querySelectorAll('.categoria-card');
+    const parentescoDetalle = document.getElementById('parentesco-detalle');
+    const tasaInput = document.getElementById('tasa_mostrada');
+    const parentescoGroups = document.querySelectorAll('.parentesco-group');
+    
+    categoriaCards.forEach(card => {
+        card.addEventListener('click', function() {
+            categoriaCards.forEach(c => c.classList.remove('selected'));
+            this.classList.add('selected');
+            this.querySelector('input').checked = true;
+            
+            // Mostrar detalles de parentescos para la categoría seleccionada
+            const categoria = parseInt(this.dataset.categoria);
+            const grupoMap = {1: 'linea-directa', 10: 'colateral', 20: 'otros'};
+            const grupoKey = grupoMap[categoria];
+            
+            // Ocultar todos los grupos de parentesco
+            parentescoGroups.forEach(g => g.style.display = 'none');
+            
+            // Mostrar solo el grupo correspondiente
+            const grupoMostrar = document.querySelector(`.parentesco-group[data-grupo="${grupoKey}"]`);
+            if (grupoMostrar) {
+                grupoMostrar.style.display = 'block';
+                parentescoDetalle.style.display = 'block';
+                
+                // Seleccionar automáticamente el primer parentesco del grupo
+                const firstOption = grupoMostrar.querySelector('.parentesco-option input');
+                if (firstOption) {
+                    firstOption.checked = true;
+                    firstOption.closest('.parentesco-option').classList.add('selected');
+                    tasaInput.value = firstOption.closest('.parentesco-option').dataset.tasa;
+                }
+            }
+        });
+    });
+
     // Manejo de selección de parentescos
     const parentescoOptions = document.querySelectorAll('.parentesco-option');
-    const tasaInput = document.getElementById('tasa_mostrada');
     
     parentescoOptions.forEach(option => {
         option.addEventListener('click', function() {

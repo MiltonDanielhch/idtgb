@@ -8,7 +8,6 @@
     .card-header-primary { background-color: var(--verde-beni); color: white; }
     .step-header { font-weight: bold; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 5px; color: var(--verde-beni); }
 
-    /* Boleta de preliquidación con estilo de ticket */
     .boleta-container {
         border-left: 8px solid var(--verde-beni);
         background-color: #ffffff;
@@ -18,29 +17,54 @@
         font-family: 'Courier New', Courier, monospace;
     }
 
-    /* Optimización de Grupos de Parentesco */
-    .parentesco-group {
-        border: 1px solid #dee2e6;
+    .categoria-card {
+        border: 2px solid #dee2e6;
         border-radius: 8px;
-        margin-bottom: 12px;
-        transition: transform 0.2s;
+        padding: 12px 15px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background: #fff;
     }
-    .parentesco-group:hover { transform: translateY(-2px); }
-
-    .parentesco-group-header {
-        padding: 8px 12px;
+    .categoria-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .categoria-card.selected {
+        border-color: var(--verde-beni);
+        background-color: #f0f9f4;
+    }
+    .categoria-card.selected::after {
+        content: '\f00c';
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        color: var(--verde-beni);
         font-size: 0.9rem;
-        font-weight: bold;
-        display: flex;
-        align-items: center;
-        gap: 8px;
     }
 
-    .linea-directa .parentesco-group-header { background: #d4edda; color: #155724; }
-    .colateral .parentesco-group-header { background: #fff3cd; color: #856404; }
-    .otros .parentesco-group-header { background: #f8d7da; color: #721c24; }
+    .categoria-tasa {
+        font-size: 1.3rem;
+        font-weight: bold;
+        line-height: 1;
+    }
+    .categoria-tasa.linea-directa { color: #28a745; }
+    .categoria-tasa.colateral { color: #d39e00; }
+    .categoria-tasa.otros { color: #dc3545; }
 
-    .parentesco-group-body { padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .categoria-icon {
+        font-size: 1rem;
+        margin-right: 8px;
+    }
+    .categoria-icon.linea-directa { color: #28a745; }
+    .categoria-icon.colateral { color: #d39e00; }
+    .categoria-icon.otros { color: #dc3545; }
+
+    .categoria-desc {
+        font-size: 0.75rem;
+        color: #6c757d;
+    }
 
     .parentesco-option {
         font-size: 0.85rem;
@@ -127,22 +151,24 @@
                     </div>
 
                     <div class="col-lg-5">
-                        <div class="step-header"><i class="fas fa-users me-2"></i> 2. Parentesco</div>
-                        <div id="parentesco-selector">
-                            @foreach($parentescosAgrupados as $grupoKey => $grupo)
-                                <div class="parentesco-group {{ $grupoKey }}">
-                                    <div class="parentesco-group-header">
-                                        <i class="fas {{ $grupo['icono'] }}"></i>
-                                        <span>{{ $grupo['label'] }} ({{ $grupo['tasa'] }}%)</span>
-                                    </div>
-                                    <div class="parentesco-group-body">
-                                        @foreach($grupo['parentescos'] as $p)
-                                            <label class="parentesco-option" data-group="{{ $grupoKey }}">
-                                                <input type="radio" name="parentesco_id" value="{{ $p->id }}" required>
-                                                <span>{{ $p->nombre }}</span>
-                                            </label>
-                                        @endforeach
-                                    </div>
+                        <div class="step-header"><i class="fas fa-users me-2"></i> 2. Categoría de Parentesco</div>
+                        <p class="text-muted small mb-3">Seleccione la categoría que mejor describa su relación con el transmitente:</p>
+                        <div class="row g-2" id="categoria-selector">
+                            @foreach($categorias as $cat)
+                                <div class="col-12">
+                                    <label class="categoria-card position-relative d-flex align-items-center" data-categoria="{{ $cat['key'] }}">
+                                        <input type="radio" name="categoria_tasa" value="{{ $cat['key'] }}" required class="d-none">
+                                        <div class="categoria-icon {{ $cat['grupo'] }}">
+                                            <i class="fas {{ $cat['icono'] }}"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <span class="fw-bold">{{ $cat['label'] }}</span>
+                                                <span class="categoria-tasa {{ $cat['grupo'] }}">{{ $cat['tasa'] }}%</span>
+                                            </div>
+                                            <div class="categoria-desc">{{ $cat['descripcion'] }}</div>
+                                        </div>
+                                    </label>
                                 </div>
                             @endforeach
                         </div>
@@ -169,15 +195,13 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // [Tu lógica original de JS aquí, solo ajustaré la presentación del HTML generado]
     const form = document.getElementById('form-calculadora');
     const resultadoDiv = document.getElementById('resultado');
     const boletaDetalle = document.getElementById('boleta-detalle');
 
-    // Selección visual de parentescos
-    document.querySelectorAll('.parentesco-option').forEach(option => {
-        option.addEventListener('click', function() {
-            document.querySelectorAll('.parentesco-option').forEach(opt => opt.classList.remove('selected'));
+    document.querySelectorAll('.categoria-card').forEach(card => {
+        card.addEventListener('click', function() {
+            document.querySelectorAll('.categoria-card').forEach(c => c.classList.remove('selected'));
             this.classList.add('selected');
             this.querySelector('input').checked = true;
         });
@@ -185,8 +209,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        const categoriaSeleccionada = document.querySelector('input[name="categoria_tasa"]:checked');
+        if (!categoriaSeleccionada) {
+            alert('Por favor seleccione una categoría de parentesco');
+            return;
+        }
+
         resultadoDiv.classList.remove('d-none');
-        boletaDetalle.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-success"></div><p class="mt-2">Sintonizando cálculos...</p></div>';
+        boletaDetalle.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-success"></div><p class="mt-2">Calculando...</p></div>';
 
         try {
             const res = await fetch('{{ route("calculadora.beni.post") }}', {
@@ -207,6 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <h6 class="text-uppercase small fw-bold">Referencia</h6>
                             <div class="small">
                                 <div class="d-flex justify-content-between"><span>Trámite:</span> <span class="fw-bold">${json.nro_tramite}</span></div>
+                                <div class="d-flex justify-content-between"><span>Categoría:</span> <span class="fw-bold">${json.categoria_label}</span></div>
                                 <div class="d-flex justify-content-between"><span>UFV Venc:</span> <span>${json.ufv_vencimiento}</span></div>
                                 <div class="d-flex justify-content-between"><span>UFV Pago:</span> <span>${json.ufv_pago}</span></div>
                                 <div class="d-flex justify-content-between"><span>Días Mora:</span> <span>${json.dias_mora}</span></div>

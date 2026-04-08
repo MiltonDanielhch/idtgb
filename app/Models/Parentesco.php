@@ -14,9 +14,14 @@ class Parentesco extends Model
 
     protected $fillable = [
         'nombre',
+        'categoria_tasa',
         'created_by',
         'updated_by',
     ];
+
+    public const CATEGORIA_LINEA_DIRECTA = 1;
+    public const CATEGORIA_COLATERAL = 10;
+    public const CATEGORIA_OTROS = 20;
 
     public function tasas()
     {
@@ -98,10 +103,14 @@ class Parentesco extends Model
     }
 
     /**
-     * Obtiene el grupo al que pertenece un parentesco por su nombre
+     * Obtiene el grupo al que pertenece un parentesco (prioriza campo categoria_tasa)
      */
-    public static function getGrupoPorNombre(string $nombre): string
+    public static function getGrupoPorNombre(string $nombre, ?int $categoria = null): string
     {
+        if ($categoria !== null) {
+            return self::getGrupoPorCategoria($categoria);
+        }
+
         $grupos = self::getGruposParentescos();
 
         foreach ($grupos as $grupoKey => $grupoData) {
@@ -113,6 +122,14 @@ class Parentesco extends Model
         }
 
         return self::GRUPO_OTROS;
+    }
+
+    public function getGrupoAttribute(): string
+    {
+        if ($this->categoria_tasa !== null) {
+            return self::getGrupoPorCategoria($this->categoria_tasa);
+        }
+        return self::getGrupoPorNombre($this->nombre);
     }
 
     /**
@@ -140,7 +157,7 @@ class Parentesco extends Model
         }
 
         foreach ($parentescos as $parentesco) {
-            $grupoKey = self::getGrupoPorNombre($parentesco->nombre);
+            $grupoKey = self::getGrupoPorNombre($parentesco->nombre, $parentesco->categoria_tasa);
             $resultado[$grupoKey]['parentescos'][] = $parentesco;
         }
 
@@ -148,5 +165,91 @@ class Parentesco extends Model
         return array_filter($resultado, function ($grupo) {
             return ! empty($grupo['parentescos']);
         });
+    }
+
+    public static function agruparPorCategorias(): array
+    {
+        try {
+            self::where('categoria_tasa', 1)->firstOrFail();
+            return self::getCategoriasParaSelect();
+        } catch (\Exception $e) {
+            return self::getCategoriasParaSelect();
+        }
+    }
+
+    public static function getCategoriaPorGrupo(string $grupo): int
+    {
+        return match($grupo) {
+            self::GRUPO_LINEA_DIRECTA => self::CATEGORIA_LINEA_DIRECTA,
+            self::GRUPO_COLATERAL => self::CATEGORIA_COLATERAL,
+            self::GRUPO_OTROS => self::CATEGORIA_OTROS,
+            default => self::CATEGORIA_OTROS,
+        };
+    }
+
+    public static function getGrupoPorCategoria(int $categoria): string
+    {
+        return match($categoria) {
+            self::CATEGORIA_LINEA_DIRECTA => self::GRUPO_LINEA_DIRECTA,
+            self::CATEGORIA_COLATERAL => self::GRUPO_COLATERAL,
+            self::CATEGORIA_OTROS => self::GRUPO_OTROS,
+            default => self::GRUPO_OTROS,
+        };
+    }
+
+    public static function getPrimerParentescoPorCategoria(int $categoria): ?self
+    {
+        try {
+            return self::where('categoria_tasa', $categoria)->first();
+        } catch (\Exception $e) {
+            return self::getPrimerParentescoPorNombre($categoria);
+        }
+    }
+
+    private static function getPrimerParentescoPorNombre(int $categoria): ?self
+    {
+        $nombres = match($categoria) {
+            1 => ['Cónyuge', 'Hijo'],
+            10 => ['Hermano'],
+            20 => ['Tío', 'Sin parentesco'],
+            default => ['Sin parentesco'],
+        };
+
+        foreach ($nombres as $nombre) {
+            $parentesco = self::where('nombre', 'like', "%{$nombre}%")->first();
+            if ($parentesco) return $parentesco;
+        }
+
+        return self::first();
+    }
+
+    public static function getCategoriasParaSelect(): array
+    {
+        return [
+            [
+                'key' => self::CATEGORIA_LINEA_DIRECTA,
+                'grupo' => self::GRUPO_LINEA_DIRECTA,
+                'label' => 'Línea Directa (1%)',
+                'tasa' => 1,
+                'icono' => 'fa-home',
+                'descripcion' => 'Cónyuge, Hijos, Padres, Abuelos, Nietos',
+            ],
+            [
+                'key' => self::CATEGORIA_COLATERAL,
+                'grupo' => self::GRUPO_COLATERAL,
+                'label' => 'Línea Colateral (10%)',
+                'tasa' => 10,
+                'icono' => 'fa-users',
+                'descripcion' => 'Hermanos',
+            ],
+            [
+                'key' => self::CATEGORIA_OTROS,
+                'grupo' => self::GRUPO_OTROS,
+                'label' => 'Otros (20%)',
+                'tasa' => 20,
+                'icono' => 'fa-user-plus',
+                'descripcion' => 'Tíos, Sobrinos, Sin parentesco',
+            ],
+        ];
     }
 }

@@ -307,12 +307,16 @@ class TramiteWizardController extends Controller
         // Agrupar parentescos para el selector visual
         $parentescosAgrupados = \App\Models\Parentesco::agruparParaSelect($parentescos);
 
+        // Categorías simplificadas para selección rápida
+        $categorias = \App\Models\Parentesco::agruparPorCategorias();
+
         $isEdit = ! empty($wizardData['current_tramite_id']);
 
         return view('admin.tramites.wizard.create_step_3', [
             'adquirentes' => $adquirentes,
             'parentescos' => $parentescos,
             'parentescosAgrupados' => $parentescosAgrupados,
+            'categorias' => $categorias,
             'step_title' => 'Paso 3: Adquirentes',
             'current_step' => 3, 'total_steps' => 7, 'progress' => 42,
             'is_edit' => $isEdit,

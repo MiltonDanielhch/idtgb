@@ -17,9 +17,8 @@ class CalculadoraBeniController extends Controller
 
     public function formulario()
     {
-        // Implementación de Caching para listas (Mejora #3)
-        $parentescosAgrupados = Cache::remember('parentescos.agrupados', 3600, function () {
-            return Parentesco::agruparParaSelect();
+        $categorias = Cache::remember('categorias.tasa.select', 3600, function () {
+            return Parentesco::agruparPorCategorias();
         });
 
         $tipos_transmision = Cache::remember('tipos_transmision.all', 3600, function () {
@@ -27,7 +26,7 @@ class CalculadoraBeniController extends Controller
         });
 
         return view('calculadora_beni_interactivo', [
-            'parentescosAgrupados' => $parentescosAgrupados,
+            'categorias' => $categorias,
             'tipos_transmision' => $tipos_transmision,
             'nro_tramite' => null,
         ]);
@@ -39,37 +38,36 @@ class CalculadoraBeniController extends Controller
             'nombre_sujeto' => 'nullable|string|max:150',
             'ci_sujeto' => 'nullable|string|max:20',
             'tipo_contribuyente' => 'required|in:Natural,Jurídica',
-            'parentesco_id' => 'required|exists:parentescos,id',
-            'fecha_transmision' => 'required|date|before_or_equal:today', // Mejora #4: Validación fecha futura
+            'categoria_tasa' => 'required|integer|in:1,10,20',
+            'fecha_transmision' => 'required|date|before_or_equal:today',
             'base_imponible' => 'required|numeric|min:0.01',
             'tipo_transmision' => 'required|string',
             'participacion' => 'required|numeric|min:1|max:100',
         ], [
             'fecha_transmision.before_or_equal' => 'La fecha de transmisión no puede ser futura.',
+            'categoria_tasa.required' => 'Debe seleccionar una categoría de parentesco.',
+            'categoria_tasa.in' => 'La categoría de tasa debe ser 1, 10 o 20.',
         ]);
 
-        // Mejora #2: Logging de consultas
         Log::info('Calculadora Beni: Nuevo cálculo solicitado', [
             'base' => $request->base_imponible,
             'tipo' => $request->tipo_transmision,
+            'categoria' => $request->categoria_tasa,
             'ip' => $request->ip(),
         ]);
 
-        // Mejora #3: Uso de constante para evitar hardcoding
         $beniId = Departamento::where('codigo', self::CODIGO_BENI)->firstOrFail()->id;
-
-        // Mejora #1: Validación más robusta de Tipo de Transmisión
-        // Intentamos buscar por nombre, pero si falla usamos ID 1 (Herencia) como fallback seguro
         $tipoTransmisionId = TipoTransmision::where('nombre', $request->tipo_transmision)->first()?->id ?? 1;
+
+        $parentescoId = $this->getParentescoIdFromCategoria((int) $request->categoria_tasa);
 
         $fecha_transmision = Carbon::parse($request->fecha_transmision);
         $fecha_vencimiento = $fecha_transmision->copy()->addDays(90);
 
-        // Ejecutar el cálculo con el nuevo factor de participación
         $calculo = $calculator->calculateEstimate(
             (float) $request->base_imponible,
             $beniId,
-            (int) $request->parentesco_id,
+            $parentescoId,
             $tipoTransmisionId,
             $fecha_transmision->toDateString(),
             Carbon::now()->toDateString(),
@@ -78,19 +76,28 @@ class CalculadoraBeniController extends Controller
             (float) $request->participacion
         );
 
-        // Añadimos los datos del sujeto al array de respuesta
+        $categoriaLabel = match((int) $request->categoria_tasa) {
+            1 => 'Línea Directa',
+            10 => 'Línea Colateral',
+            20 => 'Otros',
+            default => 'No especificado',
+        };
+
         return response()->json(array_merge($calculo, [
             'nombre_sujeto' => strtoupper($request->nombre_sujeto ?? 'CONSULTA REFERENCIAL'),
             'ci_sujeto' => $request->ci_sujeto ?? 'S/N',
             'tipo_contribuyente' => $request->tipo_contribuyente,
+            'categoria_tasa' => (int) $request->categoria_tasa,
+            'categoria_label' => $categoriaLabel,
         ]));
     }
 
     public function descargarPdf(Request $request, IdtgbCalculator $calculator)
     {
-        // El PDF requiere los mismos datos que el cálculo
         $beniId = Departamento::where('codigo', self::CODIGO_BENI)->firstOrFail()->id;
         $tipoTransmisionId = TipoTransmision::where('nombre', $request->tipo_transmision)->first()?->id ?? 1;
+
+        $parentescoId = $this->getParentescoIdFromCategoria((int) ($request->categoria_tasa ?? 1));
 
         $fecha_transmision = Carbon::parse($request->fecha_transmision);
         $fecha_vencimiento = $fecha_transmision->copy()->addDays(90);
@@ -98,7 +105,7 @@ class CalculadoraBeniController extends Controller
         $calculo = $calculator->calculateEstimate(
             (float) $request->base_imponible,
             $beniId,
-            (int) $request->parentesco_id,
+            $parentescoId,
             $tipoTransmisionId,
             $request->fecha_transmision,
             Carbon::now()->toDateString(),
@@ -107,18 +114,40 @@ class CalculadoraBeniController extends Controller
             (float) $request->participacion
         );
 
-        // Datos adicionales para el reporte formal
+        $categoriaLabel = match((int) ($request->categoria_tasa ?? 1)) {
+            1 => 'Línea Directa',
+            10 => 'Línea Colateral',
+            20 => 'Otros',
+            default => 'No especificado',
+        };
+
         $dataReporte = array_merge($calculo, [
             'nombre_sujeto' => strtoupper($request->nombre_sujeto ?? 'CONSULTA REFERENCIAL'),
             'ci_sujeto' => $request->ci_sujeto ?? 'S/N',
             'tipo_contribuyente' => $request->tipo_contribuyente,
             'telefono' => $request->telefono ?? '',
-            'parentesco' => Parentesco::find($request->parentesco_id)->nombre,
+            'parentesco' => $categoriaLabel,
             'tipo_transmision_nombre' => $request->tipo_transmision,
         ]);
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.calculo_estimado_beni', $dataReporte);
 
         return $pdf->download('Preliquidacion_IDTGB_Beni_'.$calculo['nro_tramite'].'.pdf');
+    }
+
+    private function getParentescoIdFromCategoria(int $categoria): int
+    {
+        $parentesco = Parentesco::getPrimerParentescoPorCategoria($categoria);
+        
+        if (!$parentesco) {
+            $defaultCategories = [
+                1 => Parentesco::where('nombre', 'Cónyuge o Conviviente')->first()?->id,
+                10 => Parentesco::where('nombre', 'Hermano/a')->first()?->id,
+                20 => Parentesco::where('nombre', 'Sin parentesco')->first()?->id,
+            ];
+            return $defaultCategories[$categoria] ?? 1;
+        }
+
+        return $parentesco->id;
     }
 }
