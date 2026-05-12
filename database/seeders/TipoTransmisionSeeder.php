@@ -13,14 +13,17 @@ class TipoTransmisionSeeder extends Seeder
      */
     public function run(): void
     {
+        \Illuminate\Support\Facades\DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        TipoTransmision::withTrashed()->forceDelete();
+        \Illuminate\Support\Facades\DB::statement('SET FOREIGN_KEY_CHECKS=1');
+
         $tipos = [
-            'Herencia',
-            'Donación',
-            'Legado',
+            1 => 'mortis causa',
+            2 => 'Entre vivos',
         ];
 
-        foreach ($tipos as $nombre) {
-            TipoTransmision::firstOrCreate(['nombre' => $nombre]);
+        foreach ($tipos as $id => $nombre) {
+            TipoTransmision::create(['id' => $id, 'nombre' => $nombre]);
         }
     }
 }
