@@ -171,7 +171,7 @@
         </div>
 
         <div class="total-final">
-            <strong>TOTAL DEUDA TRIBUTARIA: Bs. {{ number_format($final, 2, ',', '.') }}</strong>
+            <strong>TOTAL DEUDA TRIBUTARIA: Bs. {{ number_format(round($final), 0, ',', '.') }}</strong>
         </div>
     </div>
 
