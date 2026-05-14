@@ -23,7 +23,7 @@
                     <div class="col-md-6">
                         <label>Fecha <span class="required">*</span></label>
                         <input type="date" name="fecha" class="form-control"
-                               value="{{ old('fecha', $ufv->fecha->format('Y-m-d')) }}" required max="{{ today()->format('Y-m-d') }}">
+                               value="{{ old('fecha', $ufv->fecha->format('Y-m-d')) }}" required>
                         @error('fecha') <small class="text-danger">{{ $message }}</small> @enderror
                     </div>
 

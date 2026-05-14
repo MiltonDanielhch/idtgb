@@ -55,7 +55,7 @@ class UfvController extends Controller
         $this->authorize('create', Ufv::class);
 
         $request->validate([
-            'fecha' => 'required|date|before_or_equal:end_of_current_month|unique:ufvs,fecha',
+            'fecha' => 'required|date|before_or_equal:' . now()->endOfMonth()->format('Y-m-d') . '|unique:ufvs,fecha',
             'valor' => 'required|numeric|min:0.00001',
         ], [
             'fecha.unique' => 'Ya existe un valor UFV para esa fecha.',
@@ -183,7 +183,7 @@ class UfvController extends Controller
         $this->authorize('update', $ufv);
 
         $request->validate([
-            'fecha' => 'required|date|before_or_equal:end_of_current_month|unique:ufvs,fecha,' . $ufv->id,
+            'fecha' => 'required|date|before_or_equal:' . now()->endOfMonth()->format('Y-m-d') . '|unique:ufvs,fecha,' . $ufv->id,
             'valor' => 'required|numeric|min:0.00001',
         ], [
             'fecha.before_or_equal' => 'La fecha no puede ser posterior al fin del mes actual.',
