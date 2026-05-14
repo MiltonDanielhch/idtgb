@@ -230,6 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!res.ok) throw new Error(json.message || 'Error en el cálculo');
 
             const fmt = (n) => parseFloat(n).toLocaleString('es-BO', { minimumFractionDigits: 2 });
+            const fmtTotal = (n) => Math.round(parseFloat(n)).toLocaleString('es-BO');
 
             boletaDetalle.innerHTML = `
                 <div class="row g-4">
@@ -257,7 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="d-flex justify-content-between mb-3"><span>(+) Multa IDF</span> <span class="fw-bold">Bs. ${fmt(json.multa_idf)}</span></div>
                             <div class="border-top border-2 border-dark pt-2 d-flex justify-content-between h4">
                                 <span class="fw-bold">TOTAL DEUDA</span>
-                                <span class="fw-bold text-success">Bs. ${fmt(json.final)}</span>
+                                <span class="fw-bold text-success">Bs. ${fmtTotal(json.final)}</span>
                             </div>
                         </div>
                         <div class="text-end mt-3">
