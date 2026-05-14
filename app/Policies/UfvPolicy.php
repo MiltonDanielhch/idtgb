@@ -24,6 +24,14 @@ class UfvPolicy
     {
         return $user->hasPermission('read_ufvs');
     }
+    public function update(User $user, Ufv $ufv): bool
+    {
+        return $user->hasPermission('edit_ufvs');
+    }
+    public function delete(User $user, Ufv $ufv): bool
+    {
+        return $user->hasPermission('delete_ufvs');
+    }
     public function before(User $user, $ability): ?bool
     {
         return $user->hasPermission('browse_admin') ?: null;

@@ -14,11 +14,25 @@
                     <td><strong>{{ $item->fecha->format('d/m/Y') }}</strong></td>
                     <td class="text-right"><strong>{{ number_format($item->valor, 5) }}</strong></td>
                     <td class="text-center">{{ $item->created_at->format('d/m/Y H:i') }}</td>
-                    <td class="text-center" style="width: 10%">
+                    <td class="text-center" style="width: 15%">
                         @can('view', $item)
                             <a href="{{ route('admin.ufvs.show', $item) }}" class="btn btn-xs btn-warning" title="Ver">
                                 <i class="voyager-eye"></i>
                             </a>
+                        @endcan
+                        @can('update', $item)
+                            <a href="{{ route('admin.ufvs.edit', $item) }}" class="btn btn-xs btn-info" title="Editar">
+                                <i class="voyager-edit"></i>
+                            </a>
+                        @endcan
+                        @can('delete', $item)
+                            <form action="{{ route('admin.ufvs.destroy', $item) }}" method="POST" style="display:inline" class="delete-form">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-xs btn-danger" title="Eliminar">
+                                    <i class="voyager-trash"></i>
+                                </button>
+                            </form>
                         @endcan
                     </td>
                 </tr>
@@ -65,3 +79,16 @@
     });
 </script>
 @endif
+
+{{-- Confirmar eliminación --}}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.delete-form').forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            if (!confirm('¿Está seguro de eliminar este valor UFV?')) {
+                e.preventDefault();
+            }
+        });
+    });
+});
+</script>

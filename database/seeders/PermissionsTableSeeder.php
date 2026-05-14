@@ -180,6 +180,7 @@ class PermissionsTableSeeder extends Seeder
             'browse_ufvs' => 'Ver lista de UFVs',
             'read_ufvs'   => 'Ver detalles de una UFV',
             'add_ufvs'    => 'Agregar nuevas UFVs',
+            'edit_ufvs'   => 'Editar UFVs',
             'delete_ufvs' => 'Eliminar UFVs',
         ];
         foreach ($permissionsUfv as $key => $description) {
