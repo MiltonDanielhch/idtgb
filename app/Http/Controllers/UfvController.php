@@ -55,10 +55,11 @@ class UfvController extends Controller
         $this->authorize('create', Ufv::class);
 
         $request->validate([
-            'fecha' => 'required|date|before_or_equal:today|unique:ufvs,fecha',
+            'fecha' => 'required|date|before_or_equal:end_of_current_month|unique:ufvs,fecha',
             'valor' => 'required|numeric|min:0.00001',
         ], [
             'fecha.unique' => 'Ya existe un valor UFV para esa fecha.',
+            'fecha.before_or_equal' => 'La fecha no puede ser posterior al fin del mes actual.',
         ]);
 
         Ufv::create([
@@ -89,6 +90,7 @@ class UfvController extends Controller
             $toInsert = [];
             $now      = now();
             $today    = now()->startOfDay();
+            $endOfMonth = now()->endOfMonth()->startOfDay();
             $userId   = auth()->id();
 
             $firstLine = fgets($handle);
@@ -115,8 +117,8 @@ class UfvController extends Controller
                     continue;
                 }
                 
-                if ($dateObject > $today) {
-                    $errors[] = "La fecha no puede ser futura: {$fecha}";
+                if ($dateObject > $endOfMonth) {
+                    $errors[] = "La fecha no puede ser posterior al fin del mes actual: {$fecha}";
                     continue;
                 }
 
@@ -181,8 +183,10 @@ class UfvController extends Controller
         $this->authorize('update', $ufv);
 
         $request->validate([
-            'fecha' => 'required|date|before_or_equal:today|unique:ufvs,fecha,' . $ufv->id,
+            'fecha' => 'required|date|before_or_equal:end_of_current_month|unique:ufvs,fecha,' . $ufv->id,
             'valor' => 'required|numeric|min:0.00001',
+        ], [
+            'fecha.before_or_equal' => 'La fecha no puede ser posterior al fin del mes actual.',
         ]);
 
         $ufv->update([
