@@ -31,17 +31,7 @@
             </div>
 
 
-            @if (env('APP_DEMO', false))
-                <div class="row">
-                    <div class="col-md-12" style="margin-bottom: 0px">
-                        <div class="alert alert-info" style="margin-bottom: 5px">
-                            <small style="font-weight: bold">Ingrese los siguientes datos en el formulario</small><br>
-                            <strong>Email: </strong> admin@admin.com <br>
-                            <strong>Contraseña: </strong> password
-                        </div>
-                    </div>
-                </div>
-            @endif
+            
             <div class="form-group" id="rememberMeGroup">
                 <div class="controls">
                     <input type="checkbox" name="remember" id="remember" value="1"><label for="remember" class="remember-me-text">{{ __('voyager::generic.remember_me') }}</label>
