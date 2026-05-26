@@ -17,17 +17,9 @@ class StorePersonRequest extends FormRequest
     {
         $rules = [
             'person_type' => 'required|in:Natural,Jurídica',
-            'tipo_doc' => 'required|in:CI,NIT,PASS',
-            'email' => 'nullable|email|max:100',
+            'tipo_doc' => 'required|in:CI,NIT',
             'phone' => 'nullable|max:50',
-            'address' => 'nullable|max:255',
-            'municipio_id' => 'nullable|exists:municipios,id',
-            'image' => 'nullable|image|max:2048',
-            'status' => 'nullable|in:0,1,2',
-            'estado_persona' => 'nullable|in:Activo,Inactivo,Fallecido',
             'ci_complemento' => 'nullable|max:5',
-            'middle_name' => 'nullable|max:50',
-            'maternal_surname' => 'nullable|max:50',
         ];
 
         $ciRule = [
@@ -43,14 +35,10 @@ class StorePersonRequest extends FormRequest
 
             // Campos que no aplican para jurídica
             $rules['ci'] = array_merge(['nullable', 'max:20'], $ciRule);
-            $rules['first_name'] = 'nullable|max:50';
-            $rules['paternal_surname'] = 'nullable|max:50';
+            $rules['nombre_completo'] = 'nullable|max:200';
         } else {
             $rules['ci'] = array_merge(['required', 'max:20'], $ciRule);
-            $rules['first_name'] = 'required|max:50';
-            $rules['paternal_surname'] = 'required|max:50';
-            $rules['birth_date'] = 'nullable|date';
-            $rules['gender'] = 'nullable|in:Masculino,Femenino';
+            $rules['nombre_completo'] = 'required|max:200';
 
             // Campos que no aplican para natural
             $rules['nit'] = 'nullable|max:20|unique:people';
@@ -67,12 +55,8 @@ class StorePersonRequest extends FormRequest
             'ci.unique' => 'Este CI ya está registrado por otra persona.',
             'nit.required' => 'El NIT es obligatorio para personas jurídicas.',
             'nit.unique' => 'Este NIT ya está registrado por otra persona.',
-            'first_name.required' => 'El primer nombre es obligatorio para personas naturales.',
-            'paternal_surname.required' => 'El apellido paterno es obligatorio para personas naturales.',
+            'nombre_completo.required' => 'El nombre completo es obligatorio para personas naturales.',
             'legal_name.required' => 'La razón social es obligatoria para personas jurídicas.',
-            'image.image' => 'El archivo debe ser una imagen válida.',
-            'image.max' => 'La imagen no debe pesar más de 2MB.',
-            'municipio_id.exists' => 'El municipio seleccionado no es válido.', // ✅ AÑADIDO
         ];
     }
 
@@ -84,13 +68,7 @@ class StorePersonRequest extends FormRequest
             'ci' => 'carnet de identidad',
             'nit' => 'NIT',
             'legal_name' => 'razón social',
-            'first_name' => 'primer nombre',
-            'middle_name' => 'segundo nombre',
-            'paternal_surname' => 'apellido paterno',
-            'maternal_surname' => 'apellido materno',
-            'birth_date' => 'fecha de nacimiento',
-            'estado_persona' => 'estado de persona',
-            'municipio_id' => 'municipio', // ✅ AÑADIDO
+            'nombre_completo' => 'nombre completo',
         ];
     }
 }

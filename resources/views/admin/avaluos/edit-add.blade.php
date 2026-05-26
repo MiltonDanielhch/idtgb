@@ -99,7 +99,7 @@
                             @foreach($peritos as $p)
                                 <option value="{{ $p->id }}"
                                     {{ old('perito_id', optional($avaluo)->perito_id) == $p->id ? 'selected' : '' }}>
-                                    {{ $p->first_name }} {{ $p->paternal_surname }}
+                                    {{ $p->nombre_completo }}
                                 </option>
                             @endforeach
                         </select>

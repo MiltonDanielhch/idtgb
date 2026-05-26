@@ -14,7 +14,7 @@ class StoreTramiteRequest extends FormRequest
     public function rules()
     {
         return [
-            'nro_tramite'         => 'required|string|max:15|unique:tramites',
+            'nro_tramite'         => 'nullable|string|max:15|unique:tramites',
             'fecha_presentacion'  => 'required|date',
             'tipo_transmision_id' => 'required|exists:tipos_transmision,id',
             'inmueble_id'         => 'required|exists:inmuebles,id',

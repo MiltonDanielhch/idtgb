@@ -955,15 +955,13 @@ class TramiteWizardController extends Controller
         $term = $request->get('q', '');
 
         $people = Person::where(function ($query) use ($term) {
-            $query->where('first_name', 'LIKE', "%{$term}%")
-                ->orWhere('paternal_surname', 'LIKE', "%{$term}%")
+            $query->where('nombre_completo', 'LIKE', "%{$term}%")
                 ->orWhere('ci', 'LIKE', "%{$term}%")
                 ->orWhere('legal_name', 'LIKE', "%{$term}%")
-                ->orWhere('nit', 'LIKE', "%{$term}%"); // Añadido para buscar por NIT
+                ->orWhere('nit', 'LIKE', "%{$term}%");
         })
             ->limit(20)
-            // Aseguramos que se seleccionen todos los campos necesarios para los accesores
-            ->get(['id', 'first_name', 'middle_name', 'paternal_surname', 'maternal_surname', 'legal_name', 'ci', 'person_type', 'nit', 'tipo_doc']);
+            ->get(['id', 'nombre_completo', 'legal_name', 'ci', 'person_type', 'nit', 'tipo_doc']);
 
         $formatted = $people->map(function ($person) {
             return [

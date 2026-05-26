@@ -1,0 +1,55 @@
+# Dependencies
+/node_modules
+/vendor
+
+# Laravel
+/storage/*.key
+/storage/logs
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/.env
+/.env.backup
+/.env.production
+/.phpunit.result.cache
+/Homestead.json
+/Homestead.lock
+/auth.json
+
+# IDE
+/.idea
+/.vscode
+/.vagrant
+*.sublime-project
+*.sublime-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Documentation
+README.md
+CHANGELOG.md
+LICENSE
+
+# Testing
+/tests
+/phpunit.xml
+/.phpunit.cache
+
+# Cache
+/bootstrap/cache/*.php
+/storage/cache/*
+
+# Logs
+*.log

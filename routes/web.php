@@ -26,6 +26,7 @@ use App\Http\Controllers\UfvController;
 use App\Http\Controllers\ValidacionController;
 use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\Admin\TramiteWizardController;
+use App\Http\Controllers\Admin\TramiteSimpleController;
 use App\Http\Controllers\TipoInmuebleController;
 use App\Http\Controllers\TipoTransmisionController;
 use App\Http\Controllers\Admin\DashboardController;
@@ -122,64 +123,23 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
     Route::get('avaluos/ajax/list', [AvaluoController::class, 'list'])->name('admin.avaluos.ajax.list');
     Route::get('avaluos/{avaluo}/download', [AvaluoController::class, 'download'])->name('admin.avaluos.download');
 
-    // Asistente para creación de trámites
-    Route::prefix('tramites/wizard')->name('admin.tramites.wizard.')->group(function () {
-        Route::get('create-step-1', [TramiteWizardController::class, 'createStep1'])->name('create.step1');
-        Route::post('post-step-1', [TramiteWizardController::class, 'postStep1'])->name('post.step1');
-        Route::get('create-step-2', [TramiteWizardController::class, 'createStep2'])->name('create.step2');
-        Route::post('post-step-2', [TramiteWizardController::class, 'postStep2'])->name('post.step2');
-        Route::post('add-disponente', [TramiteWizardController::class, 'addDisponente'])->name('add.disponente');
-        Route::get('remove-disponente/{person_id}', [TramiteWizardController::class, 'removeDisponente'])->name('remove.disponente');
-
-        // Step 3: Adquirentes
-        Route::get('create-step-3', [TramiteWizardController::class, 'createStep3'])->name('create.step3');
-        Route::post('post-step-3', [TramiteWizardController::class, 'postStep3'])->name('post.step3');
-        Route::post('add-adquirente', [TramiteWizardController::class, 'addAdquirente'])->name('add.adquirente');
-        Route::delete('remove-adquirente/{person_id}', [TramiteWizardController::class, 'removeAdquirente'])->name('remove.adquirente');
-
-        // Step 4: Inmueble
-        Route::get('create-step-4', [TramiteWizardController::class, 'createStep4'])->name('create.step4');
-        Route::post('post-step-4', [TramiteWizardController::class, 'postStep4'])->name('post.step4');
-        Route::post('add-inmueble', [TramiteWizardController::class, 'addInmueble'])->name('add.inmueble');
-        Route::get('remove-inmueble/{id}', [TramiteWizardController::class, 'removeInmueble'])->name('remove.inmueble');
-
-        // Step 5: Documentos
-        Route::get('create-step-5', [TramiteWizardController::class, 'createStep5'])->name('create.step5');
-        Route::post('post-step-5', [TramiteWizardController::class, 'postStep5'])->name('post.step5');
-        Route::post('add-documento', [TramiteWizardController::class, 'addDocumento'])->name('add.documento');
-        Route::get('remove-documento/{doc_id}', [TramiteWizardController::class, 'removeDocumento'])->name('remove.documento');
-
-        // Step 6: Exenciones
-        Route::get('create-step-6', [TramiteWizardController::class, 'createStep6'])->name('create.step6');
-        Route::post('post-step-6', [TramiteWizardController::class, 'postStep6'])->name('post.step6');
-        Route::post('add-exencion', [TramiteWizardController::class, 'addExencion'])->name('add.exencion');
-        Route::get('remove-exencion/{exencion_id}', [TramiteWizardController::class, 'removeExencion'])->name('remove.exencion');
-
-        // Step 7: Resumen y Guardar
-        Route::get('create-step-7', [TramiteWizardController::class, 'createStep7'])->name('create.step7');
-        Route::post('store', [TramiteWizardController::class, 'store'])->name('store');
-
-        // Editar trámite existente
-        Route::get('edit/{id}', [TramiteWizardController::class, 'edit'])->name('edit');
-
-        // Cancelar
-        Route::get('cancel', [TramiteWizardController::class, 'cancelWizard'])->name('cancel');
-
-        // Rutas AJAX para el asistente
-        Route::get('ajax/person-list', [TramiteWizardController::class, 'ajaxPersonList'])->name('ajax.personList');
+    // ──────────────── TRÁMITES ────────────────
+    // Trámite simplificado (una sola página) - ÚNICA FORMA DE CREAR TRÁMITES
+    Route::prefix('tramites/simple')->name('admin.tramites.simple.')->group(function () {
+        Route::get('create', [TramiteSimpleController::class, 'create'])->name('create');
+        Route::post('store', [TramiteSimpleController::class, 'store'])->name('store');
+        Route::get('ajax/persons', [TramiteSimpleController::class, 'ajaxPersonList'])->name('ajax.persons');
+        Route::post('ajax/calculate', [TramiteSimpleController::class, 'ajaxCalculate'])->name('ajax.calculate');
     });
 
-
-
-    // ──────────────── TRÁMITES ────────────────
     // Ruta personalizada que debe ir ANTES que el resource para no ser capturada por el método show del resource.
     Route::get('tramites/{tramite}/a01', [TramiteController::class, 'a01'])->name('admin.tramites.a01');
 
     // El resource se mantiene para las rutas show, edit, update, destroy.
-    // Los métodos create y store se excluyen porque ahora los maneja el TramiteWizardController.
+    // Los métodos create y store se excluyen porque ahora los maneja el TramiteSimpleController.
     Route::resource('tramites', TramiteController::class)->names('admin.tramites')->except(['create', 'store']);
-    // Redirigimos la ruta de creación al primer paso del asistente.
-    Route::get('tramites/create', fn() => redirect()->route('admin.tramites.wizard.create.step1'))->name('admin.tramites.create');
+    // Redirigimos la ruta de creación al formulario simplificado.
+    Route::get('tramites/create', fn() => redirect()->route('admin.tramites.simple.create'))->name('admin.tramites.create');
     Route::get('tramites/ajax/list', [TramiteController::class, 'list'])->name('admin.tramites.ajax.list');
 
     // ──────────────── RECURSOS ANIDADOS (Pivotes de Trámite) ────────────────

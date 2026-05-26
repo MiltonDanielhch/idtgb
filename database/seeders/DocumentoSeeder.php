@@ -17,8 +17,7 @@ class DocumentoSeeder extends Seeder
         $tramite1 = Tramite::where('nro_tramite', 'BE-2025-0001')->first();
         if ($tramite1) {
             // Disponente: Pedro Méndez (fallecido)
-            $disponente1 = Person::where('first_name', 'Pedro')
-                                 ->where('paternal_surname', 'Méndez')
+            $disponente1 = Person::where('nombre_completo', 'Pedro José Méndez Rojas')
                                  ->first();
             // Adquirente: primera persona natural (hijo)
             $adquirente1 = Person::where('ci', '1500000')->first();
@@ -110,8 +109,7 @@ class DocumentoSeeder extends Seeder
         // === Trámite 3: Herencia a cónyuge (BE-2025-0003) ===
         $tramite3 = Tramite::where('nro_tramite', 'BE-2025-0003')->first();
         if ($tramite3) {
-            $disponente3 = Person::where('first_name', 'Pedro')
-                                 ->where('paternal_surname', 'Méndez')
+            $disponente3 = Person::where('nombre_completo', 'Pedro José Méndez Rojas')
                                  ->first();
             $adquirente3 = Person::where('ci', '1500002')->first(); // cónyuge
 

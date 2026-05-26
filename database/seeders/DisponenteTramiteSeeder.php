@@ -15,8 +15,7 @@ class DisponenteTramiteSeeder extends Seeder
         $tramite1 = Tramite::where('nro_tramite', 'BE-2025-0001')->first();
         if ($tramite1) {
             // Buscar una persona fallecida (ej. Pedro Méndez)
-            $personaFallecida = Person::where('first_name', 'Pedro')
-                                      ->where('paternal_surname', 'Méndez')
+            $personaFallecida = Person::where('nombre_completo', 'Pedro José Méndez Rojas')
                                       ->first();
 
             if ($personaFallecida) {

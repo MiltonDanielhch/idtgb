@@ -16,15 +16,8 @@ class CalculadoraDemoSeeder extends Seeder
             ['ci' => '0000001'],
             [
                 'person_type'        => 'Natural',
-                'first_name'         => 'Juan',
-                'paternal_surname'   => 'Pérez',
-                'maternal_surname'   => 'López',
-                'birth_date'         => '1980-01-01',
-                'email'              => 'juan.perez@mail.com',
+                'nombre_completo'    => 'Juan Pérez López',
                 'phone'              => '70000001',
-                'address'            => 'Calle Avaroa #123, Trinidad',
-                'status'             => 1,
-                'estado_persona'     => 'Activo',
             ]
         );
 

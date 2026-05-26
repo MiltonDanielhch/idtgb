@@ -225,7 +225,7 @@ class IdtgbCalculator
         ];
     }
 
-    private function tasaVigente($depId, $parId, $tipoId, $fecha)
+    public function tasaVigente($depId, $parId, $tipoId, $fecha)
     {
         // Cache key: tasa:{dep}:{par}:{tipo}:{fecha}
         // FIX: Incluir tipoId en cache key

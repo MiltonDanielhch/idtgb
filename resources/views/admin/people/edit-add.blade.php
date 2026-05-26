@@ -42,7 +42,6 @@
                         <select name="tipo_doc" id="tipo_doc" class="form-control @error('tipo_doc') is-invalid @enderror" required>
                             <option value="CI" {{ old('tipo_doc', optional($person)->tipo_doc) == 'CI' ? 'selected' : '' }}>CI</option>
                             <option value="NIT" {{ old('tipo_doc', optional($person)->tipo_doc) == 'NIT' ? 'selected' : '' }}>NIT</option>
-                            <option value="PASS" {{ old('tipo_doc', optional($person)->tipo_doc) == 'PASS' ? 'selected' : '' }}>PASS</option>
                         </select>
                         @error('tipo_doc')
                             <span class="text-danger">{{ $message }}</span>
@@ -77,72 +76,21 @@
                     {{-- Razón social (solo Jurídica) --}}
                     <div class="col-md-8 juridica-field" style="{{ optional($person)->person_type != 'Jurídica' ? 'display:none' : '' }}">
                         <label>Razón social <span class="required">*</span></label>
-                        <input type="text" name="legal_name" class="form-control @error('legal_name') is-invalid @enderror" value="{{ old('legal_name', optional($person)->legal_name) }}" required>
+                        <input type="text" name="legal_name" class="form-control @error('legal_name') is-invalid @enderror" value="{{ old('legal_name', optional($person)->getAttributes()['legal_name'] ?? '') }}" required>
                         @error('legal_name')
                             <span class="text-danger">{{ $message }}</span>
                         @enderror
                     </div>
 
-                    {{-- Nombres y apellidos (solo Natural) --}}
-                    <div class="col-md-3 natural-field" style="{{ optional($person)->person_type == 'Jurídica' ? 'display:none' : '' }}">
-                        <label>Primer nombre <span class="required">*</span></label>
-                        <input type="text" name="first_name" class="form-control @error('first_name') is-invalid @enderror" value="{{ old('first_name', optional($person)->first_name) }}">
-                        @error('first_name')
-                            <span class="text-danger">{{ $message }}</span>
-                        @enderror
-                    </div>
-                    <div class="col-md-3 natural-field" style="{{ optional($person)->person_type == 'Jurídica' ? 'display:none' : '' }}">
-                        <label>Segundo nombre</label>
-                        <input type="text" name="middle_name" class="form-control @error('middle_name') is-invalid @enderror" value="{{ old('middle_name', optional($person)->middle_name) }}">
-                        @error('middle_name')
-                            <span class="text-danger">{{ $message }}</span>
-                        @enderror
-                    </div>
-                    <div class="col-md-3 natural-field" style="{{ optional($person)->person_type == 'Jurídica' ? 'display:none' : '' }}">
-                        <label>Apellido paterno <span class="required">*</span></label>
-                        <input type="text" name="paternal_surname" class="form-control @error('paternal_surname') is-invalid @enderror" value="{{ old('paternal_surname', optional($person)->paternal_surname) }}">
-                        @error('paternal_surname')
-                            <span class="text-danger">{{ $message }}</span>
-                        @enderror
-                    </div>
-                    <div class="col-md-3 natural-field" style="{{ optional($person)->person_type == 'Jurídica' ? 'display:none' : '' }}">
-                        <label>Apellido materno</label>
-                        <input type="text" name="maternal_surname" class="form-control @error('maternal_surname') is-invalid @enderror" value="{{ old('maternal_surname', optional($person)->maternal_surname) }}">
-                        @error('maternal_surname')
+                    {{-- Nombre completo (solo Natural) --}}
+                    <div class="col-md-6 natural-field" style="{{ optional($person)->person_type == 'Jurídica' ? 'display:none' : '' }}">
+                        <label>Nombre completo <span class="required">*</span></label>
+                        <input type="text" name="nombre_completo" class="form-control @error('nombre_completo') is-invalid @enderror" value="{{ old('nombre_completo', optional($person)->getAttributes()['nombre_completo'] ?? '') }}">
+                        @error('nombre_completo')
                             <span class="text-danger">{{ $message }}</span>
                         @enderror
                     </div>
 
-                    {{-- Fecha de nacimiento (solo Natural) --}}
-                    <div class="col-md-3 natural-field" style="{{ optional($person)->person_type == 'Jurídica' ? 'display:none' : '' }}">
-                        <label>Fecha de nacimiento</label>
-                        <input type="date" name="birth_date" class="form-control @error('birth_date') is-invalid @enderror" value="{{ old('birth_date', optional($person)->birth_date?->format('Y-m-d')) }}">
-                        @error('birth_date')
-                            <span class="text-danger">{{ $message }}</span>
-                        @enderror
-                    </div>
-
-                    {{-- Género (solo Natural) --}}
-                    <div class="col-md-3 natural-field" style="{{ optional($person)->person_type == 'Jurídica' ? 'display:none' : '' }}">
-                        <label>Género</label>
-                        <select name="gender" class="form-control @error('gender') is-invalid @enderror">
-                            <option value="">Seleccione...</option>
-                            <option value="Masculino" {{ old('gender', optional($person)->gender) == 'Masculino' ? 'selected' : '' }}>Masculino</option>
-                            <option value="Femenino" {{ old('gender', optional($person)->gender) == 'Femenino' ? 'selected' : '' }}>Femenino</option>
-                        </select>
-                        @error('gender')
-                            <span class="text-danger">{{ $message }}</span>
-                        @enderror
-                    </div>
-
-                    {{-- Email --}}
-                    <div class="col-md-3">
-                        <label>Email</label>
-                        <input type="email" name="email" class="form-control @error('email') is-invalid @enderror" value="{{ old('email', optional($person)->email) }}">
-                        @error('email')
-                            <span class="text-danger">{{ $message }}</span>
-                        @enderror
-                    </div>
 
                     {{-- Teléfono --}}
                     <div class="col-md-3">
@@ -153,76 +101,8 @@
                         @enderror
                     </div>
 
-                    {{-- Dirección --}}
-                    <div class="col-md-6">
-                        <label>Dirección</label>
-                        <textarea name="address" class="form-control @error('address') is-invalid @enderror" rows="2">{{ old('address', optional($person)->address) }}</textarea>
-                        @error('address')
-                            <span class="text-danger">{{ $message }}</span>
-                        @enderror
-                    </div>
 
-                    {{-- Municipio --}}
-                    <div class="col-md-6">
-                        <label>Municipio</label>
-                        <select name="municipio_id" class="form-control select2 @error('municipio_id') is-invalid @enderror">
-                            <option value="">Seleccione un municipio</option>
-                            @foreach($municipios as $municipio)
-                                <option value="{{ $municipio->id }}"
-                                    {{ old('municipio_id', optional($person)->municipio_id) == $municipio->id ? 'selected' : '' }}>
-                                    {{ $municipio->nombre }} - {{ $municipio->provincia->nombre }} - {{ $municipio->provincia->departamento->nombre }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('municipio_id')
-                            <span class="text-danger">{{ $message }}</span>
-                        @enderror
-                    </div>
 
-                    {{-- Fotografía --}}
-                    <div class="col-md-6">
-                        <label>Fotografía</label>
-                        @if(($person->exists ?? false) && $person->image)
-                            <div class="mb-2">
-                                <img src="{{ asset('storage/'.$person->image) }}" alt="Foto actual" style="width: 120px; height: auto; border-radius: 4px;">
-                                <div class="mt-1">
-                                    <label class="checkbox-inline">
-                                        <input type="checkbox" name="remove_image" value="1"> Eliminar imagen actual
-                                    </label>
-                                </div>
-                            </div>
-                        @endif
-                        <input type="file" name="image" class="form-control @error('image') is-invalid @enderror" accept="image/*">
-                        @error('image')
-                            <span class="text-danger">{{ $message }}</span>
-                        @enderror
-                    </div>
-
-                    {{-- Estado --}}
-                    <div class="col-md-3">
-                        <label>Estado</label>
-                        <select name="status" class="form-control @error('status') is-invalid @enderror">
-                            <option value="1" {{ old('status', optional($person)->status ?? 1) == 1 ? 'selected' : '' }}>Activo</option>
-                            <option value="0" {{ old('status', optional($person)->status ?? 1) == 0 ? 'selected' : '' }}>Inactivo</option>
-                            <option value="2" {{ old('status', optional($person)->status ?? 1) == 2 ? 'selected' : '' }}>Pendiente</option>
-                        </select>
-                        @error('status')
-                            <span class="text-danger">{{ $message }}</span>
-                        @enderror
-                    </div>
-
-                    {{-- Estado persona --}}
-                    <div class="col-md-3">
-                        <label>Estado persona</label>
-                        <select name="estado_persona" class="form-control @error('estado_persona') is-invalid @enderror">
-                            <option value="Activo" {{ old('estado_persona', optional($person)->estado_persona ?? 'Activo') == 'Activo' ? 'selected' : '' }}>Activo</option>
-                            <option value="Inactivo" {{ old('estado_persona', optional($person)->estado_persona ?? 'Activo') == 'Inactivo' ? 'selected' : '' }}>Inactivo</option>
-                            <option value="Fallecido" {{ old('estado_persona', optional($person)->estado_persona ?? 'Activo') == 'Fallecido' ? 'selected' : '' }}>Fallecido</option>
-                        </select>
-                        @error('estado_persona')
-                            <span class="text-danger">{{ $message }}</span>
-                        @enderror
-                    </div>
                 </div>
             </div>
 
@@ -247,15 +127,13 @@
             $('.juridica-field').show().find('input, select').prop('disabled', false);
             $('.natural-field').hide().find('input, select').prop('disabled', true);
             $('#tipo_doc').val('NIT');
-            $('#tipo_doc option').hide();
-            $('#tipo_doc option[value="NIT"]').show();
 
             // Limpiar y remover clases de error de campos naturales
             $('.natural-field input, .natural-field select').val('').removeClass('is-invalid');
         } else {
             $('.juridica-field').hide().find('input, select').prop('disabled', true);
             $('.natural-field').show().find('input, select').prop('disabled', false);
-            $('#tipo_doc option').show();
+            $('#tipo_doc').val('CI');
 
             // Limpiar y remover clases de error de campos jurídicos
             $('.juridica-field input, .juridica-field select').val('').removeClass('is-invalid');
@@ -266,11 +144,6 @@
         // Inicializar
         toggleFields();
 
-        // Inicializar Select2 para municipio
-        $('.select2').select2({
-            placeholder: 'Seleccione un municipio',
-            allowClear: true
-        });
 
         // Evento change
         $('#person_type').change(toggleFields);
@@ -298,12 +171,8 @@
                 }
             } else {
                 // Validar campos naturales
-                if (!$('input[name="first_name"]').val()) {
-                    $('input[name="first_name"]').addClass('is-invalid');
-                    isValid = false;
-                }
-                if (!$('input[name="paternal_surname"]').val()) {
-                    $('input[name="paternal_surname"]').addClass('is-invalid');
+                if (!$('input[name="nombre_completo"]').val()) {
+                    $('input[name="nombre_completo"]').addClass('is-invalid');
                     isValid = false;
                 }
             }

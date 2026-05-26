@@ -54,14 +54,14 @@ class UserController extends Controller
         {
             return redirect()->route('voyager.users.index')->with(['message' => 'El correo ya existe.', 'alert-type' => 'warning    ']);
         }
-        $person = Person::where('deleted_at', null)->where('status', 1)->where('id', $request->person_id)->first();
+        $person = Person::where('deleted_at', null)->where('id', $request->person_id)->first();
 
         DB::beginTransaction();
         try {
 
             User::create([
                 'person_id' => $request->person_id,
-                'name' =>  $person->first_name,
+                'name' =>  $person->nombre_completo,
                 'role_id' => $request->role_id,
                 'email' => $request->email,
                 'avatar' => 'users/default.png',

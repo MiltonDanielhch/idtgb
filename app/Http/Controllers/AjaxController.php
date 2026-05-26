@@ -16,15 +16,7 @@ class AjaxController extends Controller
         $q = request('q');
         $data = Person::OrWhereRaw($q ? "ci like '%$q%'" : 1)
                         ->OrWhereRaw($q ? "phone like '%$q%'" : 1)
-                        ->OrWhereRaw($q ? "first_name like '%$q%'" : 1)
-                        ->OrWhereRaw($q ? "middle_name like '%$q%'" : 1)
-                        ->OrWhereRaw($q ? "paternal_surname like '%$q%'" : 1)
-                        ->OrWhereRaw($q ? "maternal_surname like '%$q%'" : 1)
-                        ->orWhere(function ($subQ) use ($q) {
-                            $subQ->whereRaw("CONCAT(COALESCE(first_name, ''), ' ', COALESCE(middle_name, '')) like ?", ["%$q%"])
-                                ->orWhereRaw("CONCAT(COALESCE(first_name, ''), ' ', COALESCE(paternal_surname, ''), ' ', COALESCE(maternal_surname, '')) like ?", ["%$q%"])
-                                ->orWhereRaw("CONCAT(COALESCE(first_name, ''), ' ', COALESCE(middle_name, ''), ' ', COALESCE(paternal_surname, ''), ' ', COALESCE(maternal_surname, '')) like ?", ["%$q%"]);
-                        })
+                        ->OrWhereRaw($q ? "nombre_completo like '%$q%'" : 1)
                         ->where('deleted_at', null)
                         ->get();
         return response()->json($data);
@@ -33,12 +25,25 @@ class AjaxController extends Controller
     public function personStore(Request $request){
         DB::beginTransaction();
         try {
-            $person =Person::create($request->all());
+            // Solo aceptar campos del formulario
+            $data = $request->only(['nombre_completo', 'ci', 'phone']);
+            
+            // Agregar campos por defecto
+            $data['person_type'] = 'Natural';
+            $data['tipo_doc'] = 'CI';
+            
+            $person = Person::create($data);
             DB::commit();
-            return response()->json(['person' => $person]);
+            return response()->json([
+                'success' => true,
+                'person' => $person
+            ]);
         } catch (\Throwable $th) {
             DB::rollback();
-            return response()->json(['error' => $th->getMessage()], 500);
+            return response()->json([
+                'success' => false,
+                'error' => $th->getMessage()
+            ], 500);
         }
     }
 }

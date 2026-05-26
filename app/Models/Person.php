@@ -15,10 +15,9 @@ class Person extends Model
      *  CONFIGURACIÓN
      * ------------------------------------------------- */
     protected $table = 'people';
-    protected $dates = ['deleted_at', 'birth_date'];
+    protected $dates = ['deleted_at'];
     protected $casts = [
-        'status' => 'integer',
-        'birth_date' => 'date',
+        //
     ];
 
     protected $fillable = [
@@ -27,20 +26,9 @@ class Person extends Model
         'ci',
         'ci_complemento',
         'nit',
-        'first_name',
-        'middle_name',
-        'paternal_surname',
-        'maternal_surname',
+        'nombre_completo',
         'legal_name',
-        'birth_date',
-        'email',
         'phone',
-        'address',
-        'municipio_id',
-        'gender',
-        'image',
-        'status',
-        'estado_persona',
         'registerUser_id',
         'registerRole',
         'deleteUser_id',
@@ -48,39 +36,18 @@ class Person extends Model
         'deleteObservation',
     ];
 
-      // Agregar los accesores a los appends
-    protected $appends = ['ubicacion_completa', 'ubicacion_segura'];
+    protected $appends = [];
     
-    /* -------------------------------------------------
-     *  CONSTANTES
-     * ------------------------------------------------- */
-    const STATUS_ACTIVE   = 1;
-    const STATUS_INACTIVE = 0;
-    const STATUS_PENDING  = 2;
-
-    public static function getStatusLabel($status): string
-    {
-        return match ($status) {
-            self::STATUS_ACTIVE   => 'Activo',
-            self::STATUS_INACTIVE => 'Inactivo',
-            self::STATUS_PENDING  => 'Pendiente',
-            default               => 'Desconocido',
-        };
-    }
 
     /* -------------------------------------------------
      *  ACCESORES
      * ------------------------------------------------- */
     public function getFullNameAttribute(): string
     {
-        return trim(
-            collect([
-                $this->first_name,
-                $this->middle_name,
-                $this->paternal_surname,
-                $this->maternal_surname,
-            ])->filter()->join(' ')
-        );
+        if ($this->person_type === 'Jurídica') {
+            return $this->legal_name ?? 'Sin razón social';
+        }
+        return $this->attributes['nombre_completo'] ?? 'Nombre no definido';
     }
 
     /**
@@ -89,13 +56,7 @@ class Person extends Model
      */
     public function getNombreCompletoAttribute(): string
     {
-        // Preferir display_name (para personas jurídicas), si no usar full_name
-        return $this->display_name ?? $this->full_name ?? 'Nombre no definido';
-    }
-    // En el modelo Person
-    public function getDisplayImageAttribute()
-    {
-        return $this->image ? asset('storage/'.$this->image) : asset('images/default.jpg');
+        return $this->attributes['nombre_completo'] ?? '';
     }
 
     public function getDisplayNameAttribute()
@@ -104,7 +65,7 @@ class Person extends Model
             return strtoupper($this->legal_name ?? 'Sin razón social');
         }
 
-        return strtoupper($this->full_name ?: 'Nombre no definido');
+        return strtoupper($this->nombre_completo ?: 'Nombre no definido');
     }
 
     public function getDisplayDocumentAttribute()
@@ -116,24 +77,9 @@ class Person extends Model
         return $this->ci . ($this->ci_complemento ? ' ' . $this->ci_complemento : '') ?: 'Sin CI';
     }
 
-    public function getDisplayAgeAttribute()
-    {
-        if (!$this->birth_date) return '-';
-
-        return \Carbon\Carbon::parse($this->birth_date)->age . ' años';
-    }
-
-    public function getFormattedBirthDateAttribute()
-    {
-        return $this->birth_date ? $this->birth_date->format('d/m/Y') : null;
-    }
     /* -------------------------------------------------
       *  SCOPES
       * ------------------------------------------------- */
-    public function scopeActive($query)
-    {
-        return $query->where('status', self::STATUS_ACTIVE);
-    }
 
     public function scopeSearch($query, $search)
     {
@@ -144,56 +90,13 @@ class Person extends Model
         return $query->where(function ($q) use ($search) {
             $q->where('ci', 'like', "%{$search}%")
                 ->orWhere('nit', 'like', "%{$search}%")
-                ->orWhere('first_name', 'like', "%{$search}%")
-                ->orWhere('paternal_surname', 'like', "%{$search}%")
-                ->orWhere('maternal_surname', 'like', "%{$search}%")
+                ->orWhere('nombre_completo', 'like', "%{$search}%")
                 ->orWhere('legal_name', 'like', "%{$search}%")
-                ->orWhere('phone', 'like', "%{$search}%")
-                ->orWhere('email', 'like', "%{$search}%");
+                ->orWhere('phone', 'like', "%{$search}%");
         });
     }
 
 
-     /**
-     * Relación con municipio
-     */
-    public function municipio()
-    {
-        return $this->belongsTo(Municipio::class);
-    }
-  /**
-     * Accesor para la ubicación completa
-     */
-    public function getUbicacionCompletaAttribute()
-    {
-        if (!$this->municipio) {
-            return 'Ubicación no especificada';
-        }
-
-        $ubicacion = $this->municipio->nombre;
-
-        if ($this->municipio->provincia) {
-            $ubicacion .= ', ' . $this->municipio->provincia->nombre;
-        }
-
-        if ($this->municipio->provincia && $this->municipio->provincia->departamento) {
-            $ubicacion .= ', ' . $this->municipio->provincia->departamento->nombre;
-        }
-
-        return $ubicacion;
-    }
-
-    /**
-     * Accesor para mostrar información de ubicación segura
-     */
-    public function getUbicacionSeguraAttribute()
-    {
-        try {
-            return $this->ubicacion_completa;
-        } catch (\Exception $e) {
-            return 'Ubicación no disponible';
-        }
-    }
 
     /* -------------------------------------------------
      *  RELACIONES

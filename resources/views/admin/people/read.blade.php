@@ -43,19 +43,7 @@
                             @if($person->person_type === 'Natural')
                                 <tr>
                                     <th>Nombre completo</th>
-                                    <td>{{ strtoupper(trim($person->first_name.' '.$person->middle_name.' '.$person->paternal_surname.' '.$person->maternal_surname)) }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Fecha de nacimiento</th>
-                                    <td>{{ $person->birth_date ? \Carbon\Carbon::parse($person->birth_date)->format('d/m/Y') : '-' }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Edad</th>
-                                    <td>{{ $person->birth_date ? \Carbon\Carbon::parse($person->birth_date)->age.' años' : '-' }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Género</th>
-                                    <td>{{ $person->gender }}</td>
+                                    <td>{{ strtoupper($person->nombre_completo) }}</td>
                                 </tr>
                             @else
                                 {{-- JURÍDICA --}}
@@ -66,48 +54,8 @@
                             @endif
 
                             <tr>
-                                <th>Email</th>
-                                <td>{{ $person->email ?? 'SN' }}</td>
-                            </tr>
-                            <tr>
                                 <th>Teléfono / Celular</th>
                                 <td>{{ $person->phone ?? 'SN' }}</td>
-                            </tr>
-                            <tr>
-                                <th>Dirección</th>
-                                <td>{{ $person->address ?? 'SN' }}</td>
-                            </tr>
-                            <tr>
-                                <th>Ubicación</th>
-                                <td>
-                                    {{ $person->ubicacion_segura }}
-                                    @if($person->municipio)
-                                        <br>
-                                        <small class="text-muted">
-                                            <strong>Municipio:</strong> {{ $person->municipio->nombre }} |
-                                            <strong>Provincia:</strong> {{ $person->municipio->provincia->nombre }} |
-                                            <strong>Departamento:</strong> {{ $person->municipio->provincia->departamento->nombre }}
-                                        </small>
-                                    @endif
-                                </td>
-                            </tr>
-                            <tr>
-                                <th>Fotografía</th>
-                                <td>
-                                    @if($person->image)
-                                        <img src="{{ asset('storage/'.$person->image) }}" alt="Foto" style="width: 150px; height: auto; border-radius: 4px;">
-                                    @else
-                                        <img src="{{ asset('images/default.jpg') }}" alt="Sin foto" style="width: 150px; height: auto; border-radius: 4px;">
-                                    @endif
-                                </td>
-                            </tr>
-                            <tr>
-                                <th>Estado</th>
-                                <td>
-                                   <span class="badge badge-{{ $person->status == 1 ? 'success' : ($person->status == 2 ? 'warning' : 'danger') }}">
-                                        {{ $person->estado_persona }}
-                                    </span>
-                                </td>
                             </tr>
                             <tr>
                                 <th>Creado</th>

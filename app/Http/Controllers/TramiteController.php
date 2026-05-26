@@ -28,17 +28,27 @@ class TramiteController extends Controller
 
     public function list()
     {
-        $this->authorize('viewAny', Tramite::class);
+        try {
+            Log::info('LIST: Iniciando listado de trámites');
+            $this->authorize('viewAny', Tramite::class);
+            Log::info('LIST: Autorización pasada');
 
-        $search   = request('search');
-        $paginate = request('paginate', 10);
+            $search   = request('search');
+            $paginate = request('paginate', 10);
+            Log::info('LIST: Parámetros - search: ' . $search . ', paginate: ' . $paginate);
 
-        $data = Tramite::with(['tipoTransmision', 'user', 'inmuebles'])
-            ->when($search, fn($q) => $q->where('nro_tramite', 'like', "%{$search}%"))
-            ->orderByDesc('id')
-            ->paginate($paginate);
+            $data = Tramite::with(['tipoTransmision', 'user', 'inmuebles'])
+                ->when($search, fn($q) => $q->where('nro_tramite', 'like', "%{$search}%"))
+                ->orderByDesc('id')
+                ->paginate($paginate);
+            Log::info('LIST: Consulta completada, resultados: ' . $data->count());
 
-        return view('admin.tramites.list', compact('data'));
+            return view('admin.tramites.list', compact('data'));
+        } catch (\Throwable $e) {
+            Log::error('LIST: Error - ' . $e->getMessage());
+            Log::error('LIST: Trace - ' . $e->getTraceAsString());
+            throw $e;
+        }
     }
 
     /* ----------  LECTURA  ---------- */
@@ -149,8 +159,8 @@ class TramiteController extends Controller
             $tramite->load([
                 'tipoTransmision',
                 'adquirentes.parentesco',
-                'adquirentes.person.municipio.provincia.departamento',
-                'disponentes.person.municipio.provincia.departamento',
+                'adquirentes.person',
+                'disponentes.person',
                 'exenciones',
                 'inmuebles.municipio.provincia.departamento'
             ]);

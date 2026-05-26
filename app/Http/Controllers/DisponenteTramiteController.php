@@ -31,7 +31,7 @@ class DisponenteTramiteController extends Controller
 
         $data = DisponenteTramite::with(['person'])
             ->where('tramite_id', $tramite->id)
-            ->when($search, fn($q) => $q->whereHas('person', fn($sq) => $sq->where('ci', 'like', "%{$search}%")->orWhere('first_name', 'like', "%{$search}%")->orWhere('paternal_surname', 'like', "%{$search}%")))
+            ->when($search, fn($q) => $q->whereHas('person', fn($sq) => $sq->where('ci', 'like', "%{$search}%")->orWhere('nombre_completo', 'like', "%{$search}%")))
             ->orderBy('id')
             ->paginate($paginate);
 
@@ -50,11 +50,8 @@ class DisponenteTramiteController extends Controller
     {
         $this->authorize('create', DisponenteTramite::class);
 
-        $personas = Person::where('status', 1)
-            ->where('estado_persona', 'Activo')
-            ->whereDoesntHave('disponentesTramite', fn($q) => $q->where('tramite_id', $tramite->id))
-            ->orderBy('first_name')
-            ->orderBy('paternal_surname')
+        $personas = Person::whereDoesntHave('disponentesTramite', fn($q) => $q->where('tramite_id', $tramite->id))
+            ->orderBy('nombre_completo')
             ->get();
 
         $tipos = ['Causante', 'Donante', 'Testador'];

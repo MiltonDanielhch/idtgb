@@ -35,7 +35,7 @@ class AdquirenteTramiteController extends Controller
 
         $data = AdquirenteTramite::with(['person', 'parentesco'])
             ->where('tramite_id', $tramite->id)
-            ->when($search, fn($q) => $q->whereHas('person', fn($sq) => $sq->where('ci', 'like', "%{$search}%")->orWhere('first_name', 'like', "%{$search}%")->orWhere('paternal_surname', 'like', "%{$search}%")))
+            ->when($search, fn($q) => $q->whereHas('person', fn($sq) => $sq->where('ci', 'like', "%{$search}%")->orWhere('nombre_completo', 'like', "%{$search}%")))
             ->orderBy('id')
             ->paginate($paginate);
 
@@ -54,11 +54,8 @@ class AdquirenteTramiteController extends Controller
     {
         $this->authorize('create', AdquirenteTramite::class);
 
-        $personas = Person::where('status', 1)
-            ->where('estado_persona', 'Activo')
-            ->whereDoesntHave('adquirentesTramite', fn($q) => $q->where('tramite_id', $tramite->id))
-            ->orderBy('first_name')
-            ->orderBy('paternal_surname')
+        $personas = Person::whereDoesntHave('adquirentesTramite', fn($q) => $q->where('tramite_id', $tramite->id))
+            ->orderBy('nombre_completo')
             ->get();
         // dd($personas);
         $parentescos = Parentesco::orderBy('nombre')->get();

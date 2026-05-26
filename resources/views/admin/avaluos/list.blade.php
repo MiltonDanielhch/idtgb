@@ -23,7 +23,7 @@
                     </td>
                     <td>
                         @if($a->perito)
-                            {{ $a->perito->first_name }} {{ $a->perito->paternal_surname }}
+                            {{ $a->perito->nombre_completo }}
                         @else
                             <span class="text-muted">-</span>
                         @endif

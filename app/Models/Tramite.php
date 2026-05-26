@@ -32,6 +32,17 @@ class Tramite extends Model
         'hash_validacion',
     ];
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($tramite) {
+            if (empty($tramite->nro_tramite)) {
+                $tramite->nro_tramite = $tramite->generateNroTramite();
+            }
+        });
+    }
+
     protected $casts = [
         'fecha_presentacion' => 'date',
         'fecha_transmision' => 'date',
@@ -141,6 +152,28 @@ class Tramite extends Model
     }
 
     /* ================== HELPERS ================== */
+
+    /**
+     * Generar número de trámite automático
+     * Formato: AÑO-XXXXX (ej: 2026-00001)
+     */
+    public function generateNroTramite(): string
+    {
+        $year = date('Y');
+        $lastTramite = self::where('nro_tramite', 'like', $year . '-%')
+            ->orderBy('nro_tramite', 'desc')
+            ->first();
+
+        if ($lastTramite) {
+            $lastNumber = (int) substr($lastTramite->nro_tramite, 5);
+            $newNumber = str_pad($lastNumber + 1, 5, '0', STR_PAD_LEFT);
+        } else {
+            $newNumber = '00001';
+        }
+
+        return $year . '-' . $newNumber;
+    }
+
     public function calcularMora(): float
     {
         if ($this->estado === 'Pagado') return 0.00;

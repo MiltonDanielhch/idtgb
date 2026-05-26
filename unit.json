@@ -1,7 +1,11 @@
 {
     "listeners": {
         "*:8000": {
-            "pass": "routes"
+            "pass": "routes",
+            "forwarded": {
+                "protocol": "X-Forwarded-Proto",
+                "source": "172.16.0.0/12"
+            }
         }
     },
 
@@ -23,7 +27,21 @@
         "laravel": {
             "type": "php",
             "root": "/var/www/example/public/",
-            "script": "index.php"
+            "script": "index.php",
+            "user": "unit",
+            "group": "unit",
+            "processes": {
+                "max": 10,
+                "spare": 2,
+                "idle_timeout": 30
+            },
+            "options": {
+                "file": "/usr/local/etc/php/conf.d/custom.ini"
+            },
+            "environment": {
+                "APP_ENV": "production",
+                "APP_DEBUG": "false"
+            }
         }
     }
 }

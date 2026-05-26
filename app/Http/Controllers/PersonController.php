@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Person;
-use App\Models\Municipio;
 use Illuminate\Http\Request;
 use App\Http\Requests\StorePersonRequest;
 use App\Http\Requests\UpdatePersonRequest;
@@ -29,19 +28,17 @@ class PersonController extends Controller
     public function show(Person $person)
     {
         $this->authorize('view', $person); // ✅ POLICY
-        $person->load('municipio.provincia.departamento');
         return view('admin.people.read', compact('person'));
     }
 
     public function list()
     {
-        $this->authorize('viewAny', Person::class); 
+        $this->authorize('viewAny', Person::class);
 
         $search   = request('search');
         $paginate = request('paginate', 10);
 
         $data = Person::query()
-            ->with(['municipio.provincia.departamento'])
             ->search($search)
             ->whereNull('deleted_at')
             ->orderByDesc('id')
@@ -54,8 +51,7 @@ class PersonController extends Controller
     public function create()
     {
         $this->authorize('create', Person::class); // ✅ POLICY
-        $municipios = Municipio::getCachedForSelect();
-        return view('admin.people.edit-add', ['person' => new Person(), 'municipios' => $municipios ]);
+        return view('admin.people.edit-add', ['person' => new Person()]);
     }
 
     public function store(StorePersonRequest $request)
@@ -63,9 +59,7 @@ class PersonController extends Controller
         $this->authorize('create', Person::class);
 
         try {
-            $data = $request->except('image');
-            $data['image'] = $request->hasFile('image') ? $this->storeImage($request->file('image')) : null;
-
+            $data = $request->validated();
             Person::create($data);
 
             return redirect()->route('admin.people.index')
@@ -80,12 +74,7 @@ class PersonController extends Controller
     public function edit(Person $person)
     {
         $this->authorize('update', $person); // ✅ POLICY
-        $municipios = Municipio::getCachedForSelect();
-        $person->load('municipio');
-        return view('admin.people.edit-add', [
-            'person' => $person,
-            'municipios' => $municipios // ✅ PASAR A LA VISTA
-        ]);
+        return view('admin.people.edit-add', ['person' => $person]);
     }
 
     public function update(UpdatePersonRequest $request, Person $person)
@@ -94,17 +83,7 @@ class PersonController extends Controller
 
         DB::beginTransaction();
         try {
-            $data = $request->except('image', 'remove_image');
-            
-            if ($request->hasFile('image')) {
-                $data['image'] = $this->storeImage($request->file('image'), $person->image);
-            } elseif ($request->boolean('remove_image')) {
-                if ($person->image) {
-                    Storage::disk('public')->delete($person->image);
-                }
-                $data['image'] = null;
-            }
-            
+            $data = $request->validated();
             $person->update($data);
             DB::commit();
 
@@ -132,12 +111,4 @@ class PersonController extends Controller
             ->with(['message' => 'Persona eliminada.', 'alert-type' => 'success']);
     }
 
-    /* ----------  GUARDAR IMAGEN  ---------- */
-    private function storeImage($file, $old = null)
-    {
-        if ($old) {
-            Storage::disk('public')->delete($old);
-        }
-        return $file ? $file->store('people', 'public') : null;
-    }
 }

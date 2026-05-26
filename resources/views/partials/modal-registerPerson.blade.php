@@ -1,5 +1,5 @@
 <form action="{{ url('admin/ajax/person/store') }}" id="create-form-person" method="POST">
-    <div class="modal fade" tabindex="-1" id="modal-create-person" role="dialog">
+    <div class="modal fade" tabindex="-1" id="modal-create-person" role="dialog" style="display: none;">
         <div class="modal-dialog modal-primary">
             <div class="modal-content">
                 <div class="modal-header">
@@ -9,53 +9,20 @@
                 <div class="modal-body">
                     @csrf
                     <div class="row">
-                        <div class="form-group col-md-6">
-                            <label for="full_name">Primer Nombre</label>
-                            <input type="text" name="first_name" class="form-control" placeholder="Juan" required>
-                        </div>
-                        <div class="form-group col-md-6">
-                            <label for="full_name">Segundo Nombre (Opcional)</label>
-                            <input type="text" name="middle_name" class="form-control" placeholder="Daniel">
+                        <div class="form-group col-md-12">
+                            <label for="nombre_completo">Nombre Completo</label>
+                            <input type="text" name="nombre_completo" class="form-control" placeholder="Juan Pérez Ortiz" required>
                         </div>
                     </div>
                     <div class="row">
                         <div class="form-group col-md-6">
-                            <label for="full_name">Apellido Paterno</label>
-                            <input type="text" name="paternal_surname" class="form-control" placeholder="Perez" required>
-                        </div>
-                        <div class="form-group col-md-6">
-                            <label for="full_name">Apellido Materno</label>
-                            <input type="text" name="maternal_surname" class="form-control" placeholder="Ortiz" >
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="form-group col-md-6">
-                            <label for="full_name">NIT/CI</label>
+                            <label for="ci">CI</label>
                             <input type="text" name="ci" class="form-control" placeholder="123456789" required>
                         </div>
                         <div class="form-group col-md-6">
-                            <label for="full_name">Celular</label>
+                            <label for="phone">Celular</label>
                             <input type="text" name="phone" class="form-control" placeholder="76558214">
                         </div>
-                    </div>
-                    <div class="row">
-                        <div class="form-group col-md-6">
-                            <label for="full_name">Género</label>
-                            <select name="gender" id="gender" class="form-control select2" required>
-                                <option value="" disabled selected>--Seleccione una opción--</option>
-                                <option value="masculino">Masculino</option>
-                                <option value="femenino">Femenino</option>
-                            </select>
-                        </div>
-                        <div class="form-group col-md-6">
-                            <label for="full_name">F. Nacimiento</label>
-                            <input type="date" name="birth_date" class="form-control">
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="address">Dirección</label>
-                        <textarea name="address" class="form-control" rows="3" placeholder="C/ 18 de nov. Nro 123 zona central"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -66,3 +33,56 @@
         </div>
     </div>
 </form>
+
+@push('javascript')
+<script>
+$(document).ready(function() {
+    // Manejar envío del formulario de persona
+    $(document).on('submit', '#create-form-person', function(e) {
+        e.preventDefault();
+        
+        var form = $(this);
+        var submitBtn = form.find('.btn-save-person');
+        
+        // Deshabilitar botón para evitar doble envío
+        submitBtn.prop('disabled', true).text('Guardando...');
+        
+        $.ajax({
+            url: form.attr('action'),
+            method: 'POST',
+            data: form.serialize(),
+            success: function(response) {
+                if (response.success && response.person) {
+                    // Cerrar el modal
+                    $('#modal-create-person').modal('hide');
+                    
+                    // Limpiar el formulario
+                    form[0].reset();
+                    
+                    // Agregar la nueva persona al select2
+                    var newOption = new Option(
+                        response.person.nombre_completo + ' - CI: ' + response.person.ci,
+                        response.person.id,
+                        true,
+                        true
+                    );
+                    $('.select2-ajax').append(newOption).trigger('change');
+                    
+                    // Mostrar mensaje de éxito
+                    alert('Persona registrada exitosamente');
+                } else {
+                    alert('Error al registrar persona: ' + (response.error || 'Error desconocido'));
+                }
+            },
+            error: function(xhr) {
+                alert('Error al registrar persona: ' + (xhr.responseJSON?.error || xhr.statusText));
+            },
+            complete: function() {
+                // Rehabilitar botón
+                submitBtn.prop('disabled', false).text('Guardar');
+            }
+        });
+    });
+});
+</script>
+@endpush

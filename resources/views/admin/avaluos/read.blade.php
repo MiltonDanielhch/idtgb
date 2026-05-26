@@ -48,7 +48,7 @@
                                 <th>Perito</th>
                                 <td>
                                     @if($avaluo->perito)
-                                        {{ $avaluo->perito->first_name }} {{ $avaluo->perito->paternal_surname }}
+                                        {{ $avaluo->perito->nombre_completo }}
                                     @else
                                         <span class="text-muted">Sin perito asignado</span>
                                     @endif

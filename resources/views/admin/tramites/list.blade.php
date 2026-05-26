@@ -59,7 +59,7 @@
                                     <i class="voyager-edit"></i>
                                 </button>
                             @else
-                                <a href="{{ route('admin.tramites.wizard.edit', $t->id) }}" class="btn btn-xs btn-primary" title="Editar">
+                                <a href="{{ route('admin.tramites.edit', $t) }}" class="btn btn-xs btn-primary" title="Editar">
                                     <i class="voyager-edit"></i>
                                 </a>
                             @endif
