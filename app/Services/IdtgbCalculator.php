@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Parentesco;
 use App\Models\Tramite;
 use App\Models\Tasa;
 use App\Models\Ufv;
@@ -68,12 +69,14 @@ class IdtgbCalculator
                 100 // FIX: Siempre 100, la proporción la dan los adquirentes
             );
 
-            // MAPEO CORRECTO SEGÚN TU SCHEMA:
+            // MAPEO CORREGIDO SEGÚN LEY 812:
+            // mantenimiento_valor ahora es 0 (va implícito en conversión UFV)
+            // El recargo_mora es solo intereses + multa
             $tramite->update([
-                'total_idtgb'  => $resultados['idtgb_base'], // Coincide con tu Schema
-                'recargo_mora' => $resultados['mantenimiento_valor'] + $resultados['interes'] + $resultados['multa_idf'], // Coincide
-                'monto_final'  => $resultados['final'], // Coincide
-                'ufv_aplicada' => $resultados['ufv_pago'], // Coincide
+                'total_idtgb'  => $resultados['idtgb_base'], // Tributo omitido base
+                'recargo_mora' => $resultados['interes'] + $resultados['multa_idf'], // Solo intereses + multa
+                'monto_final'  => $resultados['final'], // Total deuda tributaria + multa
+                'ufv_aplicada' => $resultados['ufv_pago'], // UFV de pago
             ]);
 
             // 4. ACTUALIZACIÓN DE LOS ADQUIRENTES (Para que el Formulario A-01 no salga en 0)
@@ -114,30 +117,24 @@ class IdtgbCalculator
     }
 
     /**
-     * CORE: Cálculo bajo Ley 812 con factor de participación.
+     * CORE: Cálculo bajo Ley 812 con factor de participación - VERSIÓN CORREGIDA
+     * Implementa cálculo puro UFV con intereses escalonados acumulativos
      */
     public function performCalculation($base, $depId, $tipoId, $fPres, $fTrans, $fVenc, $adquirentes, $exenciones, $tipoContribuyente, $participacion): array
     {
         // 1. Aplicar Factor de Participación (Estilo Cochabamba)
-        // Nota: Si es un trámite con múltiples adquirentes, $participacion suele ser la suma (ej: 100%)
-        // Si es calculadora, $participacion es lo que ingresa el usuario.
         $baseImponibleParticipacion = $base * ($participacion / 100);
 
-        // 2. Cálculo del Tributo Omitido (TO)
+        // 2. Cálculo del Tributo Omitido (TO) en Bolivianos
         $totalTasas = 0;
         $tasaAplicadaDecimal = 0;
 
         foreach ($adquirentes as $adq) {
-            // FIX: Usar tipo_transmision_id en la búsqueda de tasa
             $tasaModel = $this->tasaVigente($depId, $adq['parentesco_id'], $tipoId, $fPres);
             $tasaVal = $tasaModel ? $tasaModel->tasa : 0;
-            $tasaAplicadaDecimal = $tasaVal; // Para mostrar en el reporte
+            $tasaAplicadaDecimal = $tasaVal;
 
-            // FIX: Aplicar el porcentaje de cada adquirente sobre la base global participada
-            // Si calculateEstimate envía porcentaje=100, no afecta.
-            // Si calculateAndSave envía porcentajes reales (ej: 50%), se divide correctamente.
             $baseSujeto = $baseImponibleParticipacion * ($adq['porcentaje'] / 100);
-            
             $proporcional = round($baseSujeto * ($tasaVal / 100), 2);
             $totalTasas += $proporcional;
         }
@@ -148,61 +145,110 @@ class IdtgbCalculator
             $totalExenciones = array_sum(array_column($exenciones, 'monto'));
         }
 
-        // Restamos las exenciones al impuesto determinado (Crédito Fiscal)
-        // Si se debiera restar a la base, mover esta lógica antes del cálculo de tasas.
         $idtgbBase = max(0, $totalTasas - $totalExenciones);
 
-        // 3. Variables de Mora y Actualización (Estilo Santa Cruz)
-        $mantenimientoValor = 0;
-        $interes = 0;
-        $multaIdf = 0;
-        $diasMora = 0;
-        $r_interes_display = 0;
-
+        // 3. CÁLCULO PURO UFV SEGÚN LEY 812 (Artículo 47)
         $fechaPago = Carbon::parse($fPres)->startOfDay();
         $fechaVenc = Carbon::parse($fVenc)->startOfDay();
+        $diasMora = 0;
 
-        // FIX: Manejo de errores en UFV (aunque UFV model devuelve 1.0, aquí aseguramos)
+        // Obtener valores UFV
         try {
             $ufvVencimiento = Ufv::getValorEnFecha($fechaVenc);
             $ufvPago = Ufv::getValorEnFecha($fechaPago);
         } catch (\Exception $e) {
-            // Fallback seguro si falla la DB o modelo
             $ufvVencimiento = 1.0;
             $ufvPago = 1.0;
         }
 
-        // Validación de seguridad para división por cero
-        if ($ufvVencimiento == 0) {
-            $ufvVencimiento = 1.0;
-        }
+        if ($ufvVencimiento == 0) $ufvVencimiento = 1.0;
+
+        // Variables para cálculo UFV puro
+        $interesTotal = 0;
+        $mantenimientoValor = 0; // Ya no se usa, va implícito en conversión UFV
+        $multaIdf = 0;
+        $r_interes_display = 0;
 
         if ($fechaPago->isAfter($fechaVenc)) {
             $diasMora = $fechaPago->diffInDays($fechaVenc);
 
-            // A. Mantenimiento de Valor
-            $tributoActualizado = $idtgbBase * ($ufvPago / $ufvVencimiento);
-            $mantenimientoValor = max(0, $tributoActualizado - $idtgbBase);
+            // === CÁLCULO EN DOMINIO UFV PURO ===
+            
+            // Paso 1: Convertir Tributo Omitido a UFV en fecha de vencimiento
+            $toUfv = $idtgbBase / $ufvVencimiento;
 
-            // B. Intereses (Ley 812 - Escalonado)
-            $aniosMora = $diasMora / 360;
-            $r = 0.04;
-            if ($aniosMora > 4) $r = 0.06;
-            if ($aniosMora > 7) $r = 0.10;
+            // Paso 2: Cálculo de Intereses por Tramos Acumulados
+            // Tramo 1: Hasta 4 años (máximo 1440 días) - Tasa 4%
+            $n1 = min($diasMora, 1440);
+            $i1 = $toUfv * (pow(1 + (0.04 / 360), $n1) - 1);
+            $saldo1 = $toUfv + $i1;
 
-            $r_interes_display = $r * 100;
-            $interes = $tributoActualizado * (pow(1 + ($r / 360), $diasMora) - 1);
+            // Tramo 2: Años 5-7 (máximo 1080 días) - Tasa 6%
+            $n2 = 0;
+            $i2 = 0;
+            $saldo2 = $saldo1;
+            if ($diasMora > 1440) {
+                $n2 = min($diasMora - 1440, 1080);
+                $i2 = $saldo1 * (pow(1 + (0.06 / 360), $n2) - 1);
+                $saldo2 = $saldo1 + $i2;
+            }
 
-            // C. Multa IDF (50 o 100 UFVs)
+            // Tramo 3: Año 8 en adelante - Tasa 10%
+            $n3 = 0;
+            $i3 = 0;
+            $saldo3 = $saldo2;
+            if ($diasMora > 2520) {
+                $n3 = $diasMora - 2520;
+                $i3 = $saldo2 * (pow(1 + (0.10 / 360), $n3) - 1);
+                $saldo3 = $saldo2 + $i3;
+            }
+
+            $interesTotalUfv = $i1 + $i2 + $i3;
+
+            // Paso 3: Deuda Tributaria en UFV
+            $deudaTributariaUfv = $toUfv + $interesTotalUfv;
+
+            // Paso 4: Convertir a Bolivianos
+            $deudaTributariaBs = $deudaTributariaUfv * $ufvPago;
+
+            // Paso 5: Calcular tributo actualizado por UFV (para mostrar en boleta)
+            $tributoActualizado = $toUfv * $ufvPago;
+
+            // Paso 6: Calcular intereses en Bs para mostrar
+            $interesTotal = $deudaTributariaBs - $tributoActualizado;
+
+            // Paso 6: Multa IDF
             $cantUfvMulta = ($tipoContribuyente === 'Jurídica') ? 100 : 50;
             $multaIdf = $cantUfvMulta * $ufvPago;
+
+            // El mantenimiento de valor ya está implícito en la conversión UFV
+            // Deuda Tributaria Bs = (TO_UFV + Intereses_UFV) * UFV_Pago
+            // = TO_UFV * UFV_Pago + Intereses_UFV * UFV_Pago
+            // = Tributo_Actualizado + Intereses_Bs
+            // Donde Tributo_Actualizado incluye el ajuste por inflación
+        } else {
+            // Sin mora: solo tributo base
+            $deudaTributariaBs = $idtgbBase;
         }
 
-        $recargoTotal = $mantenimientoValor + $interes + $multaIdf;
-        $final = $idtgbBase + $recargoTotal;
+        $recargoTotal = $interesTotal + $multaIdf;
+        $final = $deudaTributariaBs + $multaIdf;
 
-        // FIX: Usar unique ID en lugar de rand() simple
+        // Determinar tasa de interés para display (la más alta aplicada)
+        if ($diasMora > 2520) $r_interes_display = 10;
+        elseif ($diasMora > 1440) $r_interes_display = 6;
+        elseif ($diasMora > 0) $r_interes_display = 4;
+
         $nroTramiteRef = 'REF-' . strtoupper(substr(uniqid(), -5)) . rand(10, 99);
+
+        // Obtener categoría de tasa del parentesco
+        $categoriaTasa = 1; // Default
+        if (!empty($adquirentes) && isset($adquirentes[0]['parentesco_id'])) {
+            $parentesco = Parentesco::find($adquirentes[0]['parentesco_id']);
+            if ($parentesco) {
+                $categoriaTasa = $parentesco->categoria_tasa ?? 1;
+            }
+        }
 
         return [
             'nro_tramite' => $nroTramiteRef,
@@ -210,15 +256,17 @@ class IdtgbCalculator
             'participacion' => $participacion,
             'base_imponible_calculada' => $baseImponibleParticipacion,
             'tasa_aplicada' => $tasaAplicadaDecimal,
-            'idtgb_base' => round($idtgbBase, 2),        // S900
-            'mantenimiento_valor' => round($mantenimientoValor, 2), // S920
-            'interes' => round($interes, 2),            // S930
-            'tasa_mora' => $r_interes_display,          // 4%, 6% o 10%
-            'multa_idf' => round($multaIdf, 2),         // S900 (Multa)
-            'final' => round($final, 2),                // Total Deuda
+            'idtgb_base' => round($idtgbBase, 2),
+            'tributo_actualizado' => isset($tributoActualizado) ? round($tributoActualizado, 2) : round($idtgbBase, 2),
+            'mantenimiento_valor' => isset($tributoActualizado) ? round($tributoActualizado - $idtgbBase, 2) : 0,
+            'interes' => round($interesTotal, 2),
+            'tasa_mora' => $r_interes_display,
+            'multa_idf' => round($multaIdf, 2),
+            'final' => round($final, 2),
             'dias_mora' => $diasMora,
             'ufv_vencimiento' => $ufvVencimiento,
             'ufv_pago' => $ufvPago,
+            'categoria_tasa' => $categoriaTasa,
             'fecha_transmision' => Carbon::parse($fTrans)->format('d/m/Y'),
             'fecha_vencimiento' => $fechaVenc->format('d/m/Y'),
             'fecha_pago' => $fechaPago->format('d/m/Y'),

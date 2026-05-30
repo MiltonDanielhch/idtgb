@@ -252,8 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <h5 class="mb-0">ESTADO DE CUENTA PRELIMINAR</h5>
                                 <small>GAD BENI - ADMINISTRACIÓN TRIBUTARIA</small>
                             </div>
-                            <div class="d-flex justify-content-between mb-2"><span>(+) Tributo Omitido</span> <span class="fw-bold">Bs. ${fmt(json.idtgb_base)}</span></div>
-                            <div class="d-flex justify-content-between mb-2"><span>(+) Mantenimiento Valor</span> <span class="fw-bold">Bs. ${fmt(json.mantenimiento_valor)}</span></div>
+                            <div class="d-flex justify-content-between mb-2"><span>(+) Tributo Omitido (Actualizado)</span> <span class="fw-bold">Bs. ${fmt(json.tributo_actualizado)}</span></div>
                             <div class="d-flex justify-content-between mb-2"><span>(+) Interés Moratorio</span> <span class="fw-bold">Bs. ${fmt(json.interes)}</span></div>
                             <div class="d-flex justify-content-between mb-3"><span>(+) Multa IDF</span> <span class="fw-bold">Bs. ${fmt(json.multa_idf)}</span></div>
                             <div class="border-top border-2 border-dark pt-2 d-flex justify-content-between h4">

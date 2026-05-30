@@ -46,50 +46,46 @@
         <p>Departamento de Beni - Bolivia</p>
     </div>
 
-    {{-- Secciones 1, 2 y 3 en columnas para ahorrar espacio --}}
+    {{-- Secciones 1 y 3 en columnas --}}
     <table style="width: 100%; border: none; margin-bottom: 10px;">
         <tr style="vertical-align: top;">
-            <td style="width: 33%; padding-right: 10px;">
+            <td style="width: 50%; padding-right: 10px;">
                 <div class="section-title">1. Datos del Trámite</div>
                 <table class="table">
                     <tr><th>Nro Trámite</th><td>{{ $tramite->nro_tramite }}</td></tr>
                     <tr><th>F. Presentación</th><td>{{ $tramite->fecha_presentacion->format('d/m/Y') }}</td></tr>
                     <tr><th>F. Transmisión</th><td>{{ $tramite->fecha_transmision->format('d/m/Y') }}</td></tr>
+                    <tr><th>F. Vencimiento</th><td>{{ $tramite->fecha_vencimiento->format('d/m/Y') }}</td></tr>
                     <tr><th>Tipo</th><td>{{ $tramite->tipoTransmision->nombre }}</td></tr>
+                    <tr><th>UFV Venc</th><td>{{ number_format($tramite->ufv_vencimiento ?? 0, 5) }}</td></tr>
+                    <tr><th>UFV Pago</th><td>{{ number_format($tramite->ufv_aplicada, 5) }}</td></tr>
+                    <tr><th>Días Mora</th><td>{{ $tramite->dias_mora ?? 0 }}</td></tr>
                 </table>
             </td>
-            <td style="width: 34%; padding-left: 5px; padding-right: 5px;">
-                <div class="section-title">2. Inmueble</div>
-                @php $inmueble = $tramite->inmuebles->first(); @endphp
-                <table class="table">
-                    <tr><th>Catastro</th><td>{{ optional($inmueble)->catastro ?? 'No asignado' }}</td></tr>
-                    <tr><th>Dirección</th><td>{{ optional($inmueble)->direccion ?? '-' }}</td></tr>
-                    <tr><th>Valor Catastral</th><td>Bs {{ number_format(optional($inmueble)->valor_catastral ?? 0, 2) }}</td></tr>
-                </table>
-            </td>
-            <td style="width: 33%; padding-left: 10px;">
-                <div class="section-title">3. Cálculo IDTGB</div>
+            <td style="width: 50%; padding-left: 10px;">
+                <div class="section-title">2. Cálculo IDTGB (Ley 812)</div>
                 <table class="table">
                     <tr><th>Base Imponible</th><td>Bs {{ number_format($tramite->base_imponible, 2) }}</td></tr>
-                    <tr><th>Total IDTGB</th><td>Bs {{ number_format($tramite->total_idtgb, 2) }}</td></tr>
-                    <tr><th>Recargo Mora</th><td>Bs {{ number_format($tramite->recargo_mora, 2) }}</td></tr>
+                    <tr><th>Categoría Tasa</th><td>{{ $tramite->categoria_tasa == 1 ? 'Línea Directa (1%)' : ($tramite->categoria_tasa == 10 ? 'Colateral (10%)' : 'Otros (20%)') }}</td></tr>
+                    <tr><th>Tributo Omitido (Base)</th><td>Bs {{ number_format($tramite->total_idtgb, 2) }}</td></tr>
+                    <tr><th>Tributo Actualizado (UFV)</th><td>Bs {{ number_format($tramite->tributo_actualizado ?? $tramite->total_idtgb, 2) }}</td></tr>
+                    <tr><th>Intereses (Mora)</th><td>Bs {{ number_format($tramite->recargo_mora, 2) }}</td></tr>
+                    <tr><th>Multa IDF</th><td>Bs {{ number_format($tramite->multa_idf ?? 0, 2) }}</td></tr>
                     <tr class="total-row"><td>Monto Final</td><td>Bs {{ number_format($tramite->monto_final, 2) }}</td></tr>
-                    <tr><th>UFV Aplicada</th><td>{{ $tramite->ufv_aplicada }}</td></tr>
                 </table>
             </td>
         </tr>
     </table>
 
-    <div class="section-title">4. Adquirentes</div>
+    <div class="section-title">3. Adquirentes</div>
     <table class="table">
         <thead>
-            <tr><th>Nombre</th><th>Parentesco</th><th>%</th><th>Tasa</th><th>IDTGB Proporcional</th></tr>
+            <tr><th>Nombre</th><th>%</th><th>Tasa</th><th>IDTGB Proporcional</th></tr>
         </thead>
         <tbody>
             @foreach($tramite->adquirentes as $a)
             <tr>
                 <td>{{ $a->person->fullName }}</td>
-                <td>{{ $a->parentesco->nombre }}</td>
                 <td>{{ $a->porcentaje }} %</td>
                 <td>{{ $a->tasa_aplicada }} %</td>
                 <td>Bs {{ number_format($a->idtgb_proporcional, 2) }}</td>
@@ -98,35 +94,12 @@
         </tbody>
     </table>
 
-    <div class="section-title">5. Disponentes</div>
-    <table class="table">
-        <thead><tr><th>Nombre</th><th>Tipo</th><th>Fallecimiento</th></tr></thead>
-        <tbody>
-            @foreach($tramite->disponentes as $d)
-            <tr>
-                <td>{{ $d->person->fullName }}</td>
-                <td>{{ $d->tipo }}</td>
-                <td>{{ optional($d->fecha_fallecimiento)->format('d/m/Y') ?? 'Vivo' }}</td>
-            </tr>
-            @endforeach
-        </tbody>
-    </table>
-
-    <div class="section-title">6. Exenciones Aplicadas</div>
-    <p style="font-size: 10px; margin-top: 0;">
-        @forelse($tramite->exenciones as $exencion)
-            - {{ $exencion->nombre }} (Monto aplicado: Bs {{ number_format($exencion->pivot->monto_aplicado, 2) }})
-        @empty
-            Ninguna.
-        @endforelse
-    </p>
-
     <div style="margin-top: 20px;">
         <table style="width: 100%; border-collapse: collapse; border: none;">
             <tbody>
                 <tr>
                     <td class="validation-section" style="width: 70%; padding: 0;">
-                        <div class="section-title">7. Validación</div>
+                        <div class="section-title">4. Validación</div>
                         <p style="font-size: 9px; margin: 0; word-break: break-all;">
                             <strong>Hash:</strong> {{ $hash }}
                         </p>

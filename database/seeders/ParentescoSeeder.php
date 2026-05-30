@@ -28,11 +28,11 @@ class ParentescoSeeder extends Seeder
             ],
             [
                 'nombre' => 'Nieto/a',
-                'categoria_tasa' => Parentesco::CATEGORIA_LINEA_DIRECTA,
+                'categoria_tasa' => Parentesco::CATEGORIA_COLATERAL,
             ],
             [
                 'nombre' => 'Abuelo/a',
-                'categoria_tasa' => Parentesco::CATEGORIA_LINEA_DIRECTA,
+                'categoria_tasa' => Parentesco::CATEGORIA_COLATERAL,
             ],
             [
                 'nombre' => 'Tío/a o Sobrino/a',

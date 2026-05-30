@@ -3,11 +3,11 @@
         <thead>
             <tr>
                 <th>Nro Trámite</th>
+                <th>Nombre Adquirente</th>
+                <th>CI</th>
                 <th>Tipo Transmisión</th>
-                <th>Inmueble</th>
-                <th class="text-center">Valor Declarado</th>
                 <th class="text-center">Base Imponible</th>
-                <th class="text-center">Total IDTGB</th>
+                <th class="text-center">Monto Final</th>
                 <th class="text-center">Estado</th>
                 <th class="text-center">Vencimiento</th>
                 <th class="text-right">Acciones</th>
@@ -15,18 +15,17 @@
         </thead>
         <tbody>
             @forelse ($data as $t)
+                @php $adquirente = $t->adquirentes->first(); @endphp
                 <tr>
                     <td><strong>{{ $t->nro_tramite }}</strong></td>
+                    <td>{{ optional($adquirente?->person)->fullName ?? '-' }}</td>
+                    <td>{{ optional($adquirente?->person)->ci ?? '-' }}</td>
                     <td>{{ $t->tipoTransmision->nombre }}</td>
-                    <td>{{ $t->inmuebles->pluck('catastro')->join(', ') ?: 'Sin inmueble' }}</td>
-                    <td class="text-center">
-                        <span class="badge badge-secondary">Bs. {{ number_format($t->valor_declarado, 2) }}</span>
-                    </td>
                     <td class="text-center">
                         <span class="badge badge-primary">Bs. {{ number_format($t->base_imponible, 2) }}</span>
                     </td>
                     <td class="text-center">
-                        <span class="badge badge-success">Bs. {{ number_format($t->total_idtgb, 2) }}</span>
+                        <span class="badge badge-success">Bs. {{ number_format($t->monto_final, 2) }}</span>
                     </td>
                     <td class="text-center">
                         @php
@@ -59,7 +58,7 @@
                                     <i class="voyager-edit"></i>
                                 </button>
                             @else
-                                <a href="{{ route('admin.tramites.edit', $t) }}" class="btn btn-xs btn-primary" title="Editar">
+                                <a href="{{ route('admin.tramites.simple.edit', $t) }}" class="btn btn-xs btn-primary" title="Editar">
                                     <i class="voyager-edit"></i>
                                 </a>
                             @endif
@@ -95,17 +94,8 @@
                                 @endif
                                 <li role="separator" class="divider"></li>
 
-                                <li><a href="{{ route('admin.tramites.inmuebles.index', $t) }}">
-                                    <i class="voyager-home"></i> Inmuebles (pivote)</a></li>
-
-                                    <li><a href="{{ route('admin.tramites.exenciones.index', $t) }}">
-                                        <i class="voyager-gift"></i> Exenciones</a></li>
-
                                 <li><a href="{{ route('admin.tramites.adquirentes.index', $t) }}">
                                         <i class="voyager-people"></i> Adquirentes</a></li>
-
-                                <li><a href="{{ route('admin.tramites.disponentes.index', $t) }}">
-                                        <i class="voyager-person"></i> Disponentes</a></li>
 
                                 <li><a href="{{ route('admin.tramites.documentos.index', $t) }}">
                                         <i class="voyager-folder"></i> Documentos</a></li>

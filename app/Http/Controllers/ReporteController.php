@@ -25,9 +25,15 @@ class ReporteController extends Controller
             switch ($request->tipo_reporte) {
                 case 'recaudacion':
                     $reportData = $this->generarReporteRecaudacion($request);
+                    if ($request->get('exportar') === 'pdf') {
+                        return $reportData;
+                    }
                     break;
                 case 'tipos_tramite':
                     $reportData = $this->generarReporteTiposTramite($request);
+                    if ($request->get('exportar') === 'pdf') {
+                        return $reportData;
+                    }
                     break;
             }
         }
@@ -40,9 +46,9 @@ class ReporteController extends Controller
         $fechaInicio = Carbon::parse($request->fecha_inicio)->startOfDay();
         $fechaFin = Carbon::parse($request->fecha_fin)->endOfDay();
 
-        $tramites = Tramite::where('estado', 'Finalizado')
+        $tramites = Tramite::whereIn('estado', ['Pagado', 'Finalizado'])
             ->whereBetween('updated_at', [$fechaInicio, $fechaFin])
-            ->with('adquirentes.persona')
+            ->with('adquirentes.person')
             ->orderBy('updated_at', 'desc')
             ->get();
 
@@ -71,7 +77,7 @@ class ReporteController extends Controller
         $fechaInicio = Carbon::parse($request->fecha_inicio)->startOfDay();
         $fechaFin = Carbon::parse($request->fecha_fin)->endOfDay();
 
-        $stats = Tramite::where('estado', 'Finalizado')
+        $stats = Tramite::whereIn('estado', ['Pagado', 'Finalizado'])
             ->whereBetween('updated_at', [$fechaInicio, $fechaFin])
             ->with('tipoTransmision')
             ->select('tipo_transmision_id', DB::raw('count(*) as cantidad'), DB::raw('sum(monto_final) as total'))

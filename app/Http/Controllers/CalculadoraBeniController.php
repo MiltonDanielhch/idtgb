@@ -6,6 +6,7 @@ use App\Models\Departamento;
 use App\Models\Parentesco;
 use App\Models\TipoTransmision;
 use App\Services\IdtgbCalculator;
+use App\Services\DiasHabilesService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -62,7 +63,22 @@ class CalculadoraBeniController extends Controller
         $parentescoId = $this->getParentescoIdFromCategoria((int) $request->categoria_tasa);
 
         $fecha_transmision = Carbon::parse($request->fecha_transmision);
-        $fecha_vencimiento = $fecha_transmision->copy()->addDays(90);
+        
+        // Calcular fecha de vencimiento según tipo de transmisión (Ley 812)
+        $tipoTransmision = TipoTransmision::find($tipoTransmisionId);
+        $diasHabilesService = app(DiasHabilesService::class);
+        
+        if ($tipoTransmision && strtolower($tipoTransmision->nombre) === 'mortis causa') {
+            // Sucesiones hereditarias: 90 días calendario
+            $fecha_vencimiento = $fecha_transmision->copy()->addDays(90);
+        } else {
+            // Donaciones (Entre vivos): 5 días hábiles (excluyendo sábados, domingos y feriados)
+            $fecha_vencimiento = $diasHabilesService->calcularVencimiento(
+                $fecha_transmision,
+                5,
+                $beniId
+            );
+        }
 
         $calculo = $calculator->calculateEstimate(
             (float) $request->base_imponible,
@@ -100,7 +116,22 @@ class CalculadoraBeniController extends Controller
         $parentescoId = $this->getParentescoIdFromCategoria((int) ($request->categoria_tasa ?? 1));
 
         $fecha_transmision = Carbon::parse($request->fecha_transmision);
-        $fecha_vencimiento = $fecha_transmision->copy()->addDays(90);
+        
+        // Calcular fecha de vencimiento según tipo de transmisión (Ley 812)
+        $tipoTransmision = TipoTransmision::find($tipoTransmisionId);
+        $diasHabilesService = app(DiasHabilesService::class);
+        
+        if ($tipoTransmision && strtolower($tipoTransmision->nombre) === 'mortis causa') {
+            // Sucesiones hereditarias: 90 días calendario
+            $fecha_vencimiento = $fecha_transmision->copy()->addDays(90);
+        } else {
+            // Donaciones (Entre vivos): 5 días hábiles (excluyendo sábados, domingos y feriados)
+            $fecha_vencimiento = $diasHabilesService->calcularVencimiento(
+                $fecha_transmision,
+                5,
+                $beniId
+            );
+        }
 
         $calculo = $calculator->calculateEstimate(
             (float) $request->base_imponible,

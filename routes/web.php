@@ -29,6 +29,7 @@ use App\Http\Controllers\Admin\TramiteWizardController;
 use App\Http\Controllers\Admin\TramiteSimpleController;
 use App\Http\Controllers\TipoInmuebleController;
 use App\Http\Controllers\TipoTransmisionController;
+use App\Http\Controllers\FeriadoController;
 use App\Http\Controllers\Admin\DashboardController;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
@@ -102,6 +103,9 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
     Route::resource('parentescos', ParentescoController::class)->names('admin.parentescos');
     Route::get('parentescos/ajax/list', [ParentescoController::class, 'list'])->name('admin.parentescos.ajax.list');
 
+    Route::resource('feriados', FeriadoController::class)->names('admin.feriados');
+    Route::get('feriados/ajax/list', [FeriadoController::class, 'list'])->name('admin.feriados.ajax.list');
+
     Route::resource('tipos-transmision', TipoTransmisionController::class)->names('admin.tipos-transmision')->parameters(['tipos-transmision' => 'tipoTransmision']);
     Route::get('tipos-transmision/ajax/list', [TipoTransmisionController::class, 'list'])->name('admin.tipos-transmision.ajax.list');
 
@@ -124,16 +128,19 @@ Route::prefix('admin')->middleware(['loggin', 'system'])->group(function () {
     Route::get('avaluos/{avaluo}/download', [AvaluoController::class, 'download'])->name('admin.avaluos.download');
 
     // ──────────────── TRÁMITES ────────────────
-    // Trámite simplificado (una sola página) - ÚNICA FORMA DE CREAR TRÁMITES
+    // Trámite simplificado (una sola página) - ÚNICA FORMA DE CREAR Y EDITAR TRÁMITES
     Route::prefix('tramites/simple')->name('admin.tramites.simple.')->group(function () {
         Route::get('create', [TramiteSimpleController::class, 'create'])->name('create');
         Route::post('store', [TramiteSimpleController::class, 'store'])->name('store');
+        Route::get('{tramite}/edit', [TramiteSimpleController::class, 'edit'])->name('edit');
+        Route::put('{tramite}', [TramiteSimpleController::class, 'update'])->name('update');
         Route::get('ajax/persons', [TramiteSimpleController::class, 'ajaxPersonList'])->name('ajax.persons');
         Route::post('ajax/calculate', [TramiteSimpleController::class, 'ajaxCalculate'])->name('ajax.calculate');
     });
 
     // Ruta personalizada que debe ir ANTES que el resource para no ser capturada por el método show del resource.
     Route::get('tramites/{tramite}/a01', [TramiteController::class, 'a01'])->name('admin.tramites.a01');
+    Route::put('tramites/{tramite}/estado', [TramiteController::class, 'updateEstado'])->name('admin.tramites.updateEstado');
 
     // El resource se mantiene para las rutas show, edit, update, destroy.
     // Los métodos create y store se excluyen porque ahora los maneja el TramiteSimpleController.

@@ -149,12 +149,8 @@
         </div>
 
         <div class="linea-detalle">
-            <span>TRIBUTO OMITIDO (S900)</span>
-            <span>Bs. {{ number_format($idtgb_base, 2, ',', '.') }}</span>
-        </div>
-        <div class="linea-detalle">
-            <span>MANTENIMIENTO DE VALOR (S920)</span>
-            <span>Bs. {{ number_format($mantenimiento_valor, 2, ',', '.') }}</span>
+            <span>TRIBUTO OMITIDO (S900) - ACTUALIZADO POR UFV</span>
+            <span>Bs. {{ number_format($tributo_actualizado ?? $idtgb_base, 2, ',', '.') }}</span>
         </div>
         <div class="linea-detalle">
             <span>INTERESES MORATORIOS (S930) - TASA {{ $tasa_mora }}%</span>

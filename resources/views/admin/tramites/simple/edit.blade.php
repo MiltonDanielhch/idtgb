@@ -1,13 +1,14 @@
 @extends('voyager::master')
 
-@section('page_title', 'Crear Trámite Simplificado')
+@section('page_title', 'Editar Trámite Simplificado')
 
 @section('content')
 <div class="page-content container-fluid" style="padding: 15px; background-color: #f4f7f6;">
     @include('voyager::alerts')
 
-    <form action="{{ route('admin.tramites.simple.store') }}" method="POST" id="formTramite">
+    <form action="{{ route('admin.tramites.simple.update', $tramite) }}" method="POST" id="formTramite">
         @csrf
+        @method('PUT')
 
         @if($errors->any())
             <div class="alert alert-danger" style="margin-bottom: 10px;">
@@ -121,7 +122,7 @@
             <div class="col-formulario">
                 <div class="scroll-body">
                     <h3 style="margin-top:0; margin-bottom: 15px; font-weight: 800; color: #1e293b; font-size: 18px;">
-                        <i class="voyager-file-text text-primary"></i> Crear Trámite Simplificado
+                        <i class="voyager-file-text text-primary"></i> Editar Trámite: {{ $tramite->nro_tramite }}
                     </h3>
 
                     <div class="row">
@@ -135,7 +136,7 @@
                                 <select name="tipo_transmision_id" id="tipoTransmisionId" class="form-control select2" required>
                                     <option value="">-- Seleccione --</option>
                                     @foreach($tiposTransmision as $tipo)
-                                        <option value="{{ $tipo->id }}" data-nombre="{{ \Illuminate\Support\Str::slug($tipo->nombre) }}" {{ old('tipo_transmision_id') == $tipo->id ? 'selected' : '' }}>{{ $tipo->nombre }}</option>
+                                        <option value="{{ $tipo->id }}" data-nombre="{{ \Illuminate\Support\Str::slug($tipo->nombre) }}" {{ old('tipo_transmision_id', $tramite->tipo_transmision_id) == $tipo->id ? 'selected' : '' }}>{{ $tipo->nombre }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -145,8 +146,8 @@
                                 <div class="row" id="categoria-selector" style="margin-left:-6px; margin-right:-6px;">
                                     @foreach($categorias as $cat)
                                         <div class="col-xs-4" style="padding: 0 6px;">
-                                            <label class="categoria-card" data-categoria="{{ $cat['key'] }}">
-                                                <input type="radio" name="categoria_tasa" value="{{ $cat['key'] }}" required class="hidden" style="display:none !important;">
+                                            <label class="categoria-card {{ old('categoria_tasa', $tramite->categoria_tasa) == $cat['key'] ? 'selected' : '' }}" data-categoria="{{ $cat['key'] }}">
+                                                <input type="radio" name="categoria_tasa" value="{{ $cat['key'] }}" {{ old('categoria_tasa', $tramite->categoria_tasa) == $cat['key'] ? 'checked' : '' }} required class="hidden" style="display:none !important;">
                                                 <div style="font-size: 10px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; color: #64748b;">{{ $cat['label'] }}</div>
                                                 <div class="categoria-tasa {{ $cat['grupo'] }}">{{ $cat['tasa'] }}%</div>
                                             </label>
@@ -159,14 +160,14 @@
                                 <div class="col-md-6" style="padding-right: 7px;">
                                     <div class="form-group">
                                         <label>F. Transmisión <span class="required">*</span></label>
-                                        <input type="date" name="fecha_transmision" class="form-control" value="{{ old('fecha_transmision') }}" required id="fechaTransmision">
+                                        <input type="date" name="fecha_transmision" class="form-control" value="{{ old('fecha_transmision', $tramite->fecha_transmision->format('Y-m-d')) }}" required id="fechaTransmision">
                                         <div id="fechaTransmisionError" class="text-danger small" style="display: none; margin-top: 4px; font-size: 11px;">Error de rango</div>
                                     </div>
                                 </div>
                                 <div class="col-md-6" style="padding-left: 7px;">
                                     <div class="form-group">
                                         <label>F. Presentación</label>
-                                        <input type="date" name="fecha_presentacion" class="form-control" value="{{ old('fecha_presentacion', date('Y-m-d')) }}" required readonly style="background-color: #f1f5f9; cursor: not-allowed; height: 34px;">
+                                        <input type="date" name="fecha_presentacion" class="form-control" value="{{ old('fecha_presentacion', $tramite->fecha_presentacion->format('Y-m-d')) }}" required readonly style="background-color: #f1f5f9; cursor: not-allowed; height: 34px;">
                                     </div>
                                 </div>
                             </div>
@@ -181,10 +182,13 @@
                                 <label id="labelSujeto">Persona que Hereda (Adquirente) <span class="required">*</span></label>
                                 <div class="input-group" style="display: flex; width: 100%;">
                                     <div style="flex-grow: 1;">
-                                        <select name="adquirente_id" class="form-control select2-ajax" style="width: 100% !important;"
+                                        <select name="person_id" class="form-control select2-ajax" style="width: 100% !important;"
                                             data-ajax--url="{{ route('admin.tramites.simple.ajax.persons') }}"
                                             data-placeholder="Buscar persona por CI/Nombre..." required>
                                             <option value="">-- Seleccione o cree nueva --</option>
+                                            @if($tramite->adquirentes->first())
+                                                <option value="{{ $tramite->adquirentes->first()->person_id }}" selected>{{ $tramite->adquirentes->first()->person->fullName }} - {{ $tramite->adquirentes->first()->person->ci }}</option>
+                                            @endif
                                         </select>
                                     </div>
                                     <span class="input-group-btn" style="width: auto;">
@@ -199,7 +203,7 @@
                                 <label>Tipo de Contribuyente <span class="required">*</span></label>
                                 <select name="tipo_contribuyente" id="tipoContribuyente" class="form-control" required>
                                     <option value="Natural" {{ old('tipo_contribuyente', 'Natural') === 'Natural' ? 'selected' : '' }}>Persona Natural (50 UFV multa)</option>
-                                    <option value="Jurídica" {{ old('tipo_contribuyente') === 'Jurídica' ? 'selected' : '' }}>Persona Jurídica (100 UFV multa)</option>
+                                    <option value="Jurídica" {{ old('tipo_contribuyente', 'Natural') === 'Jurídica' ? 'selected' : '' }}>Persona Jurídica (100 UFV multa)</option>
                                 </select>
                             </div>
 
@@ -207,13 +211,13 @@
                                 <div class="col-md-6" style="padding-right: 7px;">
                                     <div class="form-group">
                                         <label>Base Imponible (Bs) <span class="required">*</span></label>
-                                        <input type="number" name="base_imponible" class="form-control" step="0.01" min="0" id="baseImponible" value="{{ old('base_imponible') }}" required style="font-family: monospace; font-weight: bold;">
+                                        <input type="number" name="base_imponible" class="form-control" step="0.01" min="0" id="baseImponible" value="{{ old('base_imponible', $tramite->base_imponible) }}" required style="font-family: monospace; font-weight: bold;">
                                     </div>
                                 </div>
                                 <div class="col-md-6" style="padding-left: 7px;">
                                     <div class="form-group">
                                         <label>% Participación <span class="required">*</span></label>
-                                        <input type="number" name="porcentaje" class="form-control" value="{{ old('porcentaje', 100) }}" min="1" max="100" id="porcentaje" required style="font-family: monospace; font-weight: bold;">
+                                        <input type="number" name="porcentaje" class="form-control" value="{{ old('porcentaje', $tramite->adquirentes->first()->porcentaje ?? 100) }}" min="1" max="100" id="porcentaje" required style="font-family: monospace; font-weight: bold;">
                                     </div>
                                 </div>
                             </div>
@@ -225,7 +229,7 @@
                         <div class="col-md-12">
                             <div class="form-group" style="margin-top: 5px; margin-bottom: 0;">
                                 <label style="font-size: 12px; color: #475569;">Observaciones de Ventanilla</label>
-                                <textarea name="observaciones" class="form-control" rows="1" style="resize: none; height: 38px;" placeholder="Ej. Documentos de descargo en orden..."></textarea>
+                                <textarea name="observaciones" class="form-control" rows="1" style="resize: none; height: 38px;" placeholder="Ej. Documentos de descargo en orden...">{{ old('observaciones', $tramite->observaciones) }}</textarea>
                             </div>
                         </div>
                     </div>
@@ -237,7 +241,7 @@
                         <i class="voyager-angle-left"></i> Cancelar
                     </a>
                     <button type="submit" class="btn btn-success font-weight-bold" style="margin-bottom:0; background-color:#10b981; border-color:#10b981;">
-                        <i class="voyager-check"></i> Guardar Trámite
+                        <i class="voyager-check"></i> Actualizar Trámite
                     </button>
                 </div>
             </div>

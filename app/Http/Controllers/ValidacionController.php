@@ -23,7 +23,7 @@ class ValidacionController extends Controller
         $tramite = Tramite::whereHashValidacion($hash)->firstOrFail();
 
         // Bug #4: Validar que el trámite no esté en estados no válidos para verificación
-        if (in_array($tramite->estado, ['Borrador', 'Anulado'])) {
+        if (in_array($tramite->estado, ['Anulado'])) {
             abort(404, 'El trámite no está disponible para validación');
         }
 

@@ -9,6 +9,7 @@ use App\Models\Ufv;
 use App\Http\Requests\StoreTramiteRequest;
 use App\Http\Requests\UpdateTramiteRequest;
 use App\Services\IdtgbCalculator;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -37,7 +38,7 @@ class TramiteController extends Controller
             $paginate = request('paginate', 10);
             Log::info('LIST: Parámetros - search: ' . $search . ', paginate: ' . $paginate);
 
-            $data = Tramite::with(['tipoTransmision', 'user', 'inmuebles'])
+            $data = Tramite::with(['tipoTransmision', 'user', 'inmuebles', 'adquirentes.person'])
                 ->when($search, fn($q) => $q->where('nro_tramite', 'like', "%{$search}%"))
                 ->orderByDesc('id')
                 ->paginate($paginate);
@@ -119,6 +120,24 @@ class TramiteController extends Controller
             \Log::error('Error al actualizar trámite: ' . $e->getMessage());
             return back()->withInput()->with(['message' => 'Ocurrió un error inesperado al actualizar el trámite.', 'alert-type' => 'error']);
         }
+    }
+
+    public function updateEstado(Request $request, Tramite $tramite)
+    {
+        $this->authorize('update', $tramite);
+
+        $request->validate([
+            'estado' => 'required|in:Borrador,Pagado,Observado,Anulado,Finalizado',
+        ]);
+
+        $tramite->withoutEvents(function () use ($tramite, $request) {
+            $tramite->update([
+                'estado' => $request->estado,
+                'updated_by' => auth()->id(),
+            ]);
+        });
+
+        return back()->with(['message' => 'Estado actualizado correctamente.', 'alert-type' => 'success']);
     }
 
     /* ----------  BORRADO  ---------- */

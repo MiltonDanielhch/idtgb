@@ -109,18 +109,26 @@ class DashboardService
         // La tabla de últimos trámites no depende del rango, siempre muestra los más recientes.
         // Cacheamos un array con solo los datos necesarios para la vista
         $ultimosTramites = cache()->remember($cachePrefix . ':ultimosTramites', $ttl, function() {
-            return Tramite::with(['disponentes.person', 'inmuebles'])
+            return Tramite::with(['disponentes.person', 'adquirentes.person'])
                 ->latest()
                 ->take(5)
                 ->get()
                 ->map(function($tramite) {
+                    // Priorizar disponentes para trámites tradicionales, usar adquirentes para simplificados
                     $firstDisponente = $tramite->disponentes->first();
-                    $person = $firstDisponente ? $firstDisponente->person : null;
+                    $firstAdquirente = $tramite->adquirentes->first();
+                    
+                    $person = null;
+                    if ($firstDisponente) {
+                        $person = $firstDisponente->person;
+                    } elseif ($firstAdquirente) {
+                        $person = $firstAdquirente->person;
+                    }
                     
                     return [
                         'id' => $tramite->id,
                         'nro_tramite' => $tramite->nro_tramite,
-                        'contribuyente' => $person->display_name ?? $person->full_name ?? 'N/A',
+                        'contribuyente' => $person ? ($person->fullName ?? 'N/A') : 'N/A',
                         'created_at' => $tramite->created_at->format('d M Y'),
                         'monto_final' => $tramite->monto_final,
                         'estado' => $tramite->estado
