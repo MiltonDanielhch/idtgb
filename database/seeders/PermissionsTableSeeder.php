@@ -110,6 +110,24 @@ class PermissionsTableSeeder extends Seeder
             ]);
         }
 
+        // Feriados
+        $permissionsFeriados = [
+            'browse_feriados' => 'Ver lista de feriados',
+            'read_feriados'   => 'Ver detalles de un feriado',
+            'edit_feriados'   => 'Editar información de feriados',
+            'add_feriados'    => 'Agregar nuevos feriados',
+            'delete_feriados' => 'Eliminar feriados',
+        ];
+
+        foreach ($permissionsFeriados as $key => $description) {
+            Permission::firstOrCreate([
+                'key'            => $key,
+                'keyDescription' => $description,
+                'table_name'     => 'feriados',
+                'tableDescription'=> 'Feriados'
+            ]);
+        }
+
         // Tipos de Transmisión
         Permission::generateFor('tipos-transmision');
 

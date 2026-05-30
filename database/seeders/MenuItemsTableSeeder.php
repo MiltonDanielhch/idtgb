@@ -14,12 +14,12 @@ class MenuItemsTableSeeder extends Seeder
      */
     public function run()
     {
-
+        
 
         \DB::table('menu_items')->delete();
-
+        
         \DB::table('menu_items')->insert(array (
-            0 =>
+            0 => 
             array (
                 'id' => 1,
                 'menu_id' => 1,
@@ -35,7 +35,7 @@ class MenuItemsTableSeeder extends Seeder
                 'route' => 'voyager.dashboard',
                 'parameters' => 'null',
             ),
-            1 =>
+            1 => 
             array (
                 'id' => 2,
                 'menu_id' => 1,
@@ -51,7 +51,7 @@ class MenuItemsTableSeeder extends Seeder
                 'route' => 'voyager.media.index',
                 'parameters' => NULL,
             ),
-            2 =>
+            2 => 
             array (
                 'id' => 3,
                 'menu_id' => 1,
@@ -67,7 +67,7 @@ class MenuItemsTableSeeder extends Seeder
                 'route' => 'voyager.users.index',
                 'parameters' => 'null',
             ),
-            3 =>
+            3 => 
             array (
                 'id' => 4,
                 'menu_id' => 1,
@@ -83,7 +83,7 @@ class MenuItemsTableSeeder extends Seeder
                 'route' => 'voyager.roles.index',
                 'parameters' => NULL,
             ),
-            4 =>
+            4 => 
             array (
                 'id' => 5,
                 'menu_id' => 1,
@@ -93,13 +93,13 @@ class MenuItemsTableSeeder extends Seeder
                 'icon_class' => 'voyager-tools',
                 'color' => '#000000',
                 'parent_id' => NULL,
-                'order' => 7,
+                'order' => 11,
                 'created_at' => '2024-10-18 14:28:27',
-                'updated_at' => '2025-02-10 15:42:56',
+                'updated_at' => '2026-05-29 01:21:53',
                 'route' => NULL,
                 'parameters' => '',
             ),
-            5 =>
+            5 => 
             array (
                 'id' => 6,
                 'menu_id' => 1,
@@ -115,7 +115,7 @@ class MenuItemsTableSeeder extends Seeder
                 'route' => 'voyager.menus.index',
                 'parameters' => NULL,
             ),
-            6 =>
+            6 => 
             array (
                 'id' => 7,
                 'menu_id' => 1,
@@ -131,7 +131,7 @@ class MenuItemsTableSeeder extends Seeder
                 'route' => 'voyager.database.index',
                 'parameters' => NULL,
             ),
-            7 =>
+            7 => 
             array (
                 'id' => 8,
                 'menu_id' => 1,
@@ -147,7 +147,7 @@ class MenuItemsTableSeeder extends Seeder
                 'route' => 'voyager.compass.index',
                 'parameters' => NULL,
             ),
-            8 =>
+            8 => 
             array (
                 'id' => 9,
                 'menu_id' => 1,
@@ -163,7 +163,7 @@ class MenuItemsTableSeeder extends Seeder
                 'route' => 'voyager.bread.index',
                 'parameters' => NULL,
             ),
-            9 =>
+            9 => 
             array (
                 'id' => 10,
                 'menu_id' => 1,
@@ -173,13 +173,13 @@ class MenuItemsTableSeeder extends Seeder
                 'icon_class' => 'voyager-settings',
                 'color' => '#000000',
                 'parent_id' => NULL,
-                'order' => 8,
+                'order' => 12,
                 'created_at' => '2024-10-18 14:28:27',
-                'updated_at' => '2025-02-10 15:42:56',
+                'updated_at' => '2026-05-29 01:21:53',
                 'route' => 'voyager.settings.index',
                 'parameters' => 'null',
             ),
-            10 =>
+            10 => 
             array (
                 'id' => 11,
                 'menu_id' => 1,
@@ -189,13 +189,13 @@ class MenuItemsTableSeeder extends Seeder
                 'icon_class' => 'voyager-categories',
                 'color' => NULL,
                 'parent_id' => NULL,
-                'order' => 4,
+                'order' => 6,
                 'created_at' => '2024-10-18 14:28:45',
-                'updated_at' => '2025-02-10 15:42:59',
+                'updated_at' => '2026-05-29 01:21:53',
                 'route' => 'voyager.categories.index',
                 'parameters' => NULL,
             ),
-            11 =>
+            11 => 
             array (
                 'id' => 12,
                 'menu_id' => 1,
@@ -211,7 +211,7 @@ class MenuItemsTableSeeder extends Seeder
                 'route' => 'voyager.posts.index',
                 'parameters' => NULL,
             ),
-            12 =>
+            12 => 
             array (
                 'id' => 13,
                 'menu_id' => 1,
@@ -221,13 +221,13 @@ class MenuItemsTableSeeder extends Seeder
                 'icon_class' => 'voyager-file-text',
                 'color' => NULL,
                 'parent_id' => NULL,
-                'order' => 3,
+                'order' => 4,
                 'created_at' => '2024-10-18 14:28:46',
-                'updated_at' => '2024-10-18 16:40:42',
+                'updated_at' => '2026-05-29 01:21:53',
                 'route' => 'voyager.pages.index',
                 'parameters' => NULL,
             ),
-            13 =>
+            13 => 
             array (
                 'id' => 14,
                 'menu_id' => 1,
@@ -237,13 +237,13 @@ class MenuItemsTableSeeder extends Seeder
                 'icon_class' => 'fa-solid fa-lock',
                 'color' => '#000000',
                 'parent_id' => NULL,
-                'order' => 6,
+                'order' => 9,
                 'created_at' => '2024-10-18 16:33:05',
-                'updated_at' => '2025-02-10 15:42:56',
+                'updated_at' => '2026-05-29 01:21:53',
                 'route' => NULL,
                 'parameters' => '',
             ),
-            14 =>
+            14 => 
             array (
                 'id' => 15,
                 'menu_id' => 1,
@@ -253,14 +253,270 @@ class MenuItemsTableSeeder extends Seeder
                 'icon_class' => 'fa-solid fa-broom',
                 'color' => '#000000',
                 'parent_id' => NULL,
-                'order' => 9,
+                'order' => 13,
                 'created_at' => '2024-12-09 12:33:25',
-                'updated_at' => '2025-02-10 15:42:56',
+                'updated_at' => '2026-05-29 01:21:53',
                 'route' => 'clear.cache',
                 'parameters' => NULL,
             ),
+            15 => 
+            array (
+                'id' => 31,
+                'menu_id' => 1,
+                'title' => 'Personas',
+                'url' => '',
+                'target' => '_self',
+                'icon_class' => 'voyager-person',
+                'color' => NULL,
+                'parent_id' => NULL,
+                'order' => 3,
+                'created_at' => '2026-02-19 10:42:11',
+                'updated_at' => '2026-05-29 01:21:53',
+                'route' => 'admin.people.index',
+                'parameters' => '',
+            ),
+            16 => 
+            array (
+                'id' => 32,
+                'menu_id' => 1,
+                'title' => 'Catálogos IDTGB',
+                'url' => '',
+                'target' => '_self',
+                'icon_class' => 'fa-solid fa-folder-tree',
+                'color' => NULL,
+                'parent_id' => NULL,
+                'order' => 5,
+                'created_at' => '2026-02-19 10:42:11',
+                'updated_at' => '2026-05-29 01:21:53',
+                'route' => NULL,
+                'parameters' => '',
+            ),
+            17 => 
+            array (
+                'id' => 33,
+                'menu_id' => 1,
+                'title' => 'Parentescos',
+                'url' => '',
+                'target' => '_self',
+                'icon_class' => 'fa-solid fa-people-group',
+                'color' => NULL,
+                'parent_id' => 32,
+                'order' => 1,
+                'created_at' => '2026-02-19 10:42:11',
+                'updated_at' => '2026-05-29 01:21:53',
+                'route' => 'admin.parentescos.index',
+                'parameters' => '',
+            ),
+            18 => 
+            array (
+                'id' => 34,
+                'menu_id' => 1,
+                'title' => 'Tipos de Transmisión',
+                'url' => '',
+                'target' => '_self',
+                'icon_class' => 'fa-solid fa-arrow-right-arrow-left',
+                'color' => NULL,
+                'parent_id' => 32,
+                'order' => 2,
+                'created_at' => '2026-02-19 10:42:11',
+                'updated_at' => '2026-05-29 01:21:53',
+                'route' => 'admin.tipos-transmision.index',
+                'parameters' => '',
+            ),
+            19 => 
+            array (
+                'id' => 35,
+                'menu_id' => 1,
+                'title' => 'Tipos de Inmueble',
+                'url' => '',
+                'target' => '_self',
+                'icon_class' => 'fa-solid fa-house-chimney',
+                'color' => NULL,
+                'parent_id' => 32,
+                'order' => 3,
+                'created_at' => '2026-02-19 10:42:11',
+                'updated_at' => '2026-05-29 01:21:53',
+                'route' => 'admin.tipos-inmueble.index',
+                'parameters' => '',
+            ),
+            20 => 
+            array (
+                'id' => 36,
+                'menu_id' => 1,
+                'title' => 'Tasas',
+                'url' => '',
+                'target' => '_self',
+                'icon_class' => 'fa-solid fa-percent',
+                'color' => NULL,
+                'parent_id' => 32,
+                'order' => 4,
+                'created_at' => '2026-02-19 10:42:11',
+                'updated_at' => '2026-05-29 01:21:53',
+                'route' => 'admin.tasas.index',
+                'parameters' => '',
+            ),
+            21 => 
+            array (
+                'id' => 37,
+                'menu_id' => 1,
+                'title' => 'Exenciones',
+                'url' => '',
+                'target' => '_self',
+                'icon_class' => 'fa-solid fa-gift',
+                'color' => NULL,
+                'parent_id' => 32,
+                'order' => 5,
+                'created_at' => '2026-02-19 10:42:11',
+                'updated_at' => '2026-05-29 01:21:53',
+                'route' => 'admin.exenciones.index',
+                'parameters' => '',
+            ),
+            22 => 
+            array (
+                'id' => 38,
+                'menu_id' => 1,
+                'title' => 'UFVs',
+                'url' => '',
+                'target' => '_self',
+                'icon_class' => 'fa-solid fa-calendar-day',
+                'color' => NULL,
+                'parent_id' => 32,
+                'order' => 6,
+                'created_at' => '2026-02-19 10:42:11',
+                'updated_at' => '2026-05-29 01:21:53',
+                'route' => 'admin.ufvs.index',
+                'parameters' => '',
+            ),
+            23 => 
+            array (
+                'id' => 39,
+                'menu_id' => 1,
+                'title' => 'Inmuebles',
+                'url' => '',
+                'target' => '_self',
+                'icon_class' => 'fa-solid fa-building',
+                'color' => NULL,
+                'parent_id' => NULL,
+                'order' => 7,
+                'created_at' => '2026-02-19 10:42:11',
+                'updated_at' => '2026-05-29 01:21:53',
+                'route' => NULL,
+                'parameters' => '',
+            ),
+            24 => 
+            array (
+                'id' => 40,
+                'menu_id' => 1,
+                'title' => 'Inmuebles',
+                'url' => '',
+                'target' => '_self',
+                'icon_class' => 'fa-solid fa-home',
+                'color' => NULL,
+                'parent_id' => 39,
+                'order' => 1,
+                'created_at' => '2026-02-19 10:42:11',
+                'updated_at' => '2026-02-19 10:42:11',
+                'route' => 'admin.inmuebles.index',
+                'parameters' => '',
+            ),
+            25 => 
+            array (
+                'id' => 41,
+                'menu_id' => 1,
+                'title' => 'Avalúos',
+                'url' => '',
+                'target' => '_self',
+                'icon_class' => 'fa-solid fa-file-invoice-dollar',
+                'color' => NULL,
+                'parent_id' => 39,
+                'order' => 2,
+                'created_at' => '2026-02-19 10:42:11',
+                'updated_at' => '2026-02-19 10:42:11',
+                'route' => 'admin.avaluos.index',
+                'parameters' => '',
+            ),
+            26 => 
+            array (
+                'id' => 42,
+                'menu_id' => 1,
+                'title' => 'Trámites IDTGB',
+                'url' => '',
+                'target' => '_self',
+                'icon_class' => 'fa-solid fa-file-lines',
+                'color' => NULL,
+                'parent_id' => NULL,
+                'order' => 8,
+                'created_at' => '2026-02-19 10:42:11',
+                'updated_at' => '2026-05-29 01:21:53',
+                'route' => NULL,
+                'parameters' => '',
+            ),
+            27 => 
+            array (
+                'id' => 43,
+                'menu_id' => 1,
+            'title' => 'Nuevo Trámite (Wizard)',
+                'url' => 'admin/tramites/simple/create',
+                'target' => '_self',
+                'icon_class' => 'fa-solid fa-wand-magic-sparkles',
+                'color' => '#000000',
+                'parent_id' => 42,
+                'order' => 1,
+                'created_at' => '2026-02-19 10:42:11',
+                'updated_at' => '2026-05-26 12:05:06',
+                'route' => NULL,
+                'parameters' => '',
+            ),
+            28 => 
+            array (
+                'id' => 44,
+                'menu_id' => 1,
+                'title' => 'Lista de Trámites',
+                'url' => '',
+                'target' => '_self',
+                'icon_class' => 'fa-solid fa-folder-open',
+                'color' => NULL,
+                'parent_id' => 42,
+                'order' => 2,
+                'created_at' => '2026-02-19 10:42:11',
+                'updated_at' => '2026-02-19 10:42:11',
+                'route' => 'admin.tramites.index',
+                'parameters' => '',
+            ),
+            29 => 
+            array (
+                'id' => 45,
+                'menu_id' => 1,
+                'title' => 'Reportes',
+                'url' => '',
+                'target' => '_self',
+                'icon_class' => 'voyager-bar-chart',
+                'color' => NULL,
+                'parent_id' => NULL,
+                'order' => 10,
+                'created_at' => '2026-02-19 10:42:11',
+                'updated_at' => '2026-05-29 01:21:53',
+                'route' => 'admin.reportes.index',
+                'parameters' => '',
+            ),
+            30 => 
+            array (
+                'id' => 46,
+                'menu_id' => 1,
+                'title' => 'Feriados',
+                'url' => 'admin/feriados',
+                'target' => '_self',
+                'icon_class' => 'voyager-controller',
+                'color' => '#000000',
+                'parent_id' => 32,
+                'order' => 7,
+                'created_at' => '2026-05-29 01:21:41',
+                'updated_at' => '2026-05-29 01:22:22',
+                'route' => NULL,
+                'parameters' => '',
+            ),
         ));
-
-
+        
+        
     }
 }

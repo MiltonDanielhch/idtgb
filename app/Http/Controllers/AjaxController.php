@@ -19,7 +19,26 @@ class AjaxController extends Controller
                         ->OrWhereRaw($q ? "nombre_completo like '%$q%'" : 1)
                         ->where('deleted_at', null)
                         ->get();
-        return response()->json($data);
+
+        // Transformar datos para compatibilidad con person-select.js
+        $formatted = $data->map(function ($person) {
+            $name = $person->person_type === 'Jurídica' ? $person->legal_name : $person->nombre_completo;
+            return [
+                'id' => $person->id,
+                'ci' => $person->ci,
+                'nombre_completo' => $person->nombre_completo,
+                'legal_name' => $person->legal_name,
+                'person_type' => $person->person_type,
+                'phone' => $person->phone,
+                // Campos para compatibilidad con person-select.js
+                'first_name' => $name,
+                'middle_name' => '',
+                'paternal_surname' => '',
+                'maternal_surname' => '',
+            ];
+        });
+
+        return response()->json($formatted);
     }
 
     public function personStore(Request $request){

@@ -964,11 +964,18 @@ class TramiteWizardController extends Controller
             ->get(['id', 'nombre_completo', 'legal_name', 'ci', 'person_type', 'nit', 'tipo_doc']);
 
         $formatted = $people->map(function ($person) {
+            if ($person->person_type === 'Jurídica') {
+                $name = $person->legal_name ?? 'Sin razón social';
+                $doc = 'NIT: ' . ($person->nit ?? 'Sin NIT');
+            } else {
+                $name = $person->nombre_completo ?? 'Nombre no definido';
+                $doc = 'CI: ' . ($person->ci ?? 'Sin CI');
+            }
             return [
                 'id' => $person->id,
-                'text' => $person->display_name.' - '.($person->person_type === 'Jurídica' ? 'NIT: '.$person->nit : 'CI: '.$person->ci),
-                'person_type' => $person->person_type, // Incluir el tipo de persona
-                'document' => $person->display_document, // Incluir el documento formateado
+                'text' => $name . ' - ' . $doc,
+                'person_type' => $person->person_type,
+                'document' => $person->person_type === 'Jurídica' ? ($person->nit ?? 'Sin NIT') : ($person->ci ?? 'Sin CI'),
             ];
         });
 

@@ -44,6 +44,7 @@ class PermissionRoleTableSeeder extends Seeder
                                             table_name = "people" or
                                             table_name = "parentescos" or
                                             table_name = "exenciones" or
+                                            table_name = "feriados" or
                                             table_name = "tipos-transmision" or
                                             table_name = "tipos-inmueble" or
                                             table_name = "tasas" or
