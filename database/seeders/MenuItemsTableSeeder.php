@@ -248,7 +248,7 @@ class MenuItemsTableSeeder extends Seeder
                 'id' => 15,
                 'menu_id' => 1,
                 'title' => 'Limpiar cache',
-                'url' => '',
+                'url' => '/admin/clear-cache',
                 'target' => '_self',
                 'icon_class' => 'fa-solid fa-broom',
                 'color' => '#000000',
@@ -256,7 +256,7 @@ class MenuItemsTableSeeder extends Seeder
                 'order' => 13,
                 'created_at' => '2024-12-09 12:33:25',
                 'updated_at' => '2026-05-29 01:21:53',
-                'route' => 'clear.cache',
+                'route' => 'admin.clear.cache',
                 'parameters' => NULL,
             ),
             15 => 
