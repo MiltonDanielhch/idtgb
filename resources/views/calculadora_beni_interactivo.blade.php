@@ -230,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!res.ok) throw new Error(json.message || 'Error en el cálculo');
 
             const fmt = (n) => parseFloat(n).toLocaleString('es-BO', { minimumFractionDigits: 2 });
-            const fmtTotal = (n) => Math.round(parseFloat(n)).toLocaleString('es-BO');
+            const fmtTotal = (n) => (Math.round(parseFloat(n) * 2) / 2).toLocaleString('es-BO', { minimumFractionDigits: 2 });
 
             boletaDetalle.innerHTML = `
                 <div class="row g-4">

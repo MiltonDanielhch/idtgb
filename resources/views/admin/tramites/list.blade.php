@@ -25,7 +25,7 @@
                         <span class="badge badge-primary">Bs. {{ number_format($t->base_imponible, 2) }}</span>
                     </td>
                     <td class="text-center">
-                        <span class="badge badge-success">Bs. {{ number_format($t->monto_final, 2) }}</span>
+                        <span class="badge badge-success">Bs. {{ number_format(round($t->monto_final * 2) / 2, 2) }}</span>
                     </td>
                     <td class="text-center">
                         @php

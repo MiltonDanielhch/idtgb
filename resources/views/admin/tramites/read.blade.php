@@ -108,7 +108,7 @@
                 </div>
                 <div class="col-md-3">
                     <label>Monto Final</label>
-                    <p class="form-control-static text-success" style="font-size: 1.2em; font-weight: bold;">Bs. {{ number_format($tramite->monto_final, 2) }}</p>
+                    <p class="form-control-static text-success" style="font-size: 1.2em; font-weight: bold;">Bs. {{ number_format(round($tramite->monto_final * 2) / 2, 2) }}</p>
                 </div>
             </div>
         </div>

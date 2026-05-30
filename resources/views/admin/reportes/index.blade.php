@@ -76,7 +76,7 @@
                                                     <td>{{ $tramite->nro_tramite }}</td>
                                                     <td>{{ $tramite->updated_at->format('d/m/Y H:i') }}</td>
                                                     <td>{{ optional(optional($tramite->adquirentes->first())->person)->fullName ?? 'N/A' }}</td>
-                                                    <td style="text-align: right">{{ number_format($tramite->monto_final, 2, ',', '.') }}</td>
+                                                    <td style="text-align: right">{{ number_format(round($tramite->monto_final * 2) / 2, 2, ',', '.') }}</td>
                                                 </tr>
                                             @empty
                                                 <tr>

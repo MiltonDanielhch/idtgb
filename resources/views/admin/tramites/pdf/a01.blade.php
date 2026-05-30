@@ -71,7 +71,7 @@
                     <tr><th>Tributo Actualizado (UFV)</th><td>Bs {{ number_format($tramite->tributo_actualizado ?? $tramite->total_idtgb, 2) }}</td></tr>
                     <tr><th>Intereses (Mora)</th><td>Bs {{ number_format($tramite->recargo_mora, 2) }}</td></tr>
                     <tr><th>Multa IDF</th><td>Bs {{ number_format($tramite->multa_idf ?? 0, 2) }}</td></tr>
-                    <tr class="total-row"><td>Monto Final</td><td>Bs {{ number_format($tramite->monto_final, 2) }}</td></tr>
+                    <tr class="total-row"><td>Monto Final</td><td>Bs {{ number_format(round($tramite->monto_final * 2) / 2, 2) }}</td></tr>
                 </table>
             </td>
         </tr>

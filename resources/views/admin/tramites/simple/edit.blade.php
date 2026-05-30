@@ -383,7 +383,7 @@ $(document).ready(function() {
                         $('#idtgbBase').text('Bs. ' + resultados.tributo_actualizado.toFixed(2));
                         $('#recargoMora').text('Bs. ' + resultados.interes.toFixed(2));
                         $('#multaIdf').text('Bs. ' + resultados.multa_idf.toFixed(2));
-                        $('#montoFinal').text('Bs. ' + resultados.final.toFixed(2));
+                        $('#montoFinal').text('Bs. ' + (Math.round(resultados.final * 2) / 2).toFixed(2));
                         
                         $('#nroTramite').text(resultados.nro_tramite);
                         $('#categoria').text(resultados.categoria_tasa == 1 ? 'Línea Directa' : resultados.categoria_tasa == 10 ? 'Colateral' : 'Otros');

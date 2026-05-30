@@ -24,7 +24,7 @@
                     <td>{{ $tramite['nro_tramite'] }}</td>
                     <td>{{ $tramite['contribuyente'] }}</td>
                     <td>{{ $tramite['created_at'] }}</td>
-                    <td>{{ number_format($tramite['monto_final'], 2, ',', '.') }}</td>
+                    <td>{{ number_format(round($tramite['monto_final'] * 2) / 2, 2, ',', '.') }}</td>
                     <td>
                         @php
                             $labelClass = match($tramite['estado']) {
