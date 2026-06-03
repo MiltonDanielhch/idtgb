@@ -49,9 +49,8 @@ RUN mkdir -p /var/www/example/storage /var/www/example/bootstrap/cache && \
     chown -R unit:unit /var/www/example/storage bootstrap/cache && \
     chmod -R 775 /var/www/example/storage bootstrap/cache
 
-# Optimizar Laravel para producción
+# Optimizar Laravel para producción (Excluyendo cache de rutas para evitar conflicto de Voyager)
 RUN php artisan config:cache && \
-    php artisan route:cache && \
     php artisan view:cache && \
     php artisan event:cache
 
