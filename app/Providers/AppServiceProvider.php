@@ -44,26 +44,17 @@ class AppServiceProvider extends ServiceProvider
         Tramite::observe(TramiteObserver::class);
         Pago::observe(PagoObserver::class);
 
-        // 5. Optimizaciones de rendimiento para producción
+        // 5. Optimizaciones de rendimiento para producción (Protegidas para CLI/Artisan)
         if (app()->environment('production')) {
-            // Habilitar compresión de respuesta
-            if (function_exists('ob_gzhandler')) {
-                ob_start('ob_gzhandler');
+
+            // Habilitar compresión de respuesta SOLO si no es una ejecución de consola
+            if (!app()->runningInConsole() && function_exists('ob_gzhandler')) {
+                // Verificar que no se haya inicializado el manejador previamente
+                if (!in_array('ob_gzhandler', ob_get_status(true))) {
+                    ob_start('ob_gzhandler');
+                }
             }
 
-            // Optimizar carga de clases
-            spl_autoload_register(function ($class) {
-                $prefix = 'App\\';
-                $base_dir = app_path() . '/';
-                $len = strlen($prefix);
-                if (strncmp($prefix, $class, $len) === 0) {
-                    $relative_class = substr($class, $len);
-                    $file = $base_dir . str_replace('\\', '/', $relative_class) . '.php';
-                    if (file_exists($file)) {
-                        require $file;
-                    }
-                }
-            });
         }
     }
 }
