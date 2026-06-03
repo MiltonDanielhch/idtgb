@@ -209,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        
+
         const categoriaSeleccionada = document.querySelector('input[name="categoria_tasa"]:checked');
         if (!categoriaSeleccionada) {
             alert('Por favor seleccione una categoría de parentesco');

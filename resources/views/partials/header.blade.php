@@ -1,7 +1,7 @@
 <nav class="navbar navbar-expand-lg navbar-custom shadow-sm">
     <div class="container">
         <a class="navbar-brand d-flex align-items-center" href="/">
-            <i class="fas fa-landmark me-2"></i>
+          <img src="{{ asset('images/Logo.png') }}" alt="Logo" style="height: 60px; vertical-align: middle; margin-right: 10px;">
             GAD Beni - IDTGB
         </a>
         <div class="navbar-nav ms-auto">

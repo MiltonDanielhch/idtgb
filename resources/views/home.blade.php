@@ -21,14 +21,12 @@
 <div class="container py-5">
     <div class="text-center mb-5">
         <h1 class="display-5 fw-bold" style="color: var(--beni-green);">
-            <i class="fas fa-building me-2"></i>
             GOBIERNO AUTÓNOMO DEPARTAMENTAL DEL BENI
         </h1>
         <p class="lead text-muted">
             Impuesto Departamental a la Transmisión Gratuita de Bienes (IDTGB)
         </p>
     </div>
-
     <div class="row g-4">
         <!-- CIUDADANOS -->
         <div class="col-lg-6">
