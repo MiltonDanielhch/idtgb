@@ -200,24 +200,31 @@ class Parentesco extends Model
     public static function getPrimerParentescoPorCategoria(int $categoria): ?self
     {
         try {
-            return self::where('categoria_tasa', $categoria)->first();
+            $parentesco = self::where('categoria_tasa', $categoria)->first();
+            if ($parentesco) {
+                return $parentesco;
+            }
         } catch (\Exception $e) {
-            return self::getPrimerParentescoPorNombre($categoria);
+            // tabla no existe o error de conexión
         }
+
+        return self::getPrimerParentescoPorNombre($categoria);
     }
 
     private static function getPrimerParentescoPorNombre(int $categoria): ?self
     {
         $nombres = match($categoria) {
-            1 => ['Cónyuge', 'Hijo'],
-            10 => ['Hermano'],
-            20 => ['Tío', 'Sin parentesco'],
+            self::CATEGORIA_LINEA_DIRECTA => ['Cónyuge', 'Conviviente', 'Hijo'],
+            self::CATEGORIA_COLATERAL => ['Hermano'],
+            self::CATEGORIA_OTROS => ['Tío', 'Sin parentesco'],
             default => ['Sin parentesco'],
         };
 
         foreach ($nombres as $nombre) {
             $parentesco = self::where('nombre', 'like', "%{$nombre}%")->first();
-            if ($parentesco) return $parentesco;
+            if ($parentesco) {
+                return $parentesco;
+            }
         }
 
         return self::first();
