@@ -49,13 +49,20 @@ class IdtgbMaestrosProduccionSeeder extends Seeder
             ExencionSeeder::class,        // Exenciones legales aplicables
 
             // ============================================================
-            // 4. MENÚS Y NAVEGACIÓN (OBLIGATORIO)
+            // 4. FERIADOS (OBLIGATORIO)
+            // ============================================================
+            // Necesario para el cálculo de días hábiles en donaciones
+            // (DiasHabilesService excluye sábados, domingos y feriados)
+            FeriadoSeeder::class,         // Feriados nacionales + Beni 2026
+
+            // ============================================================
+            // 5. MENÚS Y NAVEGACIÓN (OBLIGATORIO)
             // ============================================================
             // Configura el menú de administración en Voyager
             IdtgbMenuAppendSeeder::class,
             UsersTableSeeder::class,
             // ============================================================
-            // 5. UFV - UNIDADES DE FOMENTO DE VIVIENDA (RECOMENDADO)
+            // 6. UFV - UNIDADES DE FOMENTO DE VIVIENDA (RECOMENDADO)
             // ============================================================
             // Opciones para cargar UFV:
 

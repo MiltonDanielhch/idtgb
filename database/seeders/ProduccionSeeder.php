@@ -29,6 +29,7 @@ class ProduccionSeeder extends Seeder
             TipoInmuebleSeeder::class,
             TasaSeeder::class,
             ExencionSeeder::class,
+            FeriadoSeeder::class,         // Feriados nacionales + Beni 2026
             // UfvSeeder::class, // Carga los valores iniciales de UFV
             ExencionSeeder::class,
             // UfvApiSeeder::class, // Carga los valores reales de UFV desde una API (para producción)
