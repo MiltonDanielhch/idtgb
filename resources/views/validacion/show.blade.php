@@ -32,7 +32,7 @@
     <div class="container mt-5">
         <div class="card shadow-sm">
             <div class="header">
-                <h4><img src="/images/logo-gobernacion.png" height="40" alt="Logo Gobernación"> Verificación de Documento</h4>
+                <h4><img src="{{ asset('images/Logo.png') }}" height="40" alt="Logo GAD Beni" style="vertical-align: middle; margin-right: 10px;"> GAD Beni - IDTGB | Verificación de Documento</h4>
             </div>
             <div class="card-body p-4">
                 <div class="alert alert-success verification-card" role="alert">

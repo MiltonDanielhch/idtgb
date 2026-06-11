@@ -262,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <div class="text-end mt-3">
                             <button type="button" onclick="descargarPDF()" class="btn btn-danger btn-lg shadow-sm">
-                                <i class="fas fa-file-pdf me-2"></i> Descargar Reporte Oficial
+                                <i class="fas fa-file-pdf me-2"></i> Descargar Reporte
                             </button>
                         </div>
                     </div>
