@@ -29,9 +29,12 @@
                     {{-- Monto --}}
                     <div class="col-md-3">
                         <label>Monto (Bs) <span class="required">*</span></label>
+                        @php
+                            $monto_redondeado = round($tramite->monto_final * 2) / 2;
+                        @endphp
                         <input type="number" step="0.01" min="0.01" name="monto" class="form-control"
-                               value="{{ old('monto', $tramite->monto_final) }}" required>
-                        <small class="text-muted">Total a pagar: Bs. {{ number_format($tramite->monto_final, 2) }}</small>
+                               value="{{ old('monto', $monto_redondeado) }}" required>
+                        <small class="text-muted">Total a pagar: Bs. {{ number_format($monto_redondeado, 2) }}</small>
                         @error('monto') <small class="text-danger">{{ $message }}</small> @enderror
                     </div>
 
